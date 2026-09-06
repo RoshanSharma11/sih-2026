@@ -3,7 +3,7 @@ import pytest
 from pydantic import ValidationError
 
 from skyguard.ml import IdentityDetector, load_detector
-from skyguard.schemas import ClusterId, DemoInjectRequest, DemoKind
+from skyguard.schemas import Channel, ClusterId, DemoInjectRequest, DemoKind
 
 
 def test_identity_reconstructs_last_row() -> None:
@@ -52,3 +52,10 @@ def test_storm_inject_requires_cluster() -> None:
         kind=DemoKind.GENUINE_WEATHER,
     )
     assert req.cluster_id is ClusterId.NORTH
+    with pytest.raises(ValidationError):
+        DemoInjectRequest(
+            target="cluster",
+            cluster_id=ClusterId.NORTH,
+            kind=DemoKind.SPIKE,
+            channel=Channel.TEMP_C,
+        )

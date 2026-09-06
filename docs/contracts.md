@@ -113,6 +113,7 @@ Response:
 | `channel` | required for SPIKE/FREEZE/DRIFT; ignored for COMM_ERROR and GENUINE_WEATHER |
 | `duration_hours` | default 1 (spike/comm), 12 (freeze), 48 (drift), 3 (storm) |
 | Storm | `target` must be `cluster` |
+| Hardware | `target` must be `station` |
 
 `POST /demo/reset` — clear all armed overlays.
 

@@ -7,12 +7,14 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
+from skyguard.api.routes_demo import router as demo_router
 from skyguard.api.routes_ingest import router as ingest_router
 from skyguard.api.routes_query import router as query_router
 from skyguard.config import DB_PATH, STATIONS_PATH
 from skyguard.data.catalog import read_catalog
 from skyguard.db.catalog import upsert_catalog
 from skyguard.db.session import create_tables, make_engine, make_session_factory
+from skyguard.engine.demo import DemoController
 from skyguard.engine.tier3 import ResidualStore
 from skyguard.engine.windows import WindowStore
 
@@ -30,6 +32,7 @@ def create_app(db_path: Path | None = None, stations_path: Path | None = None) -
         app.state.catalog_ready = False
         app.state.windows = WindowStore()
         app.state.residuals = ResidualStore()
+        app.state.demo = DemoController()
         session = factory()
         try:
             if resolved_stations.exists():
@@ -45,6 +48,7 @@ def create_app(db_path: Path | None = None, stations_path: Path | None = None) -
     app = FastAPI(title="SkyGuard AI", version="0.1.0", lifespan=lifespan)
     app.include_router(query_router)
     app.include_router(ingest_router)
+    app.include_router(demo_router)
     return app
 
 

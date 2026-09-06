@@ -7,9 +7,11 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from skyguard.data.inject import Observation
 from skyguard.db.models import AnomalyAlert, Station, TelemetryLog
 from skyguard.engine import health as health_mod
 from skyguard.engine.classify import Classification, classify
+from skyguard.engine.demo import DemoController
 from skyguard.engine.tier1 import evaluate as evaluate_tier1
 from skyguard.engine.tier3 import BuddyResult, ResidualStore, evaluate as evaluate_buddy, load_neighbors
 from skyguard.engine.windows import WindowPoint, WindowStore
@@ -39,6 +41,7 @@ def ingest_observation(
     catalog_ready: bool,
     windows: WindowStore,
     residuals: ResidualStore | None = None,
+    demo: DemoController | None = None,
 ) -> IngestResult:
     if not catalog_ready:
         raise CatalogNotLoaded("Station catalog not loaded")
@@ -50,7 +53,12 @@ def ingest_observation(
     timestamp = as_utc(payload.timestamp)
     _reject_duplicate(session, payload.station_id, timestamp)
 
-    current = WindowPoint(timestamp, payload.temp_c, payload.pres_hpa, payload.rhum_pct)
+    observed = Observation(payload.temp_c, payload.pres_hpa, payload.rhum_pct)
+    demo_injected = None
+    if demo is not None:
+        observed, demo_injected = demo.apply(payload.station_id, observed)
+
+    current = WindowPoint(timestamp, observed.temp_c, observed.pres_hpa, observed.rhum_pct)
     previous = windows.last(payload.station_id)
     tier1 = evaluate_tier1(current, previous)
     neighbors = [] if tier1.comm_error else load_neighbors(session, station, timestamp)
@@ -73,9 +81,9 @@ def ingest_observation(
     row = TelemetryLog(
         station_id=payload.station_id,
         timestamp=timestamp,
-        temp_observed=payload.temp_c,
-        pres_observed=payload.pres_hpa,
-        rhum_observed=payload.rhum_pct,
+        temp_observed=observed.temp_c,
+        pres_observed=observed.pres_hpa,
+        rhum_observed=observed.rhum_pct,
         is_anomaly=decision.pipeline_status is PipelineStatus.HARDWARE,
         pipeline_status=decision.pipeline_status.value,
     )
@@ -110,6 +118,7 @@ def ingest_observation(
             pres_hpa=contrib[Channel.PRES_HPA],
             rhum_pct=contrib[Channel.RHUM_PCT],
         ),
+        demo_injected=demo_injected,
     )
 
 
@@ -169,6 +178,7 @@ def result_from_row(
     explainability_text: str | None = None,
     classification: Classification | None = None,
     contribution: ChannelValues | None = None,
+    demo_injected: FaultType | None = None,
 ) -> IngestResult:
     if classification is not None:
         fault_type = classification.fault_type
@@ -198,6 +208,7 @@ def result_from_row(
         mse_vector=ChannelValues(),
         health_score=station.health_score,
         station_status=StationStatus(station.status),
+        demo_injected=demo_injected,
     )
 
 

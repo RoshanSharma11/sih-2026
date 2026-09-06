@@ -15,3 +15,7 @@ class DuplicateObservation(SkyGuardError):
 
 class CatalogNotLoaded(SkyGuardError):
     pass
+
+
+class InvalidDemoRequest(SkyGuardError):
+    pass

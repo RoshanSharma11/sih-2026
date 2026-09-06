@@ -123,6 +123,8 @@ class DemoInjectRequest(BaseModel):
     def validate_demo_rules(self) -> DemoInjectRequest:
         if self.kind == DemoKind.GENUINE_WEATHER and self.target != "cluster":
             raise ValueError("GENUINE_WEATHER inject must target a cluster")
+        if self.kind != DemoKind.GENUINE_WEATHER and self.target != "station":
+            raise ValueError("hardware inject must target a station")
         if self.kind in CHANNEL_FAULTS and self.channel is None:
             raise ValueError(f"{self.kind.value} requires channel")
         if self.target == "station" and not self.station_id:
