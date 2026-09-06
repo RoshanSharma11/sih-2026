@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-06T15:58:11Z",
-  "notes": "Only 4 stations met the 85% completeness bar. NORTH has Palam + Safdarjung; WEST has Santacruz + Colaba. Buddy check works inside each cluster.",
+  "generated_at": "2026-09-06T17:22:09Z",
+  "notes": "Only 4 stations met the 85% completeness bar.",
   "range": {
     "start": "2018-01-01T00:00:00",
     "end": "2024-12-31T23:00:00"
