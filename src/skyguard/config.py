@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -14,6 +14,7 @@ RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
 
 WINDOW_HOURS = int(os.environ.get("SKYGUARD_WINDOW", "24"))
+STREAM_MS = int(os.environ.get("SKYGUARD_STREAM_MS", "200"))
 COMPLETENESS_MIN = 0.85
 BUDDY_KM = float(os.environ.get("SKYGUARD_BUDDY_KM", "150"))
 SEARCH_RADIUS_M = 80_000
@@ -23,6 +24,7 @@ KEEPER_COUNT = 5
 
 FETCH_START = datetime(2018, 1, 1)
 FETCH_END = datetime(2024, 12, 31, 23, 0, 0)
+DEMO_START = datetime(2024, 7, 1, tzinfo=timezone.utc)
 
 ANCHORS = (
     {"name": "Delhi NCR", "latitude": 28.57, "longitude": 77.12, "cluster_id": "NORTH"},
