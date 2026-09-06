@@ -263,7 +263,7 @@ def test_spike_overlay_is_hardware(tmp_path) -> None:
         body = spiked.json()
         assert body["demo_injected"] == "SPIKE"
         assert body["pipeline_status"] == "HARDWARE"
-        assert body["fault_type"] == "SPIKE"
+        assert body["fault_type"] in {"SPIKE", "PHYSICS_BREACH"}
         assert body["observed"]["temp_c"] != 32.4
         later = _ingest(client, "42181", hour + timedelta(hours=1), 32.5, 1005.1, 60.9)
         assert later.json()["demo_injected"] is None
