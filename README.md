@@ -1,7 +1,109 @@
 # SkyGuard AI (SIH PS 26073)
 
-Intelligent QC for Automatic Weather Stations using only temperature, pressure, and humidity.
+Quality-control service for Indian Automatic Weather Stations. Input is hourly **T / P / H only**. The API tells a real storm from a broken sensor, keeps raw readings intact, and tracks 7-day sensor health.
 
-**Start here:** [docs/README.md](docs/README.md)
+This package is the **data engine + FastAPI backend**. Streamlit and LSTM training are owned by the other pair. Frozen payloads: [docs/contracts.md](docs/contracts.md). Status: [docs/progress.md](docs/progress.md).
 
-Code comes after the docs are confirmed. The teammate blueprint is in `plan.pdf`.
+Catalog is **four** stations in two clusters (a fifth failed the 85% completeness bar). Buddy check stays inside a cluster (150 km). Delhi does not validate Mumbai.
+
+| Cluster | IDs |
+|---|---|
+| NORTH | `42181` Palam, `42182` Safdarjung |
+| WEST | `43003` Santacruz, `43057` Colaba |
+
+## Setup
+
+Python 3.10+. From the repo root:
+
+```text
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Do not set `MODEL_PATH`. Leave `SKYGUARD_RECON_THRESHOLD` unset (default `inf`) until ML drops weights.
+
+## Fetch ground truth
+
+Writes `data/processed/stations.json` (committed) and one parquet per station (gitignored). Slow: 2018–2024 hourly from Meteostat.
+
+```text
+python -m skyguard.data.fetch
+```
+
+If parquet is already on disk, skip fetch. Rebuild the labeled eval set (also gitignored) with:
+
+```text
+python -m skyguard.data.evalset
+```
+
+## Run the API and the clean stream
+
+`python -m skyguard.api.main` only imports the app and exits. Use the script:
+
+```text
+python scripts/run_api.py
+```
+
+Wait for `Application startup complete`. Interactive docs: http://127.0.0.1:8000/docs
+
+In a second terminal, seed 24 clean hours then POST every station each weather-hour (default 200 ms):
+
+```text
+python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024-07-01T00:00:00Z
+```
+
+`--hours N` stops after N weather-hours. The streamer has **no** `--fault` flag. `409` duplicate hours are skipped, not a crash.
+
+Tests: `pytest -q`.
+
+## Demo inject (storm ≠ broken sensor)
+
+While the stream is running:
+
+```text
+curl -X POST http://127.0.0.1:8000/demo/inject \
+  -H 'Content-Type: application/json' \
+  -d '{"target":"cluster","cluster_id":"NORTH","kind":"GENUINE_WEATHER"}'
+
+curl -X POST http://127.0.0.1:8000/demo/inject \
+  -H 'Content-Type: application/json' \
+  -d '{"target":"station","station_id":"42181","kind":"SPIKE","channel":"temp_c"}'
+```
+
+- Storm must target a **cluster**. Hardware (spike / freeze / drift / comm) must target **one station**.
+- `GET /demo/status` lists armed overlays. `POST /demo/reset` clears them.
+- `demo_injected` on `POST /ingest` is the overlay kind. It is not ground truth for judges.
+
+Poll `/stations` and `/alerts` at ~1 s. Expect two different `pipeline_status` values: cluster storm → `GENUINE_WEATHER`, lone spike → `HARDWARE`. The first station in a storm hour may be `UNKNOWN` until a same-hour neighbor exists.
+
+## Frontend
+
+Poll these. Field names are frozen in [docs/contracts.md](docs/contracts.md). Do not invent extras. No SSE in v1.
+
+| Method | Path | Use |
+|---|---|---|
+| `GET` | `/healthz` | `{ "ok": true }` |
+| `GET` | `/stations` | map markers: id, name, lat/lon, `cluster_id`, `health_score`, `status` |
+| `GET` | `/stations/{id}` | summary + `latest` ingest result |
+| `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | observed + imputed series. `is_anomaly` is true only for `HARDWARE` |
+| `GET` | `/alerts?station_id=&limit=` | newest first |
+| `GET` | `/demo/status` | armed overlays |
+
+`GENUINE_WEATHER` is an alert but it is not `is_anomaly` and it does not lower health. Raw `temp_observed` / `pres_observed` / `rhum_observed` are immutable; imputed columns are overlays.
+
+## ML
+
+Train only on complete windows from `data/processed/{station_id}.clean.parquet` (or drop-null rows from `{station_id}.parquet`). **Do not train on** `data/eval/labeled.parquet` — that file is labeled evaluation (10k rows, 15% injected).
+
+Implement `Detector` against [docs/contracts.md](docs/contracts.md) § Detector (`src/skyguard/ml/protocol.py`):
+
+- `window` shape `(N, 3)`, oldest → newest, original units, order `[temp_c, pres_hpa, rhum_pct]`, no NaNs
+- MinMax scaling belongs **inside** the real detector, not in the route
+- Return `Reconstruction` (`reconstructed` shape `(3,)` in original units, `mse`, `mse_vector`, `contribution_pct` summing to 100, `skipped`)
+
+Until a `.pt` / ONNX file exists, the API uses `IdentityDetector` (copy last step, MSE 0). When weights land: put the file on disk, implement `load_detector` in `src/skyguard/ml/loader.py`, set `MODEL_PATH`, and set a real `SKYGUARD_RECON_THRESHOLD`. Ingest already calls `Detector.reconstruct` on a full 24-hour window.
+
+## Docs
+
+Read [docs/README.md](docs/README.md) before changing behavior. If code and contracts disagree, update `docs/contracts.md` in the same change.

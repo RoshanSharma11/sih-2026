@@ -2,6 +2,8 @@
 
 Read these before writing code. They are the source of truth for data, simulator, and backend work. If code and docs disagree, update the docs in the same change.
 
+To **fetch, run the API, stream, or inject**, use the [root README](../README.md). This folder is the design record.
+
 ## Read order
 
 1. [progress.md](progress.md) — what is built, what is next (handoff)
