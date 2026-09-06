@@ -1,11 +1,6 @@
 """CLI wrapper. Logic lives in skyguard.data.evalset."""
 
-from skyguard.data import evalset  # noqa: F401
-
-
-def main() -> None:
-    raise NotImplementedError("slice 2a")
-
+from skyguard.data.evalset import main
 
 if __name__ == "__main__":
     main()
