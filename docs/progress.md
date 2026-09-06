@@ -1,12 +1,12 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-06 (after F0).
+Last updated: 2026-09-06 (after F6).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
 ## Status
 
-**Data + backend handed off (Slice 7).** Frontend docs locked (F0 / D13). Next: Streamlit shell (F1).
+**Done through F6.** Data + backend + live demo dashboard. Remaining work is ML (`MODEL_PATH`).
 
 Working tree should be clean on the current branch after each slice. Latest commits:
 
@@ -22,7 +22,9 @@ Working tree should be clean on the current branch after each slice. Latest comm
 | 5 | `cf19e83` | Live demo overlays on ingest |
 | 6 | `81b5937` | Detector hook + imputed overlay |
 | 7 | `de9ed33` | Root README + OpenAPI locked to contracts |
-| F0 | (this change) | Dashboard layout and poll rules locked before Streamlit code |
+| F0 | `f05c579` | Dashboard layout and poll rules locked |
+| F1 | `f130c3c` | Contract-only HTTP client for frozen GET shapes |
+| F2–F6 | (this change) | One-page Streamlit console: map, series, alerts, inject |
 
 ## What works
 
@@ -37,14 +39,13 @@ Working tree should be clean on the current branch after each slice. Latest comm
 - Demo overlays apply `inject.apply_live` **before** detection. Storm targets a cluster; hardware targets one station. `demo_injected` is the overlay kind, not judge ground truth.
 - Storm on both stations in a cluster at the same hour → `GENUINE_WEATHER`. Lone spike vs a static neighbor → `HARDWARE`. No neighbor → `UNKNOWN` (D11). Weather alerts do not lower health.
 - Streamer: seed 24h before `demo_start` (default 2024-07-01Z), then POST every station each hour, sleep `SKYGUARD_STREAM_MS` (200). `409` is skipped, not a crash, and does not consume overlay hours.
-- Root README: fetch, run API, stream, inject, frontend GET shapes, ML parquet + `Detector` protocol.
+- Dashboard: `python scripts/run_dashboard.py` polls the frozen GET APIs at 1 s. Marker color = `latest.pipeline_status`. Hero buttons: NORTH storm, Palam temp spike. Weather is amber, never red.
 
 ## What is still a stub
 
 | Owner | Files | Notes |
 |---|---|---|
 | ML | `ml/loader.py` | `MODEL_PATH` still raises `NotImplementedError`. When weights land: load them, set a real threshold, add one integration test |
-| Frontend | `frontend/` | Docs locked. App not built yet (F1–F6) |
 
 Out of scope unless asked: LSTM training, SSE, Docker, auth.
 
@@ -65,18 +66,20 @@ See the [root README](../README.md). Short form:
 ```text
 python scripts/run_api.py
 python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024-07-01T00:00:00Z
+python scripts/run_dashboard.py
 ```
 
 If processed parquet is missing locally (gitignored): `python -m skyguard.data.fetch` first.
 
-`--hours N` on the streamer stops after N weather-hours. Tests: `pytest -q`.
+`--hours N` on the streamer stops after N weather-hours. Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`.
 
 ## Next
 
-F1 — Streamlit shell, `frontend/api.py`, dark theme, `/healthz`. Then F2 map through F6 polish. See [frontend.md](frontend.md).
+ML: implement `load_detector` when a `.pt` / ONNX file exists. Dashboard is ready to poll.
 
 ## Open issues
 
 - Real Meteostat parquet may be absent on a fresh clone; fetch is slow (2018–2024 hourly).
 - A 2-minute live stream soak against real parquet was not run here; Slice 3/4 used tests + a 120-hour fixture soak.
 - No `.pt` / ONNX file yet. Leave `MODEL_PATH` unset.
+- Dashboard AppTest was run against a local API; click-through inject was not armed so a running demo overlay would not be disturbed.

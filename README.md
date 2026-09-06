@@ -18,7 +18,7 @@ Python 3.10+. From the repo root:
 ```text
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev,ui]"
 ```
 
 Do not set `MODEL_PATH`. Leave `SKYGUARD_RECON_THRESHOLD` unset (default `inf`) until ML drops weights.
@@ -77,17 +77,35 @@ curl -X POST http://127.0.0.1:8000/demo/inject \
 
 Poll `/stations` and `/alerts` at ~1 s. Expect two different `pipeline_status` values: cluster storm → `GENUINE_WEATHER`, lone spike → `HARDWARE`. The first station in a storm hour may be `UNKNOWN` until a same-hour neighbor exists.
 
-## Frontend
+## Dashboard
 
-Poll these. Field names are frozen in [docs/contracts.md](docs/contracts.md). Do not invent extras. No SSE in v1.
+Install UI extras, then open the ops console (API + streamer should already be running):
+
+```text
+pip install -e ".[ui]"
+python scripts/run_dashboard.py
+```
+
+Default: http://127.0.0.1:8501 · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`.
+
+**30-second judge script**
+
+1. Four teal markers (clean stream).
+2. **Storm on NORTH** → both Delhi markers go amber; Mumbai stays teal. Neighbors agree, not a fault. Health does not crash.
+3. **Reset**, then **Break Palam temperature** → only Palam goes red; Safdarjung stays teal.
+4. Point at the map: Delhi does not validate Mumbai.
+
+The first station in a storm hour may show `UNKNOWN` until the neighbor lands (~1 s). Weather is amber, never red.
+
+Poll shapes (frozen in [docs/contracts.md](docs/contracts.md)). No SSE. The dashboard does not invent fields.
 
 | Method | Path | Use |
 |---|---|---|
 | `GET` | `/healthz` | `{ "ok": true }` |
 | `GET` | `/stations` | map markers: id, name, lat/lon, `cluster_id`, `health_score`, `status` |
-| `GET` | `/stations/{id}` | summary + `latest` ingest result |
+| `GET` | `/stations/{id}` | summary + `latest` ingest result (`pipeline_status` for marker color) |
 | `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | observed + imputed series. `is_anomaly` is true only for `HARDWARE` |
-| `GET` | `/alerts?station_id=&limit=` | newest first |
+| `GET` | `/alerts?station_id=&limit=` | newest first — verdict sentence |
 | `GET` | `/demo/status` | armed overlays |
 
 `GENUINE_WEATHER` is an alert but it is not `is_anomaly` and it does not lower health. Raw `temp_observed` / `pres_observed` / `rhum_observed` are immutable; imputed columns are overlays.
