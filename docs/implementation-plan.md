@@ -28,7 +28,7 @@ See [decisions.md](decisions.md). Highest impact: two clusters not five metros; 
 
 ### How to build it
 
-Do **contracts and package skeleton first**, then the two workstreams in parallel. Do not start Streamlit or training.
+Do **contracts and package skeleton first**, then the two workstreams in parallel. Do not start Streamlit or training. **Commit after every slice and every finished feature** (`AGENTS.md`).
 
 #### Slice 0 — shared (half day)
 

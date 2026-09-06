@@ -12,3 +12,5 @@ Read `docs/` before editing. Contracts in `docs/contracts.md` are frozen unless 
 - Package layout: `docs/architecture.md`
 
 Do not add SSE, Redis, Kafka, Docker, auth, SHAP on `/ingest`, or a second inject implementation. Raw T/P/H are immutable. Simulator is clean-only. Buddy check is cluster-local.
+
+Commit after every implementation-plan slice and after every finished feature. Do not batch unrelated work. Do not leave tested code uncommitted. Never commit `.env`, SQLite, or raw/parquet dumps.
