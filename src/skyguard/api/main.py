@@ -13,6 +13,7 @@ from skyguard.config import DB_PATH, STATIONS_PATH
 from skyguard.data.catalog import read_catalog
 from skyguard.db.catalog import upsert_catalog
 from skyguard.db.session import create_tables, make_engine, make_session_factory
+from skyguard.engine.windows import WindowStore
 
 
 def create_app(db_path: Path | None = None, stations_path: Path | None = None) -> FastAPI:
@@ -26,12 +27,14 @@ def create_app(db_path: Path | None = None, stations_path: Path | None = None) -
         factory = make_session_factory(engine)
         app.state.session_factory = factory
         app.state.catalog_ready = False
+        app.state.windows = WindowStore()
         session = factory()
         try:
             if resolved_stations.exists():
                 upsert_catalog(session, read_catalog(resolved_stations))
                 session.commit()
                 app.state.catalog_ready = True
+                app.state.windows.hydrate(session)
         finally:
             session.close()
         yield

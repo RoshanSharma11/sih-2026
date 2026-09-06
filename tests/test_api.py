@@ -102,3 +102,59 @@ def test_list_stations_and_ingest_roundtrip(tmp_path) -> None:
 
         unknown = client.get("/stations/99999")
         assert unknown.status_code == 404
+
+
+def test_seed_and_tier1_faults(tmp_path) -> None:
+    with _client(tmp_path) as client:
+        missing = client.post(
+            "/stations/99999/seed",
+            json={"observations": [{"timestamp": "2024-06-30T15:00:00Z", "temp_c": 31.0, "pres_hpa": 1004.1, "rhum_pct": 68.0}]},
+        )
+        assert missing.status_code == 404
+
+        seed = client.post(
+            "/stations/42181/seed",
+            json={
+                "observations": [
+                    {"timestamp": "2024-06-30T13:00:00Z", "temp_c": 31.0, "pres_hpa": 1004.1, "rhum_pct": 68.0},
+                    {"timestamp": "2024-06-30T14:00:00Z", "temp_c": 31.2, "pres_hpa": 1004.0, "rhum_pct": 67.0},
+                ]
+            },
+        )
+        assert seed.status_code == 200
+        assert seed.json() == {"station_id": "42181", "accepted": 2, "skipped": 0}
+        again = client.post(
+            "/stations/42181/seed",
+            json={"observations": [{"timestamp": "2024-06-30T13:00:00Z", "temp_c": 31.0, "pres_hpa": 1004.1, "rhum_pct": 68.0}]},
+        )
+        assert again.json()["skipped"] == 1
+        assert client.get("/alerts").json() == []
+
+        comms = client.post(
+            "/ingest",
+            json={"station_id": "42181", "timestamp": "2024-06-30T15:00:00Z", "temp_c": None, "pres_hpa": 1004.0, "rhum_pct": 67.0},
+        )
+        assert comms.status_code == 200
+        assert comms.json()["pipeline_status"] == "HARDWARE"
+        assert comms.json()["fault_type"] == "COMM_ERROR"
+        assert client.get("/alerts").json()[0]["fault_type"] == "COMM_ERROR"
+
+        spike = client.post(
+            "/ingest",
+            json={"station_id": "42181", "timestamp": "2024-06-30T16:00:00Z", "temp_c": 65.0, "pres_hpa": 1004.0, "rhum_pct": 67.0},
+        )
+        assert spike.json()["fault_type"] == "SPIKE"
+
+        step = client.post(
+            "/ingest",
+            json={"station_id": "42181", "timestamp": "2024-06-30T17:00:00Z", "temp_c": 32.0, "pres_hpa": 1004.0, "rhum_pct": 67.0},
+        )
+        # 65 → 32 is a 33°C step, also a spike
+        assert step.json()["fault_type"] == "SPIKE"
+
+        clean = client.post(
+            "/ingest",
+            json={"station_id": "42181", "timestamp": "2024-06-30T18:00:00Z", "temp_c": 32.4, "pres_hpa": 1004.2, "rhum_pct": 66.0},
+        )
+        assert clean.json()["pipeline_status"] == "CLEAN"
+        assert clean.json()["fault_type"] is None

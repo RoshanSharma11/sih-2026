@@ -87,6 +87,12 @@ class SeedPayload(BaseModel):
     observations: list[SeedObservation] = Field(min_length=1, max_length=48)
 
 
+class SeedResult(BaseModel):
+    station_id: str
+    accepted: int
+    skipped: int
+
+
 class IngestResult(BaseModel):
     station_id: str
     timestamp: datetime

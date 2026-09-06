@@ -59,7 +59,13 @@ Any of the three channels may be null. That is a comms/sensor gap, not a validat
 }
 ```
 
-Seed rows are **clean**, written to `telemetry_logs` with `is_anomaly=false`, and used only to fill the window. No alerts. Max 48 rows per call.
+Seed rows are **clean**, written to `telemetry_logs` with `is_anomaly=false`, and used only to fill the window. No alerts. Max 48 rows per call. Duplicate timestamps are skipped so the streamer can retry safely.
+
+Response:
+
+```json
+{"station_id": "42181", "accepted": 24, "skipped": 0}
+```
 
 ## Ingest result
 
