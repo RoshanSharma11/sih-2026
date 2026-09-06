@@ -24,7 +24,7 @@ Working tree should be clean on the current branch after each slice. Latest comm
 | 7 | `de9ed33` | Root README + OpenAPI locked to contracts |
 | F0 | `f05c579` | Dashboard layout and poll rules locked |
 | F1 | `f130c3c` | Contract-only HTTP client for frozen GET shapes |
-| F2–F6 | (this change) | One-page Streamlit console: map, series, alerts, inject |
+| F2–F6 | `5e01b23` | One-page Streamlit console: map, series, alerts, inject |
 
 ## What works
 
