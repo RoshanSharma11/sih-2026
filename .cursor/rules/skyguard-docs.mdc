@@ -5,8 +5,9 @@ alwaysApply: true
 
 # SkyGuard context
 
-Read `docs/` before editing. Contracts in `docs/contracts.md` are frozen unless updated in the same change.
+Read `docs/` before editing. Start with `docs/progress.md` for current slice status. Contracts in `docs/contracts.md` are frozen unless updated in the same change.
 
+- Status / handoff: `docs/progress.md`
 - Shared language: `docs/context.md`
 - Locked decisions: `docs/decisions.md`
 - Package layout: `docs/architecture.md`

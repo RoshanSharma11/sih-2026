@@ -4,13 +4,14 @@ Read these before writing code. They are the source of truth for data, simulator
 
 ## Read order
 
-1. [context.md](context.md) — problem, scope, glossary
-2. [decisions.md](decisions.md) — locked choices and why
-3. [architecture.md](architecture.md) — system, repo, data flow
-4. [contracts.md](contracts.md) — payloads, DB, ML interface (do not invent fields)
-5. [data-simulator.md](data-simulator.md) — fetch, inject, stream, eval set
-6. [backend.md](backend.md) — FastAPI, 3-tier engine, health
-7. [implementation-plan.md](implementation-plan.md) — build order
+1. [progress.md](progress.md) — what is built, what is next (handoff)
+2. [context.md](context.md) — problem, scope, glossary
+3. [decisions.md](decisions.md) — locked choices and why
+4. [architecture.md](architecture.md) — system, repo, data flow
+5. [contracts.md](contracts.md) — payloads, DB, ML interface (do not invent fields)
+6. [data-simulator.md](data-simulator.md) — fetch, inject, stream, eval set
+7. [backend.md](backend.md) — FastAPI, 3-tier engine, health
+8. [implementation-plan.md](implementation-plan.md) — build order
 
 ## Who owns what
 

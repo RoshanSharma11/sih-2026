@@ -2,8 +2,9 @@
 
 This is SIH PS 26073 (SkyGuard AI). Read `docs/` before writing code.
 
-Required read order: `docs/README.md` → `docs/context.md` → `docs/decisions.md` → `docs/contracts.md` → the file for the area you are changing.
+Required read order: `docs/README.md` → `docs/progress.md` → `docs/context.md` → `docs/decisions.md` → `docs/contracts.md` → the file for the area you are changing.
 
+- Status / handoff: `docs/progress.md`
 - Data / streamer / inject: `docs/data-simulator.md`
 - FastAPI / pipeline / SQLite: `docs/backend.md`
 - Layout: `docs/architecture.md`
