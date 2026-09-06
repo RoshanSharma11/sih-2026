@@ -1,0 +1,14 @@
+---
+description: Always follow SkyGuard docs as source of truth
+alwaysApply: true
+---
+
+# SkyGuard context
+
+Read `docs/` before editing. Contracts in `docs/contracts.md` are frozen unless updated in the same change.
+
+- Shared language: `docs/context.md`
+- Locked decisions: `docs/decisions.md`
+- Package layout: `docs/architecture.md`
+
+Do not add SSE, Redis, Kafka, Docker, auth, SHAP on `/ingest`, or a second inject implementation. Raw T/P/H are immutable. Simulator is clean-only. Buddy check is cluster-local.

@@ -1,0 +1,15 @@
+---
+description: Fetch, inject, and stream conventions
+globs: src/skyguard/data/**/*.py,scripts/**/*.py
+alwaysApply: false
+---
+
+# Data and simulator
+
+- Map Meteostat `temp`/`pres`/`rhum` to `temp_c`/`pres_hpa`/`rhum_pct` at the fetch boundary.
+- Keep only stations with ≥85% completeness on all three channels. Lock 5 stations in 2 clusters.
+- `inject.py` is pure (optional seeded RNG). No FastAPI imports.
+- Eval set: 10k rows, 15% injected, storms labeled `GENUINE_WEATHER` with `is_anomaly=false`.
+- Streamer: seed 24 clean hours, then POST `/ingest`. No `--fault` flag.
+
+See `docs/data-simulator.md`.

@@ -1,0 +1,16 @@
+---
+description: FastAPI pipeline and SQLite conventions
+globs: src/skyguard/api/**/*.py,src/skyguard/engine/**/*.py,src/skyguard/db/**/*.py,src/skyguard/ml/**/*.py
+alwaysApply: false
+---
+
+# Backend
+
+- Routes validate with Pydantic schemas from `skyguard.schemas` and call `engine.pipeline` only.
+- Persist raw observation before detection. Imputed columns are nullable overlays.
+- `Detector` is a protocol. Default is `IdentityDetector`. Do not import training code.
+- Lock per `station_id` around window update + pipeline.
+- Duplicate `(station_id, timestamp)` → 409. Unknown station → 404.
+- `GENUINE_WEATHER` is not `is_anomaly` and does not lower health.
+
+See `docs/backend.md` and `docs/contracts.md`.
