@@ -17,6 +17,7 @@ WINDOW_HOURS = int(os.environ.get("SKYGUARD_WINDOW", "24"))
 STREAM_MS = int(os.environ.get("SKYGUARD_STREAM_MS", "200"))
 COMPLETENESS_MIN = 0.85
 BUDDY_KM = float(os.environ.get("SKYGUARD_BUDDY_KM", "150"))
+IDW_POWER = float(os.environ.get("SKYGUARD_IDW_POWER", "2"))
 SEARCH_RADIUS_M = 80_000
 NORTH_QUOTA = 3
 WEST_QUOTA = 2

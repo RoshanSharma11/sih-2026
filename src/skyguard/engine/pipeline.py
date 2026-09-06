@@ -1,4 +1,4 @@
-"""Ingest orchestrator: persist raw, run Tier 1, record alerts."""
+"""Ingest orchestrator: persist raw, run tiers, classify, update health."""
 
 from __future__ import annotations
 
@@ -8,10 +8,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from skyguard.db.models import AnomalyAlert, Station, TelemetryLog
-from skyguard.engine.tier1 import CHANNEL_LABEL, Tier1Result, evaluate
+from skyguard.engine import health as health_mod
+from skyguard.engine.classify import Classification, classify
+from skyguard.engine.tier1 import evaluate as evaluate_tier1
+from skyguard.engine.tier3 import BuddyResult, ResidualStore, evaluate as evaluate_buddy, load_neighbors
 from skyguard.engine.windows import WindowPoint, WindowStore
 from skyguard.errors import CatalogNotLoaded, DuplicateObservation, StationNotFound
 from skyguard.schemas import (
+    Channel,
     ChannelValues,
     FaultType,
     IngestPayload,
@@ -34,6 +38,7 @@ def ingest_observation(
     payload: IngestPayload,
     catalog_ready: bool,
     windows: WindowStore,
+    residuals: ResidualStore | None = None,
 ) -> IngestResult:
     if not catalog_ready:
         raise CatalogNotLoaded("Station catalog not loaded")
@@ -46,8 +51,24 @@ def ingest_observation(
     _reject_duplicate(session, payload.station_id, timestamp)
 
     current = WindowPoint(timestamp, payload.temp_c, payload.pres_hpa, payload.rhum_pct)
-    tier1 = evaluate(current, windows.last(payload.station_id))
-    status, fault, confidence, severity, text = _classify_tier1(tier1)
+    previous = windows.last(payload.station_id)
+    tier1 = evaluate_tier1(current, previous)
+    neighbors = [] if tier1.comm_error else load_neighbors(session, station, timestamp)
+    buddy = (
+        BuddyResult()
+        if tier1.comm_error
+        else evaluate_buddy(station, current, previous, neighbors)
+    )
+    tracker = residuals if residuals is not None else ResidualStore()
+    tracker.update(payload.station_id, buddy.spatial_residual)
+    decision = classify(
+        cluster_id=station.cluster_id,
+        current=current,
+        points=[*windows.points(payload.station_id), current],
+        tier1=tier1,
+        buddy=buddy,
+        drift=tracker.drift_detected(payload.station_id),
+    )
 
     row = TelemetryLog(
         station_id=payload.station_id,
@@ -55,32 +76,40 @@ def ingest_observation(
         temp_observed=payload.temp_c,
         pres_observed=payload.pres_hpa,
         rhum_observed=payload.rhum_pct,
-        is_anomaly=status is PipelineStatus.HARDWARE,
-        pipeline_status=status.value,
+        is_anomaly=decision.pipeline_status is PipelineStatus.HARDWARE,
+        pipeline_status=decision.pipeline_status.value,
     )
     session.add(row)
     session.flush()
 
-    if status is not PipelineStatus.CLEAN:
+    contrib = _contributions(decision.fail_channel)
+    if decision.pipeline_status is not PipelineStatus.CLEAN:
         session.add(
             AnomalyAlert(
                 station_id=payload.station_id,
                 timestamp=timestamp,
-                fault_type=fault.value if fault else FaultType.UNKNOWN.value,
-                confidence_score=confidence or 0.5,
-                severity=(severity or Severity.LOW).value,
-                explainability_text=text or "Tier 1 flagged this observation.",
+                fault_type=(decision.fault_type or FaultType.UNKNOWN).value,
+                confidence_score=decision.confidence or 0.5,
+                severity=(decision.severity or Severity.LOW).value,
+                explainability_text=decision.explainability_text or "Pipeline flagged this observation.",
+                contribution_temp=contrib[Channel.TEMP_C],
+                contribution_pres=contrib[Channel.PRES_HPA],
+                contribution_rhum=contrib[Channel.RHUM_PCT],
             )
         )
+        session.flush()
 
+    health_mod.recompute(session, station, timestamp)
     windows.append(payload.station_id, current)
     return result_from_row(
         station,
         row,
-        fault_type=fault,
-        confidence=confidence,
-        severity=severity,
-        explainability_text=text,
+        classification=decision,
+        contribution=ChannelValues(
+            temp_c=contrib[Channel.TEMP_C],
+            pres_hpa=contrib[Channel.PRES_HPA],
+            rhum_pct=contrib[Channel.RHUM_PCT],
+        ),
     )
 
 
@@ -138,7 +167,14 @@ def result_from_row(
     confidence: float | None = None,
     severity: Severity | None = None,
     explainability_text: str | None = None,
+    classification: Classification | None = None,
+    contribution: ChannelValues | None = None,
 ) -> IngestResult:
+    if classification is not None:
+        fault_type = classification.fault_type
+        confidence = classification.confidence
+        severity = classification.severity
+        explainability_text = classification.explainability_text
     return IngestResult(
         station_id=station.station_id,
         timestamp=as_utc(row.timestamp),
@@ -157,7 +193,7 @@ def result_from_row(
             pres_hpa=row.pres_imputed,
             rhum_pct=row.rhum_imputed,
         ),
-        contribution_pct=ChannelValues(),
+        contribution_pct=contribution or ChannelValues(),
         mse=row.mse,
         mse_vector=ChannelValues(),
         health_score=station.health_score,
@@ -176,26 +212,12 @@ def _reject_duplicate(session: Session, station_id: str, timestamp: datetime) ->
         raise DuplicateObservation(f"{station_id} {timestamp.isoformat()}")
 
 
-def _classify_tier1(
-    tier1: Tier1Result,
-) -> tuple[PipelineStatus, FaultType | None, float | None, Severity | None, str | None]:
-    if tier1.comm_error:
-        return (
-            PipelineStatus.HARDWARE,
-            FaultType.COMM_ERROR,
-            0.99,
-            Severity.HIGH,
-            "One or more channels were null (communication or sensor gap).",
-        )
-    if tier1.range_fail or tier1.step_fail:
-        channel = tier1.fail_channel
-        label = CHANNEL_LABEL[channel] if channel else "A sensor"
-        kind = "range" if tier1.range_fail else "step"
-        return (
-            PipelineStatus.HARDWARE,
-            FaultType.SPIKE,
-            0.95,
-            Severity.HIGH,
-            f"{label} failed the {kind} check and was treated as a hardware spike.",
-        )
-    return PipelineStatus.CLEAN, None, None, None, None
+def _contributions(channel: Channel | None) -> dict[Channel, float | None]:
+    values: dict[Channel, float | None] = {
+        Channel.TEMP_C: 0.0,
+        Channel.PRES_HPA: 0.0,
+        Channel.RHUM_PCT: 0.0,
+    }
+    if channel is not None:
+        values[channel] = 100.0
+    return values

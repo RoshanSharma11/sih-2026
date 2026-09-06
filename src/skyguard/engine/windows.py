@@ -38,6 +38,9 @@ class WindowStore:
             return None
         return window[-1]
 
+    def points(self, station_id: str) -> list[WindowPoint]:
+        return list(self._windows.get(station_id, ()))
+
     def append(self, station_id: str, point: WindowPoint) -> None:
         self._windows[station_id].append(point)
 

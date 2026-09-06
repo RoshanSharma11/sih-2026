@@ -143,14 +143,15 @@ def test_seed_and_tier1_faults(tmp_path) -> None:
             "/ingest",
             json={"station_id": "42181", "timestamp": "2024-06-30T16:00:00Z", "temp_c": 65.0, "pres_hpa": 1004.0, "rhum_pct": 67.0},
         )
-        assert spike.json()["fault_type"] == "SPIKE"
+        assert spike.json()["pipeline_status"] == "UNKNOWN"
+        assert spike.json()["fault_type"] == "UNKNOWN"
 
         step = client.post(
             "/ingest",
             json={"station_id": "42181", "timestamp": "2024-06-30T17:00:00Z", "temp_c": 32.0, "pres_hpa": 1004.0, "rhum_pct": 67.0},
         )
-        # 65 → 32 is a 33°C step, also a spike
-        assert step.json()["fault_type"] == "SPIKE"
+        # lone station, no neighbor: D11 abstains instead of calling hardware
+        assert step.json()["pipeline_status"] == "UNKNOWN"
 
         clean = client.post(
             "/ingest",
