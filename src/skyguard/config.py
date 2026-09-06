@@ -15,6 +15,10 @@ PROCESSED_DIR = DATA_DIR / "processed"
 
 WINDOW_HOURS = int(os.environ.get("SKYGUARD_WINDOW", "24"))
 STREAM_MS = int(os.environ.get("SKYGUARD_STREAM_MS", "200"))
+
+
+def recon_threshold() -> float:
+    return float(os.environ.get("SKYGUARD_RECON_THRESHOLD", "inf"))
 COMPLETENESS_MIN = 0.85
 BUDDY_KM = float(os.environ.get("SKYGUARD_BUDDY_KM", "150"))
 IDW_POWER = float(os.environ.get("SKYGUARD_IDW_POWER", "2"))

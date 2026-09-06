@@ -17,6 +17,7 @@ from skyguard.db.session import create_tables, make_engine, make_session_factory
 from skyguard.engine.demo import DemoController
 from skyguard.engine.tier3 import ResidualStore
 from skyguard.engine.windows import WindowStore
+from skyguard.ml import load_detector
 
 
 def create_app(db_path: Path | None = None, stations_path: Path | None = None) -> FastAPI:
@@ -33,6 +34,7 @@ def create_app(db_path: Path | None = None, stations_path: Path | None = None) -
         app.state.windows = WindowStore()
         app.state.residuals = ResidualStore()
         app.state.demo = DemoController()
+        app.state.detector = load_detector()
         session = factory()
         try:
             if resolved_stations.exists():

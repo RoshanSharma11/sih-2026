@@ -7,8 +7,10 @@ from dataclasses import dataclass
 import numpy as np
 
 from skyguard.engine.tier1 import CHANNEL_LABEL, Tier1Result
+from skyguard.engine.tier2 import CHANNELS, Tier2Result
 from skyguard.engine.tier3 import BuddyResult
 from skyguard.engine.windows import WindowPoint
+from skyguard.ml.protocol import Reconstruction
 from skyguard.schemas import Channel, FaultType, PipelineStatus, Severity
 
 FREEZE_MIN = 6
@@ -51,6 +53,19 @@ def _dominant_residual(buddy: BuddyResult) -> Channel | None:
     return max(buddy.residual, key=lambda channel: abs(buddy.residual[channel]))
 
 
+def _dominant_mse(reconstruction: Reconstruction) -> Channel:
+    return CHANNELS[int(np.argmax(reconstruction.mse_vector))]
+
+
+def _mse_spike(reconstruction: Reconstruction) -> bool:
+    vector = np.asarray(reconstruction.mse_vector, dtype=float)
+    if vector.shape != (3,):
+        return False
+    dominant = float(vector[int(np.argmax(vector))])
+    others = float(np.mean(np.delete(vector, int(np.argmax(vector)))))
+    return dominant > 5.0 * max(others, 1e-12)
+
+
 def classify(
     *,
     cluster_id: str,
@@ -59,7 +74,12 @@ def classify(
     tier1: Tier1Result,
     buddy: BuddyResult,
     drift: bool,
+    tier2: Tier2Result | None = None,
 ) -> Classification:
+    reconstruction = None if tier2 is None else tier2.reconstruction
+    recon_over = bool(tier2 is not None and tier2.over_threshold)
+    usable_recon = reconstruction is not None and not reconstruction.skipped
+
     if tier1.comm_error:
         return Classification(
             PipelineStatus.HARDWARE,
@@ -71,7 +91,7 @@ def classify(
 
     frozen = freeze_channel(points)
     weather_like = buddy.storm_shaped or buddy.heat_shaped
-    interesting = bool(tier1.failed or frozen or drift or weather_like or buddy.large)
+    interesting = bool(tier1.failed or frozen or drift or weather_like or buddy.large or recon_over)
 
     if buddy.neighbor_count >= 1 and buddy.contemporaneous and not buddy.large and weather_like:
         residual = buddy.spatial_residual or 0.0
@@ -132,36 +152,58 @@ def classify(
             FaultType.PHYSICS_BREACH,
             0.9,
             Severity.HIGH,
-            _spike_text(channel, current, buddy, "physics breach"),
+            _spike_text(channel, current, buddy, "physics breach", reconstruction),
             fail_channel=channel,
         )
 
-    if tier1.range_fail or tier1.step_fail or buddy.large:
-        channel = tier1.fail_channel or _dominant_residual(buddy)
+    mse_spike = usable_recon and reconstruction is not None and _mse_spike(reconstruction)
+    if tier1.range_fail or tier1.step_fail or buddy.large or mse_spike or recon_over:
+        channel = tier1.fail_channel
+        if channel is None and usable_recon and reconstruction is not None:
+            channel = _dominant_mse(reconstruction)
+        if channel is None:
+            channel = _dominant_residual(buddy)
         kind = "range" if tier1.range_fail else "step" if tier1.step_fail else "spatial"
+        if recon_over or mse_spike:
+            kind = "reconstruction"
         return Classification(
             PipelineStatus.HARDWARE,
             FaultType.SPIKE,
             0.95,
             Severity.HIGH,
-            _spike_text(channel, current, buddy, kind),
+            _spike_text(channel, current, buddy, kind, reconstruction),
             fail_channel=channel,
         )
 
     return Classification(PipelineStatus.CLEAN)
 
 
-def _spike_text(channel: Channel | None, current: WindowPoint, buddy: BuddyResult, kind: str) -> str:
+def _spike_text(
+    channel: Channel | None,
+    current: WindowPoint,
+    buddy: BuddyResult,
+    kind: str,
+    reconstruction: Reconstruction | None = None,
+) -> str:
     if channel is None:
         return "A sensor failed a consistency check and was treated as a hardware spike."
     label = CHANNEL_LABEL[channel]
     observed = getattr(current, channel.value)
-    expected = buddy.idw.get(channel) if buddy.idw else None
+    expected = None
+    pct = 100.0
+    if reconstruction is not None and not reconstruction.skipped and reconstruction.mse > 0:
+        idx = CHANNELS.index(channel)
+        expected = float(reconstruction.reconstructed[idx])
+        pct = float(reconstruction.contribution_pct[idx])
+    elif buddy.idw:
+        expected = buddy.idw.get(channel)
     if expected is not None and observed is not None:
         unit = CHANNEL_UNIT[channel]
         return (
-            f"{label} contributed 100.0% of reconstruction error. "
+            f"{label} contributed {pct:.1f}% of reconstruction error. "
             f"Expected {expected:.1f}{unit} given the other sensors, but received {observed:.1f}{unit}."
         )
     check = "range" if kind == "range" else "step" if kind == "step" else "buddy"
+    if kind == "reconstruction":
+        check = "reconstruction"
     return f"{label} failed the {check} check and was treated as a hardware spike."
