@@ -1,0 +1,62 @@
+{
+  "generated_at": "2026-09-06T15:58:11Z",
+  "notes": "Only 4 stations met the 85% completeness bar. NORTH has Palam + Safdarjung; WEST has Santacruz + Colaba. Buddy check works inside each cluster.",
+  "range": {
+    "start": "2018-01-01T00:00:00",
+    "end": "2024-12-31T23:00:00"
+  },
+  "stations": [
+    {
+      "station_id": "42181",
+      "name": "New Delhi / Palam",
+      "latitude": 28.5667,
+      "longitude": 77.1167,
+      "elevation_m": 220.0,
+      "cluster_id": "NORTH",
+      "completeness": {
+        "temp_c": 0.9986,
+        "pres_hpa": 0.9932,
+        "rhum_pct": 0.9985
+      }
+    },
+    {
+      "station_id": "42182",
+      "name": "New Delhi / Safdarjung",
+      "latitude": 28.5833,
+      "longitude": 77.2,
+      "elevation_m": 211.0,
+      "cluster_id": "NORTH",
+      "completeness": {
+        "temp_c": 0.9479,
+        "pres_hpa": 0.9479,
+        "rhum_pct": 0.9479
+      }
+    },
+    {
+      "station_id": "43003",
+      "name": "Bombay / Santacruz",
+      "latitude": 19.1167,
+      "longitude": 72.85,
+      "elevation_m": 8.0,
+      "cluster_id": "WEST",
+      "completeness": {
+        "temp_c": 0.9998,
+        "pres_hpa": 0.9982,
+        "rhum_pct": 0.9998
+      }
+    },
+    {
+      "station_id": "43057",
+      "name": "Bombay / Colaba",
+      "latitude": 18.9,
+      "longitude": 72.8167,
+      "elevation_m": 10.0,
+      "cluster_id": "WEST",
+      "completeness": {
+        "temp_c": 0.9451,
+        "pres_hpa": 0.9451,
+        "rhum_pct": 0.9451
+      }
+    }
+  ]
+}
