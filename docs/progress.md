@@ -1,12 +1,12 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-06 (after Slice 5).
+Last updated: 2026-09-06 (after Slice 6).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
 ## Status
 
-**Done through Slice 5.** Next work is **Slice 6 — Tier 2 hook**.
+**Done through Slice 6.** Next work is **Slice 7 — harden for handoff**.
 
 Working tree should be clean on `main` after each slice. Latest commits:
 
@@ -20,6 +20,7 @@ Working tree should be clean on `main` after each slice. Latest commits:
 | 3 | `d16ea51` | Clean streamer |
 | 4 | `7c61604` | Cluster buddy check, classifier, health |
 | 5 | `cf19e83` | Live demo overlays on ingest |
+| 6 | `81b5937` | Detector hook + imputed overlay |
 
 ## What works
 
@@ -29,7 +30,8 @@ Working tree should be clean on `main` after each slice. Latest commits:
 - Fetch: `python -m skyguard.data.fetch` → `data/processed/stations.json` + parquet (parquet is gitignored).
 - Inject library + eval builder. Streamer does **not** take `--fault`.
 - API: `/healthz`, `/stations`, `/telemetry`, `/alerts`, `POST /ingest`, `POST /stations/{id}/seed`, `POST /demo/inject`, `POST /demo/reset`, `GET /demo/status`.
-- Pipeline: persist raw → Tier 1 → cluster IDW buddy → classify → 7-day health. No ML. `IdentityDetector` only.
+- Pipeline: persist raw → Tier 1 → `Detector.reconstruct` (full 24h, no nulls) → cluster IDW buddy → classify → 7-day health.
+- Detector is `IdentityDetector` until `MODEL_PATH` is set. `SKYGUARD_RECON_THRESHOLD` defaults to `inf`, so the stub never fires. Imputed columns are the reconstruction overlay; observed T/P/H are never overwritten.
 - Demo overlays apply `inject.apply_live` **before** detection. Storm targets a cluster; hardware targets one station. `demo_injected` is the overlay kind, not judge ground truth.
 - Storm on both stations in a cluster at the same hour → `GENUINE_WEATHER`. Lone spike vs a static neighbor → `HARDWARE` / `SPIKE`. No neighbor → `UNKNOWN` (D11). Weather alerts do not lower health.
 - Streamer: seed 24h before `demo_start` (default 2024-07-01Z), then POST every station each hour, sleep `SKYGUARD_STREAM_MS` (200). `409` is skipped, not a crash, and does not consume overlay hours.
@@ -38,8 +40,8 @@ Working tree should be clean on `main` after each slice. Latest commits:
 
 | Slice | Files | Notes |
 |---|---|---|
-| 6 | `engine/tier2.py` | No `Detector.reconstruct` on ingest. Imputed columns stay null. `SKYGUARD_RECON_THRESHOLD` default `inf` when added |
 | 7 | root README polish, OpenAPI check | Handoff to frontend/ML |
+| ML | `ml/loader.py` | `MODEL_PATH` still raises `NotImplementedError`. When weights land: load them, set a real threshold, add one integration test |
 
 Out of scope unless asked: Streamlit, LSTM training, SSE, Docker, auth.
 
@@ -79,16 +81,16 @@ If processed parquet is missing locally (gitignored): `python -m skyguard.data.f
 
 `--hours N` on the streamer stops after N weather-hours. Tests: `pytest -q`.
 
-## Next slice (6)
+## Next slice (7)
 
-1. Call `Detector.reconstruct` from the pipeline when the window is full and the latest point has no nulls.
-2. Write contribution % + imputed overlay columns. Do not overwrite observed T/P/H.
-3. Threshold from `SKYGUARD_RECON_THRESHOLD` (default `inf` so IdentityDetector never fires).
-4. When ML delivers weights: set `MODEL_PATH`, add one integration test.
-5. Commit Slice 6 before starting Slice 7.
+1. Confirm FastAPI `/docs` matches `docs/contracts.md` (no extra fields).
+2. Root README: how to fetch, run API, run stream, inject.
+3. Point frontend at the three GET shapes; point ML at parquet + `Detector` protocol.
+4. Commit Slice 7 when the handoff note is enough for the other pair to work without asking us.
 
 ## Open issues
 
 - Real Meteostat parquet may be absent on a fresh clone; fetch is slow (2018–2024 hourly).
 - A 2-minute live stream soak against real parquet was not run here; Slice 3/4 used tests + a 120-hour fixture soak.
-- If the API was started before Slice 5, restart it so `/demo/*` and overlay-on-ingest load.
+- If the API was started before Slice 6, restart it so the detector hook loads.
+- No `.pt` / ONNX file yet. Leave `MODEL_PATH` unset.
