@@ -1,0 +1,15 @@
+---
+description: Streamlit dashboard conventions
+globs: frontend/**/*.py,scripts/run_dashboard.py
+alwaysApply: false
+---
+
+# Frontend
+
+- Poll frozen REST only. Do not invent API fields. No SSE.
+- Marker color = `latest.pipeline_status` from `GET /stations/{id}`. Health is a badge.
+- `GENUINE_WEATHER` is amber, never red. Verdict text comes from `GET /alerts`.
+- Live faults go through `POST /demo/inject`. Do not call `inject.py` from Streamlit.
+- Raw observed series stay visible; imputed is an overlay.
+
+See `docs/frontend.md` and `docs/contracts.md`.

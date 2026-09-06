@@ -7,6 +7,7 @@ Required read order: `docs/README.md` → `docs/progress.md` → `docs/context.m
 - Status / handoff: `docs/progress.md`
 - Data / streamer / inject: `docs/data-simulator.md`
 - FastAPI / pipeline / SQLite: `docs/backend.md`
+- Streamlit dashboard: `docs/frontend.md`
 - Layout: `docs/architecture.md`
 - Build order: `docs/implementation-plan.md`
 
@@ -30,5 +31,5 @@ The history must stay reviewable. Do not batch a whole afternoon of work into on
 2. Fault math lives only in `skyguard.data.inject`.
 3. The streamer sends clean data. Live faults go through `/demo/inject`.
 4. Never overwrite raw observations. Imputed values are overlay columns.
-5. Do not train models or build Streamlit unless asked. Provide an `IdentityDetector` until `MODEL_PATH` is set.
+5. Do not train models unless asked. Provide an `IdentityDetector` until `MODEL_PATH` is set. Dashboard polls contracts only; do not invent API fields.
 6. Buddy check stays inside a cluster (150 km). Delhi must not validate Mumbai.

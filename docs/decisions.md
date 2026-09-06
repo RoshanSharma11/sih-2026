@@ -86,3 +86,15 @@ Use the glossary names in code:
 | Station health 0–100 | `health_score` |
 
 Meteostat columns (`temp`, `pres`, `rhum`) are mapped at the fetch boundary only.
+
+## D13 — One-page dark demo console
+
+Judges have ~30 seconds. A multi-page app hides the moat.
+
+**Lock:**
+
+- Streamlit + Plotly, custom dark ops theme (not default chrome).
+- One page: map + series + alerts + inject.
+- Marker color = latest `pipeline_status` from `GET /stations/{id}`. `health_score` is a badge. Weather is amber, never red.
+- Two hero actions: storm on NORTH, Palam `temp_c` spike. Other demo kinds live in Advanced.
+- Poll ~1 s. No new contract fields. Verdict text comes from `GET /alerts`.

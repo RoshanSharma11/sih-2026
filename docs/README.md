@@ -1,8 +1,8 @@
 # SkyGuard docs
 
-Read these before writing code. They are the source of truth for data, simulator, and backend work. If code and docs disagree, update the docs in the same change.
+Read these before writing code. They are the source of truth. If code and docs disagree, update the docs in the same change.
 
-To **fetch, run the API, stream, or inject**, use the [root README](../README.md). This folder is the design record.
+To **fetch, run the API, stream, inject, or open the dashboard**, use the [root README](../README.md). This folder is the design record.
 
 ## Read order
 
@@ -13,7 +13,8 @@ To **fetch, run the API, stream, or inject**, use the [root README](../README.md
 5. [contracts.md](contracts.md) — payloads, DB, ML interface (do not invent fields)
 6. [data-simulator.md](data-simulator.md) — fetch, inject, stream, eval set
 7. [backend.md](backend.md) — FastAPI, 3-tier engine, health
-8. [implementation-plan.md](implementation-plan.md) — build order
+8. [frontend.md](frontend.md) — Streamlit demo console
+9. [implementation-plan.md](implementation-plan.md) — build order
 
 ## Who owns what
 
@@ -26,7 +27,7 @@ To **fetch, run the API, stream, or inject**, use the [root README](../README.md
 | Tier 1 rules, Tier 3 buddy check, classifier, health | Backend | backend.md |
 | Demo inject control plane | Backend (uses inject library) | backend.md, data-simulator.md |
 | LSTM training + real `Detector` | AI/ML (not us) | contracts.md § Detector |
-| Streamlit dashboard | Frontend (not us) | contracts.md § REST |
+| Streamlit dashboard | Frontend | frontend.md, contracts.md § REST |
 | ESP32 firmware | Edge/QA (not us) | out of scope |
 
 ## Rule

@@ -32,7 +32,7 @@ Meteostat (hourly T/P/H)
               │
               │ GET /stations /telemetry /alerts
               ▼
-         Streamlit (not us)
+         Streamlit dashboard (poll ~1s)
 ```
 
 ESP32, if it appears, is a parallel publisher of the same `/ingest` payload. It is not in this pair’s critical path.
@@ -80,11 +80,16 @@ sih-2026/
       identity.py           # stub
       loader.py             # later: load .pt
   tests/
+  frontend/                 # Streamlit ops console (poll only)
+    app.py
+    api.py
+  .streamlit/config.toml
   scripts/
     fetch_stations.py
     build_evalset.py
     run_stream.py
     run_api.py
+    run_dashboard.py
 ```
 
 Do not put business logic in `scripts/`. Scripts only call package functions.

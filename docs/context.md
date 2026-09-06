@@ -10,7 +10,7 @@ Official example: one station reports 55°C + wild H/P while neighbors are norma
 
 ## What we are building (this pair)
 
-A **data engine** and a **backend QC service**:
+A **data engine**, a **backend QC service**, and the **live demo dashboard**:
 
 - Historical Indian AWS ground truth (Meteostat hourly T/P/H)
 - Synthetic fault + storm injector with labels (for training and judging)
@@ -18,10 +18,10 @@ A **data engine** and a **backend QC service**:
 - FastAPI 3-tier detector: range rules → LSTM reconstruction → spatial buddy check
 - Persist raw + imputed + alerts + health
 - Demo control so the UI can inject a storm or a broken sensor live
+- Streamlit console: map + series + alerts + inject (poll only)
 
 ## What we are not building
 
-- Streamlit / Plotly dashboard
 - Training the LSTM (we only define the `Detector` interface and ship an identity stub)
 - Full SHAP/LIME on the hot path
 - On-device neural nets on ESP32

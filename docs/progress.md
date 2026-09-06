@@ -1,14 +1,14 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-06 (after Slice 7).
+Last updated: 2026-09-06 (after F0).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
 ## Status
 
-**Done through Slice 7.** Data + backend handoff is complete. Remaining work is owned by ML (`MODEL_PATH`) and frontend (Streamlit).
+**Data + backend handed off (Slice 7).** Frontend docs locked (F0 / D13). Next: Streamlit shell (F1).
 
-Working tree should be clean on `main` after each slice. Latest commits:
+Working tree should be clean on the current branch after each slice. Latest commits:
 
 | Slice | Commit | Why |
 |---|---|---|
@@ -22,6 +22,7 @@ Working tree should be clean on `main` after each slice. Latest commits:
 | 5 | `cf19e83` | Live demo overlays on ingest |
 | 6 | `81b5937` | Detector hook + imputed overlay |
 | 7 | `de9ed33` | Root README + OpenAPI locked to contracts |
+| F0 | (this change) | Dashboard layout and poll rules locked before Streamlit code |
 
 ## What works
 
@@ -43,9 +44,9 @@ Working tree should be clean on `main` after each slice. Latest commits:
 | Owner | Files | Notes |
 |---|---|---|
 | ML | `ml/loader.py` | `MODEL_PATH` still raises `NotImplementedError`. When weights land: load them, set a real threshold, add one integration test |
-| Frontend | Streamlit | Poll `/stations`, `/telemetry`, `/alerts`. Not this pair |
+| Frontend | `frontend/` | Docs locked. App not built yet (F1–F6) |
 
-Out of scope unless asked: Streamlit, LSTM training, SSE, Docker, auth.
+Out of scope unless asked: LSTM training, SSE, Docker, auth.
 
 ## Locks that bite implementers
 
@@ -55,6 +56,7 @@ Out of scope unless asked: Streamlit, LSTM training, SSE, Docker, auth.
 - Sequential ingest: the **first** station in a storm hour may be `UNKNOWN` until a same-hour neighbor exists; the **second** is the weather call.
 - Freeze is “exactly one channel stuck for 6 hours.” Flat P+H together is not a freeze (avoids false positives on still weather).
 - Do not invent API fields. Change `docs/contracts.md` in the same change if you must.
+- Dashboard: marker color = `latest.pipeline_status`; weather is amber not red; verdict from `/alerts`; poll `/stations/{id}` rather than adding list fields.
 
 ## How to run
 
@@ -71,7 +73,7 @@ If processed parquet is missing locally (gitignored): `python -m skyguard.data.f
 
 ## Next
 
-This pair has no further implementation-plan slices. If someone asks: Streamlit, LSTM training, or loading `MODEL_PATH`.
+F1 — Streamlit shell, `frontend/api.py`, dark theme, `/healthz`. Then F2 map through F6 polish. See [frontend.md](frontend.md).
 
 ## Open issues
 

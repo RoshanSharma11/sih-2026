@@ -114,10 +114,50 @@ Do **contracts and package skeleton first**, then the two workstreams in paralle
 
 One person can take left (1a, 2a, 3), the other right (1b, 2b, 4, 5, 6), after Slice 0 together.
 
-### Definition of done for this pair
+### Definition of done for data + backend
 
-- Five stations catalogued and streamable
+- Four stations catalogued and streamable (fifth failed completeness; both clusters still have a neighbor)
 - Labeled eval set on disk
 - API implements every route in contracts
 - Demo can show **storm ≠ broken sensor** with the identity detector
 - ML and frontend can work against frozen contracts without asking us
+
+---
+
+## Frontend slices (F0–F6)
+
+Dashboard work starts after Slice 7. Contracts stay frozen. See [frontend.md](frontend.md) and D13.
+
+#### F0 — lock docs
+
+`docs/frontend.md`, D13, architecture / progress / ownership. No app code.
+
+#### F1 — app shell
+
+`frontend/api.py` + Streamlit shell, dark theme, `GET /healthz`. `pip install -e ".[ui]"`.
+
+#### F2 — map + rail
+
+India Plotly geo, four markers colored by `latest.pipeline_status`, health badge, station select.
+
+#### F3 — telemetry
+
+T / P / H observed + imputed overlay for the selected station.
+
+#### F4 — verdict + alerts
+
+Status chip + `explainability_text` from `/alerts`. Weather vs hardware styling.
+
+#### F5 — inject
+
+Hero: NORTH storm, Palam temp spike, reset. Advanced: freeze / drift / comm.
+
+#### F6 — polish
+
+1 s fragment refresh, empty/offline states, README judge script.
+
+### Definition of done for the dashboard
+
+- Judge can run API + stream + dashboard and complete the storm-then-spike script without extra APIs
+- Map colors live `pipeline_status`; weather is not red
+- No contract fields invented
