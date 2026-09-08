@@ -4,6 +4,7 @@ from pathlib import Path
 
 ML_DIR = Path(__file__).resolve().parent
 ROOT = ML_DIR.parent
+ARTIFACTS_DIR = ML_DIR / "artifacts"
 WEIGHT_CANDIDATES = (
     "lstm_autoencoder.pt",
     "lstm_autoencoder.pth",
