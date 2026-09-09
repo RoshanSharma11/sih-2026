@@ -17,7 +17,7 @@ Install: `pip install -e ".[ui]"` then `python scripts/run_dashboard.py`.
 
 ## Pages (F7 lock)
 
-Do not invent routes or API fields. Shared session: `view_ids`, `station_id`, `include_buddies`.
+Do not invent routes or API fields. Shared session: `view_ids`, `station_id`, `include_buddies`, `alert_id` (set when Open is clicked on Alerts).
 
 ```
 Operations
@@ -37,16 +37,17 @@ Default **view set**: Palam `42181` + Safdarjung `42182` + `42139` + Santacruz `
 - Header chips from `GET /healthz`: `ok`, `model_loaded`, `n_stations`.
 - KPI strip counted from `latest.label` on the **view set** only: clean / genuine weather / hardware (`PHYSICAL_FAULT` + `HARDWARE_ANOMALY`) / unconfirmed / idle (`latest` null).
 - View-set multiselect + `include_buddies`. Changing it `POST /demo/stream-filter`. Caption: ingest still includes buddies so Tier 3 can run.
-- India map of `GET /stations?ids=` (view set). Marker color from `latest.label` (fallback `pipeline_status`). Click marker sets `station_id` and switches to Station.
+- India map of `GET /stations?ids=` (view set) on a light Carto basemap. Camera fits the selected station’s cluster (so Palam / Safdarjung / Meerut are readable); distant view-set stations stay on the roster. Marker color from `latest.label` (fallback `pipeline_status`). Click marker or roster row sets `station_id` and switches to Station. Only the selected marker is labeled on the map.
 - Optional 1-hop buddy edges for stations currently in view (`GET /buddy-map` subset). Do not draw the full 388-edge graph.
+- Roster names sit beside the map because NCR markers overlap at country scale.
 - Scalability copy: 151 trained stations; live view is a handful.
 
 ### Station
 
-- Selected `station_id` from session (default Palam).
+- Selected `station_id` from session (default Palam). A station opened from Alerts is kept even if it is outside the Network view set.
 - Identity, health 0–100 + `status`, isolate / buddy chips from `buddy_ids`.
-- Verdict: latest `GET /alerts?station_id=` `explainability_text`, `fault_type`, `confidence_score`. Idle copy if `latest` is null.
-- Horizontal contribution bars: `contribution_temp` / `contribution_pres` / `contribution_rhum` (public channels T / P / H).
+- Live verdict is **this hour** from `latest.label`. Matching `GET /alerts?station_id=` row (same timestamp) supplies `explainability_text` / contribution. Do not reuse an older alert as the live verdict after the hour has gone clean.
+- Open on Alerts pins `alert_id`. Station then shows that alert’s label, explainability, contribution, and a dotted marker on the chart, with a **Show live hour** control. Health stays the 7-day index.
 - Charts: observed solid, imputed/predicted dashed. Raw series never replaced.
 - Telemetry: `GET /stations/{id}/telemetry?limit=` for the selected station only.
 
@@ -54,7 +55,7 @@ Default **view set**: Palam `42181` + Safdarjung `42182` + `42139` + Santacruz `
 
 - `GET /alerts?limit=` (optional `station_id` to match session).
 - Newest first. Amber weather vs rose hardware vs slate unconfirmed.
-- Click row focuses Station.
+- Click **Open** pins that `alert_id` and focuses Station on that hour (not the live CLEAN hour).
 
 ### Control
 
@@ -85,7 +86,7 @@ Static: three tiers (physical rules → LSTM → IDW buddies), view set vs inges
 | Font | IBM Plex Sans / IBM Plex Mono |
 | Plotly | white paper, light grid, observed solid, predicted dashed |
 
-Hide Streamlit toolbar, menu, footer, deploy. Sidebar ~260px. Layout: KPI strip, then map/charts, then tables.
+Hide Streamlit toolbar, menu, footer, deploy. Sidebar ~268px with custom `st.page_link` nav (do not restyle sidebar `*` to IBM Plex — that breaks Material icons). Layout: KPI strip, then map + roster / charts, then tables. Map height ~640px.
 
 ## Marker / verdict encoding
 

@@ -138,8 +138,7 @@ def is_hardware(status: str | None, fault_type: str | None = None) -> bool:
     return fault_type in HARDWARE_FAULTS
 
 
-def verdict_kind(station: dict[str, Any] | None, fault_type: str | None = None) -> str:
-    key = marker_key(station)
+def verdict_kind_from_key(key: str | None, fault_type: str | None = None) -> str:
     if is_weather(key, fault_type):
         return "weather"
     if is_hardware(key, fault_type):
@@ -148,9 +147,71 @@ def verdict_kind(station: dict[str, Any] | None, fault_type: str | None = None) 
         return "unknown"
     if key in {"CLEAN"}:
         return "clean"
-    if not latest_payload(station) and not pipeline_status(station):
+    if not key:
         return "idle"
     return "clean"
+
+
+def verdict_kind(station: dict[str, Any] | None, fault_type: str | None = None) -> str:
+    key = marker_key(station)
+    if not latest_payload(station) and not pipeline_status(station) and key is None:
+        return "idle"
+    return verdict_kind_from_key(key, fault_type)
+
+
+def stamp_key(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).replace(" ", "T")
+    if text.endswith("+00:00"):
+        text = text[:-6] + "Z"
+    if "." in text:
+        text = text.split(".", 1)[0]
+    if text.endswith("Z"):
+        text = text[:-1]
+    return text[:19]
+
+
+def pick_alert(alerts: list[dict[str, Any]], alert_id: Any) -> dict[str, Any] | None:
+    if alert_id is None:
+        return None
+    target = str(alert_id)
+    for row in alerts:
+        if str(row.get("alert_id")) == target:
+            return row
+    return None
+
+
+def hour_alert(alerts: list[dict[str, Any]], timestamp: Any) -> dict[str, Any] | None:
+    key = stamp_key(timestamp)
+    if not key:
+        return None
+    for row in alerts:
+        if stamp_key(row.get("timestamp")) == key:
+            return row
+    return None
+
+
+def hour_telemetry(telemetry: list[dict[str, Any]], timestamp: Any) -> dict[str, Any] | None:
+    key = stamp_key(timestamp)
+    if not key:
+        return None
+    for row in telemetry:
+        if stamp_key(row.get("timestamp")) == key:
+            return row
+    return None
+
+
+def alert_kind(alert: dict[str, Any] | None) -> str:
+    if not alert:
+        return "idle"
+    return verdict_kind_from_key(alert.get("label") or alert.get("pipeline_status"), alert.get("fault_type"))
+
+
+def alert_status_label(alert: dict[str, Any] | None) -> str:
+    if not alert:
+        return IDLE_LABEL
+    return pipeline_label(alert.get("label") or alert.get("pipeline_status"))
 
 
 def selected_station(stations: list[dict[str, Any]], station_id: str | None) -> dict[str, Any] | None:

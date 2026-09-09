@@ -10,7 +10,10 @@ from api import SkyGuardApiError, merge_station
 from chrome import (
     cached_buddy_map,
     catalog_stations,
+    focus_station,
+    fmt_value,
     get_client,
+    go_page,
     kpi_strip,
     legend,
     offline_help,
@@ -19,8 +22,8 @@ from chrome import (
     sync_stream_filter,
     view_picker,
 )
-from map_view import india_map
-from status import kpi_counts
+from map_view import india_map, offscreen_stations
+from status import kpi_counts, marker_color, short_name, status_label
 
 
 def render_network() -> None:
@@ -43,21 +46,21 @@ def render_network() -> None:
 
     page_header(
         "Network",
-        "Neighborhood weather stays amber. A lone broken sensor goes rose.",
+        "Neighbors that agree stay amber. A sensor that disagrees goes rose.",
         get_client().health(),
     )
 
-    picker, copy = st.columns([1.4, 1], gap="large")
+    picker, copy = st.columns([1.55, 1], gap="large")
     with picker:
         view_picker(catalog)
     with copy:
         st.markdown(
             """<div class="sg-card">
-            <div class="sg-kicker">151 trained stations</div>
+            <div class="sg-kicker">How to read this map</div>
             <p class="sg-caption" style="margin:0.4rem 0 0 0">
-            The live map shows a handful of stations so a judge can read markers.
-            Ingest still POSTs each selected station plus its 1-hop buddies, so a Palam-only
-            view does not starve Tier 3.
+            Color is this hour’s QC label — not health. Teal lines are 1-hop buddies.
+            Palam, Safdarjung, and Meerut sit together; Santacruz is Mumbai, so a Delhi
+            storm must not paint it. Click a marker or a row to open Station.
             </p>
             </div>""",
             unsafe_allow_html=True,
@@ -92,19 +95,60 @@ def network_live() -> None:
         f"View {len(view_ids)} · ingest {len(ingest)} "
         f"(includes 1-hop buddies so QC can still run)."
     )
-
     legend()
+
     buddies = _view_buddies(view_ids, graph)
-    event = st.plotly_chart(
-        india_map(stations, st.session_state.station_id, buddies=buddies),
-        theme=None,
-        width="stretch",
-        on_select="rerun",
-        selection_mode="points",
-        key="india_map",
-    )
+    far = offscreen_stations(stations, st.session_state.station_id)
+    map_col, list_col = st.columns([2.35, 1], gap="large")
+    with map_col:
+        event = st.plotly_chart(
+            india_map(stations, st.session_state.station_id, buddies=buddies),
+            theme=None,
+            width="stretch",
+            on_select="rerun",
+            selection_mode="points",
+            key="india_map",
+            config={"scrollZoom": True, "displayModeBar": False, "doubleClick": "reset"},
+        )
+        if far:
+            names = ", ".join(short_name(row["name"]) for row in far)
+            st.caption(f"Also in this view set, outside this zoom: {names}. Open from the list, or zoom out.")
+        else:
+            st.caption("Scroll-zoom to separate nearby NCR sites. Double-click the map to reset.")
+    with list_col:
+        _station_roster(stations)
     if _apply_map_selection(event):
-        st.switch_page("station")
+        go_page("station")
+
+
+def _station_roster(stations: list[dict[str, Any]]) -> None:
+    st.markdown("##### Stations in view")
+    st.caption("Names live here so nearby markers do not stack.")
+    selected = st.session_state.get("station_id")
+    for row in stations:
+        sid = row["station_id"]
+        name = short_name(row["name"])
+        color = marker_color(row)
+        health = fmt_value(row.get("health_score"), 0)
+        label = status_label(row)
+        cols = st.columns([0.18, 1], gap="small")
+        with cols[0]:
+            st.markdown(
+                f'<div class="sg-dot" style="width:0.85rem;height:0.85rem;margin-top:0.7rem;background:{color}"></div>',
+                unsafe_allow_html=True,
+            )
+        with cols[1]:
+            clicked = st.button(
+                f"{name} · {label}",
+                key=f"roster_{sid}",
+                width="stretch",
+                type="primary" if sid == selected else "secondary",
+                help=f"{sid} · health {health}",
+            )
+            st.caption(f"{sid} · health {health}")
+        if clicked:
+            focus_station(sid)
+            go_page("station")
 
 
 def _view_buddies(view_ids: list[str], graph: dict[str, Any]) -> dict[str, list[str]]:
@@ -122,15 +166,21 @@ def _view_buddies(view_ids: list[str], graph: dict[str, Any]) -> dict[str, list[
 def _apply_map_selection(event: Any) -> bool:
     selection = getattr(event, "selection", None)
     points = getattr(selection, "points", None) if selection is not None else None
-    if not points:
+    custom = None
+    if points:
+        point = points[0]
+        custom = point.get("customdata") if isinstance(point, dict) else None
+        if custom is None and not isinstance(point, dict):
+            custom = getattr(point, "customdata", None)
+        if isinstance(custom, (list, tuple)):
+            custom = custom[0] if custom else None
+    sid = str(custom) if custom else None
+    if not st.session_state.get("_map_armed"):
+        st.session_state._map_armed = True
+        st.session_state._map_pick = sid
         return False
-    point = points[0]
-    custom = point.get("customdata") if isinstance(point, dict) else None
-    if custom is None and not isinstance(point, dict):
-        custom = getattr(point, "customdata", None)
-    if isinstance(custom, (list, tuple)):
-        custom = custom[0] if custom else None
-    if not custom:
+    if not sid or st.session_state.get("_map_pick") == sid:
         return False
-    st.session_state.station_id = str(custom)
+    st.session_state._map_pick = sid
+    focus_station(sid)
     return True

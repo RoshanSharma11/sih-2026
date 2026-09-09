@@ -21,7 +21,13 @@ CONTRIBUTION = (
 )
 
 
-def channel_figure(telemetry: list[dict[str, Any]], observed_key: str, imputed_key: str, title: str) -> go.Figure:
+def channel_figure(
+    telemetry: list[dict[str, Any]],
+    observed_key: str,
+    imputed_key: str,
+    title: str,
+    mark_at: Any | None = None,
+) -> go.Figure:
     stamps = [row.get("timestamp") for row in telemetry]
     observed = [row.get(observed_key) for row in telemetry]
     imputed = [row.get(imputed_key) for row in telemetry]
@@ -60,11 +66,24 @@ def channel_figure(telemetry: list[dict[str, Any]], observed_key: str, imputed_k
         yaxis=dict(gridcolor=GRID, zeroline=False, showline=False, color=MUTED),
         hovermode="x unified",
     )
+    if mark_at is not None:
+        fig.add_vline(
+            x=mark_at,
+            line_dash="dot",
+            line_color=MUTED,
+            line_width=1,
+            annotation_text="Pinned alert",
+            annotation_position="top",
+            annotation_font=dict(size=10, color=MUTED),
+        )
     return fig
 
 
-def telemetry_figures(telemetry: list[dict[str, Any]]) -> list[go.Figure]:
-    return [channel_figure(telemetry, observed, imputed, title) for observed, imputed, title, _unit in CHANNELS]
+def telemetry_figures(telemetry: list[dict[str, Any]], mark_at: Any | None = None) -> list[go.Figure]:
+    return [
+        channel_figure(telemetry, observed, imputed, title, mark_at=mark_at)
+        for observed, imputed, title, _unit in CHANNELS
+    ]
 
 
 def contribution_html(alert: dict[str, Any] | None) -> str:

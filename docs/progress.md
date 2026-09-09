@@ -1,6 +1,6 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-09 (F11: Guide + polish. Frontend rewrite shipped).
+Last updated: 2026-09-09 (Network map + sidebar polish).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -43,7 +43,7 @@ Next: demo rehearsal (API + Palam stream + dashboard). No further frontend slice
 - Missing artifacts → persist anyway, `UNCONFIRMED_ANOMALY`. No 24h window → same.
 - Streamer: `--stations 42181 --with-buddies` (default true) seeds/POSTs the ingest set. CLI overrides `GET /demo/stream-filter`. Empty filter = full catalog.
 - Demo inject: `target=neighborhood` expands via the buddy graph. `target=cluster` is 400.
-- Dashboard: five-page light console (Network, Station, Alerts, Control, Guide). Default view Palam∪buddies + Santacruz. Hero on Control.
+- Dashboard: five-page light console (Network, Station, Alerts, Control, Guide). Default view Palam∪buddies + Santacruz. Hero on Control. Network map is a Carto tile view that zooms to the selected cluster; names sit in a roster. Alerts **Open** pins that hour on Station.
 - ML standalone: `ml/ml/main.py` remains eval-only. Do not point the dashboard at 8001.
 - Tests: D18 mapping is unit-tested; live ingest covers two-buddy T3, isolate/one-buddy → `UNCONFIRMED_ANOMALY`, weather does not lower health. IdentityDetector / NORTH live-path tests are skipped. Engine integration skips when artifacts are missing.
 

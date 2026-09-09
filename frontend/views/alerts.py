@@ -9,7 +9,9 @@ import streamlit as st
 from api import SkyGuardApiError
 from chrome import (
     catalog_stations,
+    focus_station,
     get_client,
+    go_page,
     offline_help,
     page_header,
     show_flash,
@@ -73,6 +75,11 @@ def _alert_row(row: dict[str, Any], names: dict[str, str]) -> None:
             unsafe_allow_html=True,
         )
     with right:
-        if st.button("Open", key=f"alert_{row.get('alert_id')}_{sid}", width="stretch"):
-            st.session_state.station_id = sid
-            st.switch_page("station")
+        if st.button(
+            "Open",
+            key=f"alert_{row.get('alert_id')}_{sid}",
+            width="stretch",
+            help="Show this hour on Station, even if the live hour is already clean.",
+        ):
+            focus_station(sid, alert_id=row.get("alert_id"))
+            go_page("station")

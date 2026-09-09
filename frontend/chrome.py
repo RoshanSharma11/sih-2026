@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import streamlit as st
@@ -9,6 +10,11 @@ import streamlit as st
 from api import SkyGuardApiError, SkyGuardClient
 from status import short_name
 from theme import CLEAN, HARDWARE, SLATE, WEATHER, CSS
+
+_PAGES: dict[str, Any] = {}
+_ASSETS = Path(__file__).resolve().parent / "assets"
+_WORDMARK = _ASSETS / "skyguard-wordmark.svg"
+_MARK = _ASSETS / "skyguard-mark.svg"
 
 PALAM = "42181"
 SAFDARJUNG = "42182"
@@ -22,17 +28,60 @@ HERO_SPIKE = {"target": "station", "station_id": PALAM, "kind": "SPIKE", "channe
 
 def inject_theme() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
-    st.sidebar.markdown(
-        """<div class="sg-brand">
-        <div class="sg-brand-mark">SIH PS 26073</div>
-        <div class="sg-brand-name">SkyGuard AI</div>
-        <div class="sg-brand-sub">Live QC for Indian AWS</div>
-        </div>""",
-        unsafe_allow_html=True,
-    )
+    if _WORDMARK.exists():
+        st.logo(str(_WORDMARK), icon_image=str(_MARK) if _MARK.exists() else None, size="large")
+
+
+def render_sidebar(
+    operations: list[Any],
+    demo: list[Any],
+    guide: list[Any],
+) -> None:
+    with st.sidebar:
+        st.markdown(
+            '<p class="sg-brand-sub">Live QC for Indian AWS</p>',
+            unsafe_allow_html=True,
+        )
+        st.markdown('<div class="sg-nav-section">Operations</div>', unsafe_allow_html=True)
+        for page in operations:
+            st.page_link(page, width="stretch")
+        st.markdown('<div class="sg-nav-section">Demo</div>', unsafe_allow_html=True)
+        for page in demo:
+            st.page_link(page, width="stretch")
+        st.markdown('<div class="sg-nav-section">Guide</div>', unsafe_allow_html=True)
+        for page in guide:
+            st.page_link(page, width="stretch")
+        st.markdown(
+            """<div class="sg-sidebar-foot">
+            <strong>SIH PS 26073</strong><br>
+            151-station catalog · buddy graph QC
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+
+def register_pages(pages: dict[str, Any]) -> None:
+    _PAGES.update(pages)
+    st.session_state["_pages"] = dict(pages)
+
+
+def go_page(name: str) -> None:
+    page = _PAGES.get(name) or (st.session_state.get("_pages") or {}).get(name)
+    if page is None:
+        raise RuntimeError(f"Unknown page {name!r}. Register it in app.py.")
+    st.switch_page(page)
+
+
+def focus_station(station_id: str, alert_id: Any | None = None) -> None:
+    st.session_state.station_id = str(station_id)
+    st.session_state.alert_id = alert_id
+    st.session_state._keep_alert_pin = alert_id is not None
 
 
 def init_session() -> None:
+    saved = st.session_state.get("_pages")
+    if saved and not _PAGES:
+        _PAGES.update(saved)
     if "view_ids" not in st.session_state:
         st.session_state.view_ids = list(DEFAULT_VIEW)
     if "station_id" not in st.session_state:
@@ -43,6 +92,8 @@ def init_session() -> None:
         st.session_state.flash = None
     if "alerts_station_only" not in st.session_state:
         st.session_state.alerts_station_only = False
+    if "alert_id" not in st.session_state:
+        st.session_state.alert_id = None
 
 
 @st.cache_resource
@@ -122,7 +173,7 @@ def page_header(title: str, subtitle: str, health: dict[str, Any] | None = None)
                 chips.append(f'<span class="sg-chip">{n_stations} stations</span>')
         else:
             chips.append('<span class="sg-chip sg-chip-bad">API down</span>')
-        st.markdown("".join(chips), unsafe_allow_html=True)
+        st.markdown(f'<div class="sg-health">{"".join(chips)}</div>', unsafe_allow_html=True)
 
 
 def kpi_strip(counts: dict[str, int]) -> None:
@@ -134,7 +185,8 @@ def kpi_strip(counts: dict[str, int]) -> None:
         ("Waiting", counts.get("idle", 0), SLATE),
     )
     cells = "".join(
-        f'<div class="sg-kpi"><div class="sg-kpi-label">{label}</div>'
+        f'<div class="sg-kpi" style="border-top-color:{color}">'
+        f'<div class="sg-kpi-label">{label}</div>'
         f'<div class="sg-kpi-value" style="color:{color}">{value}</div></div>'
         for label, value, color in items
     )
@@ -190,7 +242,8 @@ def view_picker(catalog: list[dict[str, Any]]) -> None:
         on_change=sync_stream_filter,
     )
     st.markdown(
-        '<p class="sg-caption">Live map is a filtered view of 151 trained stations. '
+        '<p class="sg-caption">Map and charts show this handful of stations. '
+        "Neighbors still stream in the background so buddy QC can run. "
         "A CLI <code>--stations</code> streamer overrides this filter.</p>",
         unsafe_allow_html=True,
     )

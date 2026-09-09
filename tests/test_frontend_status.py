@@ -53,6 +53,32 @@ def test_kpi_counts_split_weather_and_idle() -> None:
     assert counts == {"clean": 1, "weather": 1, "hardware": 1, "unconfirmed": 1, "idle": 1}
 
 
+def test_pick_alert_and_hour_match() -> None:
+    from status import alert_kind, hour_alert, pick_alert, stamp_key
+
+    alerts = [
+        {
+            "alert_id": 12,
+            "timestamp": "2024-07-01T14:00:00Z",
+            "label": "UNCONFIRMED_ANOMALY",
+            "fault_type": "UNKNOWN",
+        },
+        {
+            "alert_id": 9,
+            "timestamp": "2024-07-01T10:00:00+00:00",
+            "label": "HARDWARE_ANOMALY",
+            "fault_type": "SPIKE",
+        },
+    ]
+    assert pick_alert(alerts, 12)["label"] == "UNCONFIRMED_ANOMALY"
+    assert pick_alert(alerts, "9")["fault_type"] == "SPIKE"
+    assert pick_alert(alerts, 99) is None
+    assert stamp_key("2024-07-01T14:00:00Z") == stamp_key("2024-07-01 14:00:00+00:00")
+    assert hour_alert(alerts, "2024-07-01T14:00:00")["alert_id"] == 12
+    assert alert_kind(alerts[0]) == "unknown"
+    assert alert_kind(alerts[1]) == "hardware"
+
+
 def test_merge_station_reads_latest_pipeline_status() -> None:
     summary = {
         "station_id": "42181",

@@ -21,11 +21,9 @@ def render_guide() -> None:
 Raw temperature, pressure, and humidity stay on the chart. The dashed line is a reconstruction overlay, not a rewrite.</p>
 
 <h3>Three tiers (one engine)</h3>
-<ol>
-<li><strong>Physical rules</strong> — impossible range, stuck values, missing channels. Hard fail is a physical fault.</li>
-<li><strong>LSTM autoencoder</strong> — last 24 hours. Unusual reconstruction error is a candidate anomaly, including real weather.</li>
-<li><strong>Buddy check</strong> — inverse-distance weights on the ML graph, not NORTH/WEST. Needs <strong>two</strong> usable neighbors at the same hour. If they agree, it is genuine weather (amber, health unchanged). If they disagree, it is hardware (rose).</li>
-</ol>
+<div class="sg-tier"><div class="sg-tier-n">1</div><div><strong>Physical rules</strong> — impossible range, stuck values, missing channels. Hard fail is a physical fault.</div></div>
+<div class="sg-tier"><div class="sg-tier-n">2</div><div><strong>LSTM autoencoder</strong> — last 24 hours. Unusual reconstruction error is a candidate anomaly, including real weather.</div></div>
+<div class="sg-tier"><div class="sg-tier-n">3</div><div><strong>Buddy check</strong> — inverse-distance weights on the ML graph, not NORTH/WEST. Needs <strong>two</strong> usable neighbors at the same hour. If they agree, it is genuine weather (amber, health unchanged). If they disagree, it is hardware (rose).</div></div>
 <p>Isolates and one-buddy hours skip tier 3 and land <strong>unconfirmed</strong> (slate). Honesty over a fake spatial call.</p>
 
 <h3>View set vs ingest set</h3>
