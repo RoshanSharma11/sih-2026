@@ -1,6 +1,6 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-06 (after F6).
+Last updated: 2026-09-08 (ML eval script; streamer unchanged).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -33,6 +33,7 @@ Working tree should be clean on the current branch after each slice. Latest comm
   - WEST: `43003` Santacruz, `43057` Colaba
 - Fetch: `python -m skyguard.data.fetch` → `data/processed/stations.json` + parquet (parquet is gitignored).
 - Inject library + eval builder. Streamer does **not** take `--fault`.
+- ML eval helper: send `scripts/simulate_corruption_eval.py` (standalone; pandas/numpy/matplotlib). Streamer unchanged.
 - API: `/healthz`, `/stations`, `/telemetry`, `/alerts`, `POST /ingest`, `POST /stations/{id}/seed`, `POST /demo/inject`, `POST /demo/reset`, `GET /demo/status`. OpenAPI at `/docs` matches `docs/contracts.md`.
 - Pipeline: persist raw → Tier 1 → `Detector.reconstruct` (full 24h, no nulls) → cluster IDW buddy → classify → 7-day health.
 - Detector is `IdentityDetector` until `MODEL_PATH` is set. `SKYGUARD_RECON_THRESHOLD` defaults to `inf`, so the stub never fires. Imputed columns are the reconstruction overlay; observed T/P/H are never overwritten.
@@ -75,7 +76,7 @@ If processed parquet is missing locally (gitignored): `python -m skyguard.data.f
 
 ## Next
 
-ML: implement `load_detector` when a `.pt` / ONNX file exists. Dashboard is ready to poll.
+ML: send `scripts/simulate_corruption_eval.py`. Implement `load_detector` when a `.pt` / ONNX file exists. Dashboard is ready to poll.
 
 ## Open issues
 

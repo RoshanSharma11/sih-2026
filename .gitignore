@@ -15,5 +15,8 @@ build/
 data/raw/
 data/processed/*.parquet
 data/eval/*.parquet
+data/eval/*.png
+data/eval/*.json
+data/eval/*.csv
 data/skyguard.db
 *.db

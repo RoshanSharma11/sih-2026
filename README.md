@@ -37,6 +37,12 @@ If parquet is already on disk, skip fetch. Rebuild the labeled eval set (also gi
 python -m skyguard.data.evalset
 ```
 
+LSTM eval set — send `scripts/simulate_corruption_eval.py`. Clean CSV in; labeled eval CSV + graph out. **Do not train on that CSV.**
+
+```text
+python scripts/simulate_corruption_eval.py --clean test_2024.csv --out ./eval_out
+```
+
 ## Run the API and the clean stream
 
 `python -m skyguard.api.main` only imports the app and exits. Use the script:
@@ -113,6 +119,12 @@ Poll shapes (frozen in [docs/contracts.md](docs/contracts.md)). No SSE. The dash
 ## ML
 
 Train only on complete windows from `data/processed/{station_id}.clean.parquet` (or drop-null rows from `{station_id}.parquet`). **Do not train on** `data/eval/labeled.parquet` — that file is labeled evaluation (10k rows, 15% injected).
+
+To build a labeled **eval** CSV (injected faults + graph), send ML **one file**: `scripts/simulate_corruption_eval.py`. **Do not train on that CSV** — train on `*.clean.parquet`.
+
+```text
+python scripts/simulate_corruption_eval.py --clean test_2024.csv --out ./eval_out
+```
 
 Implement `Detector` against [docs/contracts.md](docs/contracts.md) § Detector (`src/skyguard/ml/protocol.py`):
 

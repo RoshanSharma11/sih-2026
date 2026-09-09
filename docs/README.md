@@ -4,6 +4,8 @@ Read these before writing code. They are the source of truth. If code and docs d
 
 To **fetch, run the API, stream, inject, or open the dashboard**, use the [root README](../README.md). This folder is the design record.
 
+Implemented backend + simulator (purpose and how they work): [backend-simulator-summary.md](backend-simulator-summary.md).
+
 ## Read order
 
 1. [progress.md](progress.md) — what is built, what is next (handoff)
@@ -15,6 +17,7 @@ To **fetch, run the API, stream, inject, or open the dashboard**, use the [root 
 7. [backend.md](backend.md) — FastAPI, 3-tier engine, health
 8. [frontend.md](frontend.md) — Streamlit demo console
 9. [implementation-plan.md](implementation-plan.md) — build order
+10. [backend-simulator-summary.md](backend-simulator-summary.md) — what shipped in data + API, and why
 
 ## Who owns what
 

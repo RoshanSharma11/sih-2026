@@ -57,6 +57,7 @@ sih-2026/
       catalog.py
       inject.py             # ONLY fault math
       evalset.py
+      ml_eval.py            # shim → scripts/simulate_corruption_eval.py
       stream.py
     api/
       main.py
@@ -87,12 +88,14 @@ sih-2026/
   scripts/
     fetch_stations.py
     build_evalset.py
+    eval_model.py
+    simulate_corruption_eval.py   # standalone file to send ML
     run_stream.py
     run_api.py
     run_dashboard.py
 ```
 
-Do not put business logic in `scripts/`. Scripts only call package functions.
+Do not put business logic in `scripts/` except `simulate_corruption_eval.py`, which is a copyable ML drop (no package import).
 
 ## Request path (`POST /ingest`)
 

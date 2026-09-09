@@ -1,0 +1,5 @@
+/venv/*
+/analysis/*
+/helper_docs/
+__pycache__/
+/data/raw/

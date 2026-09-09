@@ -110,6 +110,20 @@ fault_type, channel, is_anomaly
 
 Never train the autoencoder on the eval file. Train on `*.clean.parquet` only.
 
+## ML eval script (does not change the streamer)
+
+Send **one file** to ML: [`scripts/simulate_corruption_eval.py`](../scripts/simulate_corruption_eval.py).
+
+It does not import SkyGuard and does not change the live simulator. Needs pandas, numpy, matplotlib.
+
+**This output is an eval set. Do not train on it.** Train on clean hours (`*.clean.parquet`).
+
+```text
+python scripts/simulate_corruption_eval.py --clean test_2024.csv --out ./eval_out
+```
+
+Writes `labeled_eval_seed42.csv` (original + corrupted + `fault_type`) and a PNG of the mix / traces. Notebook: `simulate_corruption(test_clean, seed=42)`.
+
 ## Streamer
 
 `scripts/run_stream.py` / `skyguard.data.stream`
