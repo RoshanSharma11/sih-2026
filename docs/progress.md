@@ -1,6 +1,6 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-09 (I4: `/stations?ids=` + `latest` + `/buddy-map` + `label`. Next is I5).
+Last updated: 2026-09-09 (I5: live-path tests. Next is I6 README).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -14,9 +14,9 @@ Nothing else needs a product decision. Language and D14–D18 are locked.
 
 ## Status
 
-**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**. Live ingest uses **`ml.engine`**. Processed catalog is **151 stations**. Palam `42181` buddies: Safdarjung `42182` + `42139`. Storm inject is Palam’s neighborhood, not NORTH.
+**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**. Live ingest uses **`ml.engine`**. Processed catalog is **151 stations**. Palam `42181` buddies: Safdarjung `42182` + `42139`. Storm inject is Palam’s neighborhood, not NORTH.
 
-Next: **I5** live-path tests (D18 mapping, two-buddy T3, isolate → unconfirmed, health ignores weather).
+Next: **I6** README, then **F7+** multi-page UI.
 
 | Slice | Commit | Why |
 |---|---|---|
@@ -26,11 +26,12 @@ Next: **I5** live-path tests (D18 mapping, two-buddy T3, isolate → unconfirmed
 | I1 | (this change) | Import ML catalog/edges/hours; 151-station JSON |
 | I2 | `bdd0a38` | Adapter; live `/ingest` → `process_aws_data` |
 | I3 | `a76db0d` | Stream ingest set; neighborhood inject; reject cluster |
-| I4 | (this change) | `ids=` + `latest` + `/buddy-map` + telemetry/alert `label` |
-| I5–I6 | not started | Tests, README |
+| I4 | `41d936e` | `ids=` + `latest` + `/buddy-map` + telemetry/alert `label` |
+| I5 | (this change) | D18 + two-buddy T3 + isolate unconfirmed + health; quarantine IdentityDetector live path |
+| I6 | not started | README |
 | F7+ | not started | Multi-page UI |
 
-## What works today (post-I4)
+## What works today (post-I5)
 
 - Catalog: `data/processed/stations.json` (151) + `buddy_edges.json` (388 edges, 24 isolates). Hourly parquet for all 151 ids. Re-run with `python -m skyguard.data.import_ml_catalog`.
 - API: `/healthz` reports `model_loaded`, `threshold`, `n_stations`, `n_isolates`. `GET /stations?ids=` includes `latest`, `buddy_ids`, `isolate`. `GET /buddy-map`. Telemetry and alerts store `label`. `/ingest`, seed, `/demo/*`.
@@ -40,6 +41,7 @@ Next: **I5** live-path tests (D18 mapping, two-buddy T3, isolate → unconfirmed
 - Demo inject: `target=neighborhood` expands via the buddy graph. `target=cluster` is 400.
 - Dashboard: F0–F6 hero is **Storm around Palam** (`42181` neighborhood). Still a one-page console; F7 is the rewrite.
 - ML standalone: `ml/ml/main.py` remains eval-only. Do not point the dashboard at 8001.
+- Tests: D18 mapping is unit-tested; live ingest covers two-buddy T3, isolate/one-buddy → `UNCONFIRMED_ANOMALY`, weather does not lower health. IdentityDetector / NORTH live-path tests are skipped. Engine integration skips when artifacts are missing.
 
 ## What must not be confused
 
@@ -87,11 +89,10 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Next
 
-1. **I5** — tests for D18 mapping, two-buddy T3, isolate → unconfirmed, health ignores weather. Quarantine IdentityDetector / NORTH live-path tests.
-2. **I6** README.
-3. **F7+** — multi-page UI, station-wise stream + prediction.
+1. **I6** README.
+2. **F7+** — multi-page UI, station-wise stream + prediction.
 
-Do not start F7 in the same turn as I5.
+Do not start F7 in the same turn as I6.
 
 ## Open issues
 

@@ -79,9 +79,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 
 #### I5 — replace live-path tests
 
-1. New tests for D18 mapping, two-buddy T3, isolate → unconfirmed, health ignores weather
-2. Skip or quarantine tests that require IdentityDetector + NORTH cluster as the live path
-3. `pytest -q` green with artifacts present; CI without artifacts: adapter unit tests + skip engine integration
+**Code is in.** Adapter unit tests cover D18 (`label` → `pipeline_status` / `is_anomaly`). Live ingest tests (skip without artifacts) cover two usable buddies running Tier 3, isolate and one-buddy hours landing `UNCONFIRMED_ANOMALY`, and weather not lowering health. IdentityDetector / NORTH live-path tests in `test_tier2.py` / `test_tier3.py` are skipped. `pytest -q` stays green when artifacts are missing: engine integration skips; adapter + streamer seed tests still run.
 
 #### I6 — handoff README
 

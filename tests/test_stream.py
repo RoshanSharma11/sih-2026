@@ -139,8 +139,12 @@ def test_stream_seeds_then_ingests_and_skips_duplicates(tmp_path) -> None:
         assert len(rows) == 26
         live = [row for row in rows if row["timestamp"].startswith("2024-07-01")]
         assert len(live) == 2
-        assert all(row["pipeline_status"] == "CLEAN" for row in live)
-        assert client.get("/alerts").json() == []
+        if client.get("/healthz").json().get("model_loaded"):
+            assert all(row["pipeline_status"] == "CLEAN" for row in live)
+            assert client.get("/alerts").json() == []
+        else:
+            assert all(row["label"] == "UNCONFIRMED_ANOMALY" for row in live)
+            assert all(row["pipeline_status"] == "UNKNOWN" for row in live)
 
         again = run(
             client=client,

@@ -1,3 +1,5 @@
+"""Legacy IdentityDetector stub — not the live ingest path (I5 / D16)."""
+
 import numpy as np
 import pytest
 from pydantic import ValidationError

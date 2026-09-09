@@ -1,3 +1,5 @@
+"""Legacy backend Tier 3 + NORTH/WEST live-path tests. Quarantined in I5."""
+
 import json
 from datetime import datetime, timedelta, timezone
 

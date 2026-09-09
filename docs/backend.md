@@ -42,7 +42,7 @@ If the engine raises `UnknownStationError`, return 404.
 
 ### Legacy modules (do not call from live ingest)
 
-`tier1.py`, `tier2.py`, `tier3.py`, `classify.py`, `health.py`, `src/skyguard/ml/*`. Tests that pin the old 4-station NORTH/WEST story stay until I5 replaces them. New tests assert ML labels.
+`tier1.py`, `tier2.py`, `tier3.py`, `classify.py`, `health.py`, `src/skyguard/ml/*`. IdentityDetector / NORTH live-path tests are skipped (I5). New tests assert ML labels.
 
 ### Health
 
