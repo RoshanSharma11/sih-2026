@@ -1,6 +1,6 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-09 (I3: stream `--stations`/`--with-buddies` + neighborhood inject. Next is I4).
+Last updated: 2026-09-09 (I4: `/stations?ids=` + `latest` + `/buddy-map` + `label`. Next is I5).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -14,9 +14,9 @@ Nothing else needs a product decision. Language and D14–D18 are locked.
 
 ## Status
 
-**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**. Live ingest uses **`ml.engine`**. Processed catalog is **151 stations**. Palam `42181` buddies: Safdarjung `42182` + `42139`. Storm inject is Palam’s neighborhood, not NORTH.
+**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**. Live ingest uses **`ml.engine`**. Processed catalog is **151 stations**. Palam `42181` buddies: Safdarjung `42182` + `42139`. Storm inject is Palam’s neighborhood, not NORTH.
 
-Next: **I4** query APIs (`GET /stations?ids=`, `latest`, `/buddy-map`). Stream-filter routes already exist from I3.
+Next: **I5** live-path tests (D18 mapping, two-buddy T3, isolate → unconfirmed, health ignores weather).
 
 | Slice | Commit | Why |
 |---|---|---|
@@ -25,14 +25,15 @@ Next: **I4** query APIs (`GET /stations?ids=`, `latest`, `/buddy-map`). Stream-f
 | I0 | (docs in tree) | ML owns QC; 151 catalog; view vs ingest filter |
 | I1 | (this change) | Import ML catalog/edges/hours; 151-station JSON |
 | I2 | `bdd0a38` | Adapter; live `/ingest` → `process_aws_data` |
-| I3 | (this change) | Stream ingest set; neighborhood inject; reject cluster |
-| I4–I6 | not started | Query APIs, tests, README |
+| I3 | `a76db0d` | Stream ingest set; neighborhood inject; reject cluster |
+| I4 | (this change) | `ids=` + `latest` + `/buddy-map` + telemetry/alert `label` |
+| I5–I6 | not started | Tests, README |
 | F7+ | not started | Multi-page UI |
 
-## What works today (post-I3)
+## What works today (post-I4)
 
 - Catalog: `data/processed/stations.json` (151) + `buddy_edges.json` (388 edges, 24 isolates). Hourly parquet for all 151 ids. Re-run with `python -m skyguard.data.import_ml_catalog`.
-- API: `/healthz` reports `model_loaded`, `threshold`, `n_stations`, `n_isolates`. `/stations`, `/telemetry`, `/alerts`, `POST /ingest`, seed, `/demo/*`.
+- API: `/healthz` reports `model_loaded`, `threshold`, `n_stations`, `n_isolates`. `GET /stations?ids=` includes `latest`, `buddy_ids`, `isolate`. `GET /buddy-map`. Telemetry and alerts store `label`. `/ingest`, seed, `/demo/*`.
 - Live QC: `engine/adapter.py` maps public fields ↔ ML; `pipeline.py` persists raw, calls `process_aws_data`, writes overlay/alert/health. Legacy `skyguard.engine.tier*` is not on this path.
 - Missing artifacts → persist anyway, `UNCONFIRMED_ANOMALY`. No 24h window → same.
 - Streamer: `--stations 42181 --with-buddies` (default true) seeds/POSTs the ingest set. CLI overrides `GET /demo/stream-filter`. Empty filter = full catalog.
@@ -86,11 +87,11 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Next
 
-1. **I4** — `GET /stations?ids=` + `latest`; `GET /buddy-map`; `telemetry_logs.label`. Stream-filter routes already shipped in I3.
-2. **I5** — tests; **I6** README.
+1. **I5** — tests for D18 mapping, two-buddy T3, isolate → unconfirmed, health ignores weather. Quarantine IdentityDetector / NORTH live-path tests.
+2. **I6** README.
 3. **F7+** — multi-page UI, station-wise stream + prediction.
 
-Do not start F7 in the same turn as I4.
+Do not start F7 in the same turn as I5.
 
 ## Open issues
 

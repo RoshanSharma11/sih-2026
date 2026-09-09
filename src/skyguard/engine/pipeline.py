@@ -27,6 +27,7 @@ from skyguard.schemas import (
     IngestPayload,
     IngestResult,
     Label,
+    LatestSnapshot,
     PipelineStatus,
     SeedObservation,
     Severity,
@@ -81,6 +82,7 @@ def ingest_observation(
             pres_observed=observed.pres_hpa,
             rhum_observed=observed.rhum_pct,
             is_anomaly=False,
+            label=Label.CLEAN.value,
             pipeline_status=PipelineStatus.UNKNOWN.value,
         )
         session.add(row)
@@ -113,6 +115,7 @@ def ingest_observation(
                 AnomalyAlert(
                     station_id=payload.station_id,
                     timestamp=timestamp,
+                    label=mapped["label"].value,
                     fault_type=(mapped["fault_type"] or FaultType.UNKNOWN).value,
                     confidence_score=mapped["confidence"] or 0.0,
                     severity=(mapped["severity"] or Severity.LOW).value,
@@ -177,6 +180,7 @@ def seed_station(
                 pres_observed=item.pres_hpa,
                 rhum_observed=item.rhum_pct,
                 is_anomaly=False,
+                label=Label.CLEAN.value,
                 pipeline_status=PipelineStatus.CLEAN.value,
             )
         )
@@ -211,10 +215,16 @@ def result_from_row(
         confidence = classification.confidence
         severity = classification.severity
         explainability_text = classification.explainability_text
+    resolved_label = label
+    if resolved_label is None and row.label:
+        try:
+            resolved_label = Label(row.label)
+        except ValueError:
+            resolved_label = None
     return IngestResult(
         station_id=station.station_id,
         timestamp=as_utc(row.timestamp),
-        label=label,
+        label=resolved_label,
         pipeline_status=PipelineStatus(row.pipeline_status),
         fault_type=fault_type,
         confidence=confidence,
@@ -243,6 +253,30 @@ def result_from_row(
     )
 
 
+def latest_snapshot_from_row(row: TelemetryLog) -> LatestSnapshot:
+    label = None
+    if row.label:
+        try:
+            label = Label(row.label)
+        except ValueError:
+            label = None
+    return LatestSnapshot(
+        timestamp=as_utc(row.timestamp),
+        label=label,
+        pipeline_status=PipelineStatus(row.pipeline_status),
+        observed=ChannelValues(
+            temp_c=row.temp_observed,
+            pres_hpa=row.pres_observed,
+            rhum_pct=row.rhum_observed,
+        ),
+        imputed=ChannelValues(
+            temp_c=row.temp_imputed,
+            pres_hpa=row.pres_imputed,
+            rhum_pct=row.rhum_imputed,
+        ),
+    )
+
+
 def _run_qc(qc_engine, payload: dict) -> dict:
     if qc_engine is None:
         return dict(UNCONFIRMED_FALLBACK)
@@ -261,6 +295,7 @@ def _apply_overlay(row: TelemetryLog, station: Station, mapped: dict) -> None:
     row.rhum_imputed = mapped["imputed"].rhum_pct
     row.is_anomaly = mapped["is_anomaly"]
     row.pipeline_status = mapped["pipeline_status"].value
+    row.label = mapped["label"].value
     row.mse = mapped["mse"]
     station.health_score = mapped["health_score"]
     station.status = mapped["station_status"].value

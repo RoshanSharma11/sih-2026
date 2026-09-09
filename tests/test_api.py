@@ -100,10 +100,12 @@ def test_list_stations_and_ingest_roundtrip(tmp_path) -> None:
         assert len(series.json()) == 1
         assert series.json()[0]["temp_observed"] == 34.2
         assert series.json()[0]["is_anomaly"] is True
+        assert series.json()[0]["label"] == "UNCONFIRMED_ANOMALY"
 
         alerts = client.get("/alerts")
         assert alerts.status_code == 200
         assert alerts.json()[0]["fault_type"] in {"UNKNOWN", "COMM_ERROR"}
+        assert alerts.json()[0]["label"] == "UNCONFIRMED_ANOMALY"
 
         unknown = client.get("/stations/99999")
         assert unknown.status_code == 404

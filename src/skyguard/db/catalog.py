@@ -24,7 +24,7 @@ def upsert_catalog(session: Session, document: dict[str, Any]) -> int:
                 latitude=row["latitude"],
                 longitude=row["longitude"],
                 elevation_m=row.get("elevation_m"),
-                cluster_id=row.get("cluster_id") or "NORTH",
+                cluster_id=row.get("cluster_id"),
                 isolate=isolate,
                 health_score=100.0,
                 status=StationStatus.HEALTHY.value,
@@ -35,8 +35,8 @@ def upsert_catalog(session: Session, document: dict[str, Any]) -> int:
             station.latitude = row["latitude"]
             station.longitude = row["longitude"]
             station.elevation_m = row.get("elevation_m")
-            if row.get("cluster_id"):
-                station.cluster_id = row["cluster_id"]
+            if "cluster_id" in row:
+                station.cluster_id = row.get("cluster_id")
             station.isolate = isolate
         count += 1
     session.flush()

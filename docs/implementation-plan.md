@@ -75,6 +75,8 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 5. `telemetry_logs.label`; alerts store `label`
 6. Drop required `cluster_id`
 
+**Code is in.** `GET /stations?ids=` returns the view set with `latest` loaded in one query. `GET /buddy-map` exposes the ML graph. Telemetry and alerts persist `label`. `cluster_id` is optional. F0–F6 client reads `latest` from the list (no N+1).
+
 #### I5 — replace live-path tests
 
 1. New tests for D18 mapping, two-buddy T3, isolate → unconfirmed, health ignores weather

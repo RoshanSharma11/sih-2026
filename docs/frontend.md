@@ -43,7 +43,7 @@ Hero is Palam neighborhood: `target: neighborhood, station_id: 42181`. Legacy `c
 For each poll (current page):
 
 1. `GET /healthz`
-2. `GET /stations?ids=` (view set) — after I4, use `latest` on each row; do not N+1 151 stations
+2. `GET /stations?ids=` (view set) — each row includes `latest`; do not N+1 151 stations
 3. `GET /stations/{id}/telemetry?limit=` for the **selected** station
 4. `GET /alerts?station_id=&limit=`
 5. `GET /demo/status`

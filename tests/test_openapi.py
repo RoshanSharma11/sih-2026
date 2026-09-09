@@ -7,6 +7,7 @@ CONTRACT_PATHS = {
     "/stations/{station_id}/seed": {"post"},
     "/stations/{station_id}/telemetry": {"get"},
     "/alerts": {"get"},
+    "/buddy-map": {"get"},
     "/ingest": {"post"},
     "/demo/inject": {"post"},
     "/demo/reset": {"post"},
@@ -51,9 +52,12 @@ CONTRACT_PROPERTIES = {
         "latitude",
         "longitude",
         "elevation_m",
+        "buddy_ids",
+        "isolate",
         "cluster_id",
         "health_score",
         "status",
+        "latest",
     },
     "StationDetail": {
         "station_id",
@@ -61,10 +65,19 @@ CONTRACT_PROPERTIES = {
         "latitude",
         "longitude",
         "elevation_m",
+        "buddy_ids",
+        "isolate",
         "cluster_id",
         "health_score",
         "status",
         "latest",
+    },
+    "LatestSnapshot": {
+        "timestamp",
+        "label",
+        "pipeline_status",
+        "observed",
+        "imputed",
     },
     "TelemetryRow": {
         "station_id",
@@ -76,6 +89,7 @@ CONTRACT_PROPERTIES = {
         "pres_imputed",
         "rhum_imputed",
         "is_anomaly",
+        "label",
         "pipeline_status",
         "mse",
     },
@@ -83,6 +97,7 @@ CONTRACT_PROPERTIES = {
         "alert_id",
         "station_id",
         "timestamp",
+        "label",
         "fault_type",
         "confidence_score",
         "severity",
@@ -106,6 +121,7 @@ CONTRACT_PROPERTIES = {
     "Healthz": {"ok", "model_loaded", "threshold", "n_stations", "n_isolates"},
     "SeedResult": {"station_id", "accepted", "skipped"},
     "ChannelValues": {"temp_c", "pres_hpa", "rhum_pct"},
+    "BuddyMap": {"stations", "isolates", "buddies"},
     "Tier1View": {"passed", "violations"},
     "Tier2View": {"ran", "window_mse", "threshold", "feature_contributions"},
     "Tier3View": {"performed", "buddy_ids", "usable_count", "neighbors_agree", "reason_skip"},
@@ -120,6 +136,8 @@ def test_openapi_matches_contracts() -> None:
 
     telemetry = spec["paths"]["/stations/{station_id}/telemetry"]["get"]["parameters"]
     assert {item["name"] for item in telemetry} >= {"from", "to", "limit"}
+    stations = spec["paths"]["/stations"]["get"]["parameters"]
+    assert {item["name"] for item in stations} >= {"ids"}
     alerts = spec["paths"]["/alerts"]["get"]["parameters"]
     assert {item["name"] for item in alerts} >= {"station_id", "limit"}
 

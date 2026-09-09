@@ -217,9 +217,23 @@ Station summary (list **includes** `latest` so a 151-station map does not N+1):
 }
 ```
 
-`cluster_id` is omitted unless the imported CSV supplies a region tag. QC must not read it.
+`cluster_id` is omitted unless the imported CSV supplies a region tag. QC must not read it. List rows include `buddy_ids`, `isolate`, and `latest` (null until the first seeded or ingested hour).
 
-Telemetry rows keep observed + imputed columns. `is_anomaly` follows D18. Optional `label` column on `telemetry_logs` stores the five-way ML label.
+Telemetry rows keep observed + imputed columns. `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label.
+
+`GET /buddy-map` is the ML graph for the dashboard, not a QC input:
+
+```json
+{
+  "stations": ["42181", "42182", "43003"],
+  "isolates": ["43003"],
+  "buddies": {
+    "42181": ["42182", "42139"],
+    "42182": ["42181", "42139"],
+    "43003": ["43057"]
+  }
+}
+```
 
 ## QC engine boundary (backend → ML)
 

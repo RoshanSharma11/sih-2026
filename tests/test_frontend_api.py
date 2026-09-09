@@ -20,6 +20,15 @@ def _app(request: httpx.Request) -> httpx.Response:
                     "cluster_id": "NORTH",
                     "health_score": 100.0,
                     "status": "HEALTHY",
+                    "buddy_ids": [],
+                    "isolate": False,
+                    "latest": {
+                        "timestamp": "2024-07-01T14:00:00Z",
+                        "label": "CLEAN",
+                        "pipeline_status": "CLEAN",
+                        "observed": {"temp_c": 34.2, "pres_hpa": 1002.4, "rhum_pct": 71.0},
+                        "imputed": {"temp_c": None, "pres_hpa": None, "rhum_pct": None},
+                    },
                 }
             ],
         )

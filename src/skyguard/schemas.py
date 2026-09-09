@@ -167,19 +167,30 @@ class DemoInjectRequest(BaseModel):
         return self
 
 
+class LatestSnapshot(BaseModel):
+    timestamp: datetime
+    label: Label | None = None
+    pipeline_status: PipelineStatus
+    observed: ChannelValues
+    imputed: ChannelValues
+
+
 class StationSummary(BaseModel):
     station_id: str
     name: str
     latitude: float
     longitude: float
     elevation_m: float | None = None
-    cluster_id: ClusterId
+    buddy_ids: list[str] = Field(default_factory=list)
+    isolate: bool = False
+    cluster_id: ClusterId | None = None
     health_score: float
     status: StationStatus
+    latest: LatestSnapshot | None = None
 
 
 class StationDetail(StationSummary):
-    latest: IngestResult | None = None
+    latest: LatestSnapshot | None = None
 
 
 class TelemetryRow(BaseModel):
@@ -192,6 +203,7 @@ class TelemetryRow(BaseModel):
     pres_imputed: float | None
     rhum_imputed: float | None
     is_anomaly: bool
+    label: Label | None = None
     pipeline_status: PipelineStatus
     mse: float | None = None
 
@@ -200,6 +212,7 @@ class AlertRow(BaseModel):
     alert_id: int
     station_id: str
     timestamp: datetime
+    label: Label | None = None
     fault_type: FaultType
     confidence_score: float
     severity: Severity
@@ -238,3 +251,9 @@ class StreamFilterStatus(BaseModel):
     view: list[str]
     ingest: list[str]
     include_buddies: bool
+
+
+class BuddyMap(BaseModel):
+    stations: list[str]
+    isolates: list[str]
+    buddies: dict[str, list[str]]

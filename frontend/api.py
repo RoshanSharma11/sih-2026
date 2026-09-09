@@ -28,8 +28,10 @@ class Snapshot:
     selected_id: str | None = None
 
 
-def merge_station(summary: dict[str, Any], detail: dict[str, Any]) -> dict[str, Any]:
-    latest = detail.get("latest")
+def merge_station(summary: dict[str, Any], detail: dict[str, Any] | None = None) -> dict[str, Any]:
+    latest = None if detail is None else detail.get("latest")
+    if latest is None:
+        latest = summary.get("latest")
     merged = dict(summary)
     merged["latest"] = latest
     merged["pipeline_status"] = None if not latest else latest.get("pipeline_status")
@@ -90,7 +92,7 @@ class SkyGuardClient:
             )
         try:
             summaries = self.stations()
-            stations = [merge_station(row, self.station(row["station_id"])) for row in summaries]
+            stations = [merge_station(row) for row in summaries]
         except SkyGuardApiError as exc:
             return Snapshot(ok=False, error=str(exc))
 
