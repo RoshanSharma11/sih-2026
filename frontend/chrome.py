@@ -41,6 +41,8 @@ def init_session() -> None:
         st.session_state.include_buddies = True
     if "flash" not in st.session_state:
         st.session_state.flash = None
+    if "alerts_station_only" not in st.session_state:
+        st.session_state.alerts_station_only = False
 
 
 @st.cache_resource
@@ -60,6 +62,22 @@ def cached_buddy_map() -> dict[str, Any]:
 
 def flash(message: str, kind: str = "ok") -> None:
     st.session_state.flash = {"message": message, "kind": kind}
+
+
+def fire_inject(body: dict[str, Any]) -> None:
+    try:
+        get_client().inject(body)
+        flash(f"Armed {body['kind']}. Watch the next streamed hour.")
+    except SkyGuardApiError as exc:
+        flash(str(exc), kind="bad")
+
+
+def fire_reset() -> None:
+    try:
+        get_client().reset()
+        flash("Overlays cleared.")
+    except SkyGuardApiError as exc:
+        flash(str(exc), kind="bad")
 
 
 def show_flash() -> None:

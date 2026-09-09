@@ -103,7 +103,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 
 #### F10 — alerts, health, neighborhood inject
 
-Verdict from `/alerts`. Hero: storm around Palam, Palam spike, reset.
+**Code is in.** Alerts feed (weather amber / hardware rose). Control hero: storm around Palam, Palam spike, reset, advanced inject.
 
 #### F11 — polish / judge script
 
