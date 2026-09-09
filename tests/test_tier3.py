@@ -1,12 +1,16 @@
 import json
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 
 from skyguard.api.main import create_app
 from skyguard.data.inject import default_rng, inject_storm
 from skyguard.engine.tier3 import ResidualStore, idw_value, storm_shape
 from skyguard.engine.windows import WindowPoint
+
+
+SKIP_IDENTITY_LIVE = pytest.mark.skip(reason="I5: live ingest is ml.engine, not IdentityDetector / NORTH cluster")
 
 
 def _write_catalog(path, west: bool = False) -> None:
@@ -106,6 +110,7 @@ def test_residual_store_detects_monotonic_rise() -> None:
     assert store.drift_detected("42181") is True
 
 
+@SKIP_IDENTITY_LIVE
 def test_storm_with_neighbors_is_weather(tmp_path) -> None:
     hour = datetime(2024, 7, 1, tzinfo=timezone.utc)
     storm = inject_storm(32.4, 1005.0, 60.8, rng=default_rng(26073))
@@ -126,6 +131,7 @@ def test_storm_with_neighbors_is_weather(tmp_path) -> None:
         assert alerts[0]["fault_type"] == "GENUINE_WEATHER"
 
 
+@SKIP_IDENTITY_LIVE
 def test_lone_spike_is_hardware(tmp_path) -> None:
     hour = datetime(2024, 7, 1, tzinfo=timezone.utc)
     with _client(tmp_path) as client:
@@ -141,6 +147,7 @@ def test_lone_spike_is_hardware(tmp_path) -> None:
         assert row["is_anomaly"] is True
 
 
+@SKIP_IDENTITY_LIVE
 def test_west_station_is_not_a_north_buddy(tmp_path) -> None:
     hour = datetime(2024, 7, 1, tzinfo=timezone.utc)
     with _client(tmp_path, west=True) as client:
@@ -152,6 +159,7 @@ def test_west_station_is_not_a_north_buddy(tmp_path) -> None:
         assert north.json()["pipeline_status"] == "UNKNOWN"
 
 
+@SKIP_IDENTITY_LIVE
 def test_freeze_is_hardware(tmp_path) -> None:
     start = datetime(2024, 6, 30, 16, tzinfo=timezone.utc)
     with _client(tmp_path) as client:
@@ -174,6 +182,7 @@ def test_freeze_is_hardware(tmp_path) -> None:
         assert frozen.json()["pipeline_status"] == "HARDWARE"
 
 
+@SKIP_IDENTITY_LIVE
 def test_health_drops_after_spikes_not_storm(tmp_path) -> None:
     storm_hour = datetime(2024, 7, 1, tzinfo=timezone.utc)
     storm = inject_storm(32.4, 1005.0, 60.8, rng=default_rng(1))

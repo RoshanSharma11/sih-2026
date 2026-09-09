@@ -25,11 +25,13 @@ CONTRACT_PROPERTIES = {
     "IngestResult": {
         "station_id",
         "timestamp",
+        "label",
         "pipeline_status",
         "fault_type",
         "confidence",
         "severity",
         "explainability_text",
+        "affected_variables",
         "contribution_pct",
         "observed",
         "imputed",
@@ -38,6 +40,9 @@ CONTRACT_PROPERTIES = {
         "health_score",
         "station_status",
         "demo_injected",
+        "tier1",
+        "tier2",
+        "tier3",
     },
     "StationSummary": {
         "station_id",
@@ -95,9 +100,12 @@ CONTRACT_PROPERTIES = {
     },
     "DemoStatus": {"overlays"},
     "DemoOverlayStatus": {"kind", "station_ids", "channel", "remaining_hours", "hour_index"},
-    "Healthz": {"ok"},
+    "Healthz": {"ok", "model_loaded", "threshold", "n_stations", "n_isolates"},
     "SeedResult": {"station_id", "accepted", "skipped"},
     "ChannelValues": {"temp_c", "pres_hpa", "rhum_pct"},
+    "Tier1View": {"passed", "violations"},
+    "Tier2View": {"ran", "window_mse", "threshold", "feature_contributions"},
+    "Tier3View": {"performed", "buddy_ids", "usable_count", "neighbors_agree", "reason_skip"},
 }
 
 

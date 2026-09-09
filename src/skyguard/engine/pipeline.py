@@ -1,7 +1,9 @@
-"""Ingest orchestrator: persist raw, run tiers, classify, update health."""
+"""Ingest orchestrator: persist raw, call ML, persist overlay/alert/health."""
 
 from __future__ import annotations
 
+import threading
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -9,27 +11,29 @@ from sqlalchemy.orm import Session
 
 from skyguard.data.inject import Observation
 from skyguard.db.models import AnomalyAlert, Station, TelemetryLog
-from skyguard.engine import health as health_mod
-from skyguard.engine.classify import Classification, classify
+from skyguard.engine.adapter import (
+    UNCONFIRMED_FALLBACK,
+    build_ml_payload,
+    map_ml_result,
+    qc_has_scaler,
+    unknown_station_error_type,
+)
 from skyguard.engine.demo import DemoController
-from skyguard.engine.tier1 import evaluate as evaluate_tier1
-from skyguard.engine.tier2 import CHANNELS, Tier2Result, evaluate as evaluate_tier2, skipped_reconstruction
-from skyguard.engine.tier3 import BuddyResult, ResidualStore, evaluate as evaluate_buddy, load_neighbors
 from skyguard.engine.windows import WindowPoint, WindowStore
 from skyguard.errors import CatalogNotLoaded, DuplicateObservation, StationNotFound
-from skyguard.ml.identity import IdentityDetector
-from skyguard.ml.protocol import Detector, Reconstruction
 from skyguard.schemas import (
-    Channel,
     ChannelValues,
     FaultType,
     IngestPayload,
     IngestResult,
+    Label,
     PipelineStatus,
     SeedObservation,
     Severity,
     StationStatus,
 )
+
+_STATION_LOCKS: dict[str, threading.Lock] = defaultdict(threading.Lock)
 
 
 def as_utc(value: datetime) -> datetime:
@@ -43,10 +47,12 @@ def ingest_observation(
     payload: IngestPayload,
     catalog_ready: bool,
     windows: WindowStore,
-    residuals: ResidualStore | None = None,
+    residuals=None,
     demo: DemoController | None = None,
-    detector: Detector | None = None,
+    detector=None,
+    qc_engine=None,
 ) -> IngestResult:
+    del residuals, detector
     if not catalog_ready:
         raise CatalogNotLoaded("Station catalog not loaded")
 
@@ -54,90 +60,86 @@ def ingest_observation(
     if station is None:
         raise StationNotFound(payload.station_id)
 
+    scaler = qc_has_scaler(qc_engine, payload.station_id)
+    if scaler is False:
+        raise StationNotFound(payload.station_id)
+
     timestamp = as_utc(payload.timestamp)
-    _reject_duplicate(session, payload.station_id, timestamp)
+    with _STATION_LOCKS[payload.station_id]:
+        _reject_duplicate(session, payload.station_id, timestamp)
 
-    observed = Observation(payload.temp_c, payload.pres_hpa, payload.rhum_pct)
-    demo_injected = None
-    if demo is not None:
-        observed, demo_injected = demo.apply(payload.station_id, observed)
+        observed = Observation(payload.temp_c, payload.pres_hpa, payload.rhum_pct)
+        demo_injected = None
+        if demo is not None:
+            observed, demo_injected = demo.apply(payload.station_id, observed)
 
-    current = WindowPoint(timestamp, observed.temp_c, observed.pres_hpa, observed.rhum_pct)
-    previous = windows.last(payload.station_id)
-    tier1 = evaluate_tier1(current, previous)
-    neighbors = [] if tier1.comm_error else load_neighbors(session, station, timestamp)
-    buddy = (
-        BuddyResult()
-        if tier1.comm_error
-        else evaluate_buddy(station, current, previous, neighbors)
-    )
-    tracker = residuals if residuals is not None else ResidualStore()
-    tracker.update(payload.station_id, buddy.spatial_residual)
-    points = [*windows.points(payload.station_id), current]
-    tier2 = (
-        Tier2Result(skipped_reconstruction(), False)
-        if tier1.comm_error
-        else evaluate_tier2(points, detector or IdentityDetector())
-    )
-    decision = classify(
-        cluster_id=station.cluster_id,
-        current=current,
-        points=points,
-        tier1=tier1,
-        buddy=buddy,
-        drift=tracker.drift_detected(payload.station_id),
-        tier2=tier2,
-    )
-
-    imputed = _imputed(tier2.reconstruction)
-    mse_vector = _mse_vector(tier2.reconstruction)
-    row = TelemetryLog(
-        station_id=payload.station_id,
-        timestamp=timestamp,
-        temp_observed=observed.temp_c,
-        pres_observed=observed.pres_hpa,
-        rhum_observed=observed.rhum_pct,
-        temp_imputed=imputed.temp_c,
-        pres_imputed=imputed.pres_hpa,
-        rhum_imputed=imputed.rhum_pct,
-        is_anomaly=decision.pipeline_status is PipelineStatus.HARDWARE,
-        pipeline_status=decision.pipeline_status.value,
-        mse=None if tier2.skipped else float(tier2.reconstruction.mse),
-    )
-    session.add(row)
-    session.flush()
-
-    contrib = _contributions(decision.fail_channel, tier2.reconstruction)
-    if decision.pipeline_status is not PipelineStatus.CLEAN:
-        session.add(
-            AnomalyAlert(
-                station_id=payload.station_id,
-                timestamp=timestamp,
-                fault_type=(decision.fault_type or FaultType.UNKNOWN).value,
-                confidence_score=decision.confidence or 0.5,
-                severity=(decision.severity or Severity.LOW).value,
-                explainability_text=decision.explainability_text or "Pipeline flagged this observation.",
-                contribution_temp=contrib[Channel.TEMP_C],
-                contribution_pres=contrib[Channel.PRES_HPA],
-                contribution_rhum=contrib[Channel.RHUM_PCT],
-            )
+        current = WindowPoint(timestamp, observed.temp_c, observed.pres_hpa, observed.rhum_pct)
+        row = TelemetryLog(
+            station_id=payload.station_id,
+            timestamp=timestamp,
+            temp_observed=observed.temp_c,
+            pres_observed=observed.pres_hpa,
+            rhum_observed=observed.rhum_pct,
+            is_anomaly=False,
+            pipeline_status=PipelineStatus.UNKNOWN.value,
         )
+        session.add(row)
         session.flush()
+        windows.append(payload.station_id, current)
 
-    health_mod.recompute(session, station, timestamp)
-    windows.append(payload.station_id, current)
-    return result_from_row(
-        station,
-        row,
-        classification=decision,
-        contribution=ChannelValues(
-            temp_c=contrib[Channel.TEMP_C],
-            pres_hpa=contrib[Channel.PRES_HPA],
-            rhum_pct=contrib[Channel.RHUM_PCT],
-        ),
-        mse_vector=mse_vector,
-        demo_injected=demo_injected,
-    )
+        try:
+            ml_out = _run_qc(
+                qc_engine,
+                build_ml_payload(
+                    session,
+                    payload.station_id,
+                    timestamp,
+                    observed.temp_c,
+                    observed.pres_hpa,
+                    observed.rhum_pct,
+                    windows,
+                ),
+            )
+        except Exception as exc:
+            unknown = unknown_station_error_type()
+            if unknown is not None and isinstance(exc, unknown):
+                raise StationNotFound(payload.station_id) from exc
+            raise
+        mapped = map_ml_result(ml_out)
+        _apply_overlay(row, station, mapped)
+        if mapped["is_anomaly"]:
+            contrib = mapped["contribution_pct"]
+            session.add(
+                AnomalyAlert(
+                    station_id=payload.station_id,
+                    timestamp=timestamp,
+                    fault_type=(mapped["fault_type"] or FaultType.UNKNOWN).value,
+                    confidence_score=mapped["confidence"] or 0.0,
+                    severity=(mapped["severity"] or Severity.LOW).value,
+                    explainability_text=mapped["explainability_text"]
+                    or "Pipeline flagged this observation.",
+                    contribution_temp=contrib.temp_c,
+                    contribution_pres=contrib.pres_hpa,
+                    contribution_rhum=contrib.rhum_pct,
+                )
+            )
+            session.flush()
+
+        return result_from_row(
+            station,
+            row,
+            fault_type=mapped["fault_type"],
+            confidence=mapped["confidence"],
+            severity=mapped["severity"],
+            explainability_text=mapped["explainability_text"],
+            contribution=mapped["contribution_pct"],
+            demo_injected=demo_injected,
+            label=mapped["label"],
+            affected_variables=mapped["affected_variables"],
+            tier1=mapped["tier1"],
+            tier2=mapped["tier2"],
+            tier3=mapped["tier3"],
+        )
 
 
 def seed_station(
@@ -194,10 +196,15 @@ def result_from_row(
     confidence: float | None = None,
     severity: Severity | None = None,
     explainability_text: str | None = None,
-    classification: Classification | None = None,
+    classification=None,
     contribution: ChannelValues | None = None,
     mse_vector: ChannelValues | None = None,
     demo_injected: FaultType | None = None,
+    label: Label | None = None,
+    affected_variables: list[str] | None = None,
+    tier1=None,
+    tier2=None,
+    tier3=None,
 ) -> IngestResult:
     if classification is not None:
         fault_type = classification.fault_type
@@ -207,11 +214,13 @@ def result_from_row(
     return IngestResult(
         station_id=station.station_id,
         timestamp=as_utc(row.timestamp),
+        label=label,
         pipeline_status=PipelineStatus(row.pipeline_status),
         fault_type=fault_type,
         confidence=confidence,
         severity=severity,
         explainability_text=explainability_text,
+        affected_variables=affected_variables or [],
         observed=ChannelValues(
             temp_c=row.temp_observed,
             pres_hpa=row.pres_observed,
@@ -228,7 +237,33 @@ def result_from_row(
         health_score=station.health_score,
         station_status=StationStatus(station.status),
         demo_injected=demo_injected,
+        tier1=tier1,
+        tier2=tier2,
+        tier3=tier3,
     )
+
+
+def _run_qc(qc_engine, payload: dict) -> dict:
+    if qc_engine is None:
+        return dict(UNCONFIRMED_FALLBACK)
+    unknown = unknown_station_error_type()
+    try:
+        return qc_engine.process_aws_data(payload)
+    except Exception as exc:
+        if unknown is not None and isinstance(exc, unknown):
+            raise
+        return dict(UNCONFIRMED_FALLBACK)
+
+
+def _apply_overlay(row: TelemetryLog, station: Station, mapped: dict) -> None:
+    row.temp_imputed = mapped["imputed"].temp_c
+    row.pres_imputed = mapped["imputed"].pres_hpa
+    row.rhum_imputed = mapped["imputed"].rhum_pct
+    row.is_anomaly = mapped["is_anomaly"]
+    row.pipeline_status = mapped["pipeline_status"].value
+    row.mse = mapped["mse"]
+    station.health_score = mapped["health_score"]
+    station.status = mapped["station_status"].value
 
 
 def _reject_duplicate(session: Session, station_id: str, timestamp: datetime) -> None:
@@ -240,35 +275,3 @@ def _reject_duplicate(session: Session, station_id: str, timestamp: datetime) ->
     )
     if already is not None:
         raise DuplicateObservation(f"{station_id} {timestamp.isoformat()}")
-
-
-def _imputed(reconstruction: Reconstruction) -> ChannelValues:
-    if reconstruction.skipped:
-        return ChannelValues()
-    values = [float(item) for item in reconstruction.reconstructed]
-    return ChannelValues(temp_c=values[0], pres_hpa=values[1], rhum_pct=values[2])
-
-
-def _mse_vector(reconstruction: Reconstruction) -> ChannelValues:
-    if reconstruction.skipped:
-        return ChannelValues()
-    values = [float(item) for item in reconstruction.mse_vector]
-    return ChannelValues(temp_c=values[0], pres_hpa=values[1], rhum_pct=values[2])
-
-
-def _contributions(
-    channel: Channel | None,
-    reconstruction: Reconstruction | None = None,
-) -> dict[Channel, float | None]:
-    if reconstruction is not None and not reconstruction.skipped and reconstruction.mse > 0:
-        return {
-            item: float(reconstruction.contribution_pct[idx]) for idx, item in enumerate(CHANNELS)
-        }
-    values: dict[Channel, float | None] = {
-        Channel.TEMP_C: 0.0,
-        Channel.PRES_HPA: 0.0,
-        Channel.RHUM_PCT: 0.0,
-    }
-    if channel is not None:
-        values[channel] = 100.0
-    return values

@@ -31,9 +31,8 @@ def ingest(payload: IngestPayload, request: Request, session: Session = Depends(
             payload,
             request.app.state.catalog_ready,
             request.app.state.windows,
-            request.app.state.residuals,
-            request.app.state.demo,
-            request.app.state.detector,
+            demo=request.app.state.demo,
+            qc_engine=request.app.state.qc_engine,
         )
     except (CatalogNotLoaded, StationNotFound, DuplicateObservation) as exc:
         raise _translate(exc) from exc

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from skyguard.api.deps import get_db
@@ -48,8 +48,20 @@ def _require_station(session: Session, station_id: str) -> Station:
 
 
 @router.get("/healthz", response_model=Healthz)
-def healthz() -> Healthz:
-    return Healthz(ok=True)
+def healthz(request: Request, session: Session = Depends(get_db)) -> Healthz:
+    engine = getattr(request.app.state, "qc_engine", None)
+    lstm = getattr(engine, "lstm", None) if engine is not None else None
+    n_stations = session.scalar(select(func.count()).select_from(Station)) or 0
+    n_isolates = session.scalar(
+        select(func.count()).select_from(Station).where(Station.isolate.is_(True))
+    ) or 0
+    return Healthz(
+        ok=True,
+        model_loaded=bool(lstm is not None and lstm.loaded),
+        threshold=getattr(lstm, "threshold", None),
+        n_stations=int(n_stations),
+        n_isolates=int(n_isolates),
+    )
 
 
 @router.get("/stations", response_model=list[StationSummary])

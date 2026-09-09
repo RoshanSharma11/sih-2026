@@ -39,6 +39,14 @@ class PipelineStatus(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
+class Label(str, Enum):
+    CLEAN = "CLEAN"
+    PHYSICAL_FAULT = "PHYSICAL_FAULT"
+    GENUINE_WEATHER_EVENT = "GENUINE_WEATHER_EVENT"
+    HARDWARE_ANOMALY = "HARDWARE_ANOMALY"
+    UNCONFIRMED_ANOMALY = "UNCONFIRMED_ANOMALY"
+
+
 class Channel(str, Enum):
     TEMP_C = "temp_c"
     PRES_HPA = "pres_hpa"
@@ -65,6 +73,26 @@ class ChannelValues(BaseModel):
     temp_c: float | None = None
     pres_hpa: float | None = None
     rhum_pct: float | None = None
+
+
+class Tier1View(BaseModel):
+    passed: bool
+    violations: list[str] = Field(default_factory=list)
+
+
+class Tier2View(BaseModel):
+    ran: bool
+    window_mse: float | None = None
+    threshold: float | None = None
+    feature_contributions: dict[str, float | None] = Field(default_factory=dict)
+
+
+class Tier3View(BaseModel):
+    performed: bool
+    buddy_ids: list[str] = Field(default_factory=list)
+    usable_count: int = 0
+    neighbors_agree: bool | None = None
+    reason_skip: str | None = None
 
 
 class IngestPayload(BaseModel):
@@ -96,11 +124,13 @@ class SeedResult(BaseModel):
 class IngestResult(BaseModel):
     station_id: str
     timestamp: datetime
+    label: Label | None = None
     pipeline_status: PipelineStatus
     fault_type: FaultType | None = None
     confidence: float | None = None
     severity: Severity | None = None
     explainability_text: str | None = None
+    affected_variables: list[str] = Field(default_factory=list)
     contribution_pct: ChannelValues
     observed: ChannelValues
     imputed: ChannelValues
@@ -109,6 +139,9 @@ class IngestResult(BaseModel):
     health_score: float
     station_status: StationStatus
     demo_injected: FaultType | None = None
+    tier1: Tier1View | None = None
+    tier2: Tier2View | None = None
+    tier3: Tier3View | None = None
 
 
 class DemoInjectRequest(BaseModel):
@@ -178,6 +211,10 @@ class AlertRow(BaseModel):
 
 class Healthz(BaseModel):
     ok: bool = True
+    model_loaded: bool = False
+    threshold: float | None = None
+    n_stations: int = 0
+    n_isolates: int = 0
 
 
 class DemoOverlayStatus(BaseModel):

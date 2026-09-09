@@ -21,11 +21,34 @@ class Station(Base):
     longitude: Mapped[float] = mapped_column(Float)
     elevation_m: Mapped[float | None] = mapped_column(Float, nullable=True)
     cluster_id: Mapped[str] = mapped_column(String(20))
+    isolate: Mapped[bool] = mapped_column(Boolean, default=False)
     health_score: Mapped[float] = mapped_column(Float, default=100.0)
     status: Mapped[str] = mapped_column(String(20), default="HEALTHY")
 
     telemetry: Mapped[list[TelemetryLog]] = relationship(back_populates="station")
     alerts: Mapped[list[AnomalyAlert]] = relationship(back_populates="station")
+    buddies: Mapped[list[StationBuddy]] = relationship(
+        back_populates="station",
+        cascade="all, delete-orphan",
+        foreign_keys="StationBuddy.station_id",
+    )
+
+
+class StationBuddy(Base):
+    __tablename__ = "station_buddies"
+
+    station_id: Mapped[str] = mapped_column(
+        String(20), ForeignKey("stations.station_id"), primary_key=True
+    )
+    buddy_id: Mapped[str] = mapped_column(
+        String(20), ForeignKey("stations.station_id"), primary_key=True
+    )
+    distance_km: Mapped[float] = mapped_column(Float)
+
+    station: Mapped[Station] = relationship(
+        back_populates="buddies",
+        foreign_keys=[station_id],
+    )
 
 
 class TelemetryLog(Base):

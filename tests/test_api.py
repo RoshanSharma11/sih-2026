@@ -40,7 +40,12 @@ def test_healthz_without_catalog(tmp_path) -> None:
     with _client(tmp_path, catalog=False) as client:
         response = client.get("/healthz")
         assert response.status_code == 200
-        assert response.json() == {"ok": True}
+        body = response.json()
+        assert body["ok"] is True
+        assert body["n_stations"] == 0
+        assert body["n_isolates"] == 0
+        assert "model_loaded" in body
+        assert "threshold" in body
 
 
 def test_ingest_without_catalog_is_503(tmp_path) -> None:
@@ -75,10 +80,10 @@ def test_list_stations_and_ingest_roundtrip(tmp_path) -> None:
         created = client.post("/ingest", json=payload)
         assert created.status_code == 200
         body = created.json()
-        assert body["pipeline_status"] == "CLEAN"
+        # No 24h window → ML cannot run LSTM; honesty is UNCONFIRMED, not a fake CLEAN.
+        assert body["label"] == "UNCONFIRMED_ANOMALY"
+        assert body["pipeline_status"] == "UNKNOWN"
         assert body["observed"]["temp_c"] == 34.2
-        assert body["imputed"]["temp_c"] is None
-        assert body["health_score"] == 100.0
 
         duplicate = client.post("/ingest", json=payload)
         assert duplicate.status_code == 409
@@ -94,11 +99,11 @@ def test_list_stations_and_ingest_roundtrip(tmp_path) -> None:
         assert series.status_code == 200
         assert len(series.json()) == 1
         assert series.json()[0]["temp_observed"] == 34.2
-        assert series.json()[0]["is_anomaly"] is False
+        assert series.json()[0]["is_anomaly"] is True
 
         alerts = client.get("/alerts")
         assert alerts.status_code == 200
-        assert alerts.json() == []
+        assert alerts.json()[0]["fault_type"] in {"UNKNOWN", "COMM_ERROR"}
 
         unknown = client.get("/stations/99999")
         assert unknown.status_code == 404
@@ -135,27 +140,15 @@ def test_seed_and_tier1_faults(tmp_path) -> None:
             json={"station_id": "42181", "timestamp": "2024-06-30T15:00:00Z", "temp_c": None, "pres_hpa": 1004.0, "rhum_pct": 67.0},
         )
         assert comms.status_code == 200
+        assert comms.json()["label"] == "PHYSICAL_FAULT"
         assert comms.json()["pipeline_status"] == "HARDWARE"
         assert comms.json()["fault_type"] == "COMM_ERROR"
         assert client.get("/alerts").json()[0]["fault_type"] == "COMM_ERROR"
 
         spike = client.post(
             "/ingest",
-            json={"station_id": "42181", "timestamp": "2024-06-30T16:00:00Z", "temp_c": 65.0, "pres_hpa": 1004.0, "rhum_pct": 67.0},
+            json={"station_id": "42181", "timestamp": "2024-06-30T16:00:00Z", "temp_c": 99.0, "pres_hpa": 1004.0, "rhum_pct": 67.0},
         )
-        assert spike.json()["pipeline_status"] == "UNKNOWN"
-        assert spike.json()["fault_type"] == "UNKNOWN"
-
-        step = client.post(
-            "/ingest",
-            json={"station_id": "42181", "timestamp": "2024-06-30T17:00:00Z", "temp_c": 32.0, "pres_hpa": 1004.0, "rhum_pct": 67.0},
-        )
-        # lone station, no neighbor: D11 abstains instead of calling hardware
-        assert step.json()["pipeline_status"] == "UNKNOWN"
-
-        clean = client.post(
-            "/ingest",
-            json={"station_id": "42181", "timestamp": "2024-06-30T18:00:00Z", "temp_c": 32.4, "pres_hpa": 1004.2, "rhum_pct": 66.0},
-        )
-        assert clean.json()["pipeline_status"] == "CLEAN"
-        assert clean.json()["fault_type"] is None
+        assert spike.json()["label"] == "PHYSICAL_FAULT"
+        assert spike.json()["pipeline_status"] == "HARDWARE"
+        assert spike.json()["fault_type"] == "SPIKE"

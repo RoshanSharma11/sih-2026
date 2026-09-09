@@ -40,12 +40,12 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 #### I1 — import ML catalog
 
 1. Document expected files: `ml/data/raw/stations.csv`, `buddy_edges.csv`, `{station_id}.csv`
-2. `skyguard.data.import_ml_catalog` (or equivalent) → `data/processed/stations.json` + `buddy_edges.json`
+2. `skyguard.data.import_ml_catalog` → `data/processed/stations.json` + `buddy_edges.json`
 3. Map hours to parquet with public column names
 4. Upsert catalog + `station_buddies` on API boot
-5. Tests: scaler ids ⊂ catalog; Palam/Safdarjung/Santacruz/Colaba present; isolates have &lt;2 buddies
+5. Tests: scaler ids ⊂ catalog (fixture covering all scalers); Palam/Safdarjung/Santacruz/Colaba present; isolates have &lt;2 buddies
 
-**Blocked** until the CSV dump exists.
+**Code is in.** Real 151-station JSON is not written until you drop `ml/data/raw/`. The committed 4-station `stations.json` is unchanged. Wipe `data/skyguard.db` after a real import (new `isolate` column + `station_buddies` table).
 
 #### I2 — adapter + live ingest uses ML
 
@@ -54,6 +54,8 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 3. Stop calling `tier1` / `tier2` / `tier3` / `classify` / legacy `health.recompute`
 4. `GET /healthz` includes `model_loaded`, `threshold`, `n_stations`, `n_isolates`
 5. Integration test: Palam spike vs neighborhood storm using real artifacts (CPU)
+
+**Code is in.** Live `/ingest` maps through `engine/adapter.py` and calls `DetectionEngine.process_aws_data`. Legacy backend tiers are not imported on that path. `/healthz` reports `model_loaded` / `threshold` / `n_stations` / `n_isolates`. Integration tests cover Palam spike vs a coordinated neighborhood move (skip if artifacts missing).
 
 #### I3 — streamer filter + neighborhood inject
 

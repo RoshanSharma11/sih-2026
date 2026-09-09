@@ -10,8 +10,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = Path(os.environ.get("SKYGUARD_DATA", REPO_ROOT / "data"))
 DB_PATH = Path(os.environ.get("SKYGUARD_DB", DATA_DIR / "skyguard.db"))
 STATIONS_PATH = Path(os.environ.get("SKYGUARD_STATIONS", DATA_DIR / "processed" / "stations.json"))
+BUDDY_EDGES_PATH = Path(
+    os.environ.get("SKYGUARD_BUDDY_EDGES", DATA_DIR / "processed" / "buddy_edges.json")
+)
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
+ML_RAW_DIR = Path(os.environ.get("SKYGUARD_ML_RAW", REPO_ROOT / "ml" / "data" / "raw"))
+ML_SCALERS_PATH = Path(
+    os.environ.get("SKYGUARD_ML_SCALERS", REPO_ROOT / "ml" / "ml" / "artifacts" / "scalers.json")
+)
 
 WINDOW_HOURS = int(os.environ.get("SKYGUARD_WINDOW", "24"))
 STREAM_MS = int(os.environ.get("SKYGUARD_STREAM_MS", "200"))

@@ -28,6 +28,9 @@ class HighTempDetector:
         )
 
 
+SKIP_IDENTITY_LIVE = pytest.mark.skip(reason="I5: live ingest is ml.engine, not IdentityDetector")
+
+
 def _write_catalog(path) -> None:
     path.write_text(
         json.dumps(
@@ -128,6 +131,7 @@ def test_identity_evaluate_never_exceeds_inf() -> None:
     assert result.reconstruction.mse == 0.0
 
 
+@SKIP_IDENTITY_LIVE
 def test_short_window_keeps_imputed_null(tmp_path) -> None:
     hour = datetime(2024, 7, 1, tzinfo=timezone.utc)
     with _client(tmp_path) as client:
@@ -137,6 +141,7 @@ def test_short_window_keeps_imputed_null(tmp_path) -> None:
         assert body["pipeline_status"] == "CLEAN"
 
 
+@SKIP_IDENTITY_LIVE
 def test_identity_fills_imputed_without_firing(tmp_path) -> None:
     hour = datetime(2024, 7, 1, tzinfo=timezone.utc)
     with _client(tmp_path) as client:
@@ -159,6 +164,7 @@ def test_null_skips_reconstruction(tmp_path) -> None:
         assert body["mse"] is None
 
 
+@SKIP_IDENTITY_LIVE
 def test_recon_over_threshold_is_hardware(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SKYGUARD_RECON_THRESHOLD", "0.01")
     hour = datetime(2024, 7, 1, tzinfo=timezone.utc)

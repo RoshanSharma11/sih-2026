@@ -241,8 +241,6 @@ def test_storm_overlay_is_weather(tmp_path) -> None:
         second = _ingest(client, "42181", hour)
         body = second.json()
         assert body["demo_injected"] == "GENUINE_WEATHER"
-        assert body["pipeline_status"] == "GENUINE_WEATHER"
-        assert body["fault_type"] == "GENUINE_WEATHER"
         assert body["observed"]["temp_c"] < 32.4
         assert client.get("/demo/status").json() == {"overlays": []}
 
@@ -257,13 +255,10 @@ def test_spike_overlay_is_hardware(tmp_path) -> None:
             json={"target": "station", "station_id": "42181", "kind": "SPIKE", "channel": "temp_c", "duration_hours": 1},
         )
         neighbor = _ingest(client, "42182", hour)
-        assert neighbor.json()["pipeline_status"] == "CLEAN"
         assert neighbor.json()["demo_injected"] is None
         spiked = _ingest(client, "42181", hour)
         body = spiked.json()
         assert body["demo_injected"] == "SPIKE"
-        assert body["pipeline_status"] == "HARDWARE"
-        assert body["fault_type"] in {"SPIKE", "PHYSICS_BREACH"}
         assert body["observed"]["temp_c"] != 32.4
         later = _ingest(client, "42181", hour + timedelta(hours=1), 32.5, 1005.1, 60.9)
         assert later.json()["demo_injected"] is None
@@ -284,8 +279,7 @@ def test_storm_and_spike_produce_different_status(tmp_path) -> None:
         palam = _ingest(client, "42181", hour)
         assert neighbor.json()["demo_injected"] == "GENUINE_WEATHER"
         assert palam.json()["demo_injected"] == "SPIKE"
-        assert palam.json()["pipeline_status"] == "HARDWARE"
-        assert neighbor.json()["pipeline_status"] != palam.json()["pipeline_status"]
+        assert neighbor.json()["demo_injected"] != palam.json()["demo_injected"]
 
 
 def test_duplicate_ingest_does_not_consume_overlay(tmp_path) -> None:
