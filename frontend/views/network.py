@@ -84,6 +84,9 @@ def network_live() -> None:
         return
 
     kpi_strip(kpi_counts(stations))
+    if not stations:
+        st.info("Nothing in the view set. Pick Palam and a neighbor on the left — do not load all 151 onto the map.")
+        return
     ingest = filt.get("ingest") or []
     st.caption(
         f"View {len(view_ids)} · ingest {len(ingest)} "

@@ -1,27 +1,29 @@
 # UI registry — SkyGuard dashboard
 
-Last updated: 2026-09-06
+Last updated: 2026-09-09
 
-Dark ops console. Weather is amber, never red. Health is a badge, not the marker fill.
+Light ops console. Weather is amber, never rose. Health is a badge, not the marker fill. Status color is reserved for QC state.
 
-## Baseline — Established 2026-09-06
+## Baseline — Established 2026-09-09
 
 | Property | Value |
 |---|---|
-| Page background | `#070b14` |
-| Panel / card | `#101827` |
-| Border | `#1e2a3f` |
+| Page background | `#F8FAFC` |
+| Panel / card | `#FFFFFF` |
+| Border | `#E2E8F0` |
 | Radius | `12px` cards, `8px` overlays, `999px` chips |
-| Text primary | `#e8eef7` |
-| Text muted | `#8b9bb4` |
-| Font | IBM Plex Sans / IBM Plex Mono (meta) |
-| Accent / clean | `#2dd4bf` |
-| Genuine weather | `#f5b942` |
-| Hardware | `#f43f5e` |
-| Unknown / idle pip | `#94a3b8` / `#3d4f6f` |
-| Observed series | `#5eead4` solid |
-| Imputed series | `#f5b942` dashed |
-| Map land / ocean | `#152036` / `#070b14` |
+| Shadow | `0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04)` |
+| Text primary | `#0F172A` |
+| Text muted | `#475569` |
+| Font | IBM Plex Sans / IBM Plex Mono (meta, KPI, contribution %) |
+| Accent / clean | `#0D9488` |
+| Genuine weather | `#D97706` |
+| Hardware | `#E11D48` |
+| Unknown / idle | `#64748B` |
+| Observed series | `#0F766E` solid |
+| Imputed series | `#D97706` dashed |
+| Map land / ocean | `#EEF2F7` / `#F8FAFC` |
+| Contribution T / P / H | `#0F766E` / `#0369A1` / `#6D28D9` (not status colors) |
 
 ### Page shell
 
@@ -29,36 +31,50 @@ File: `frontend/theme.py`, `.streamlit/config.toml`
 
 | Property | Class / value |
 |---|---|
-| Background | `#070b14` |
-| Streamlit primary | `#2dd4bf` |
-| Secondary surface | `#101827` |
-| Spacing | `.block-container` padding-top `1.1rem`, max-width `1320px` |
+| Background | `#F8FAFC` |
+| Streamlit primary | `#0D9488` |
+| Secondary surface | `#FFFFFF` |
+| Spacing | `.block-container` padding-top `1.15rem`, max-width `1280px` |
+| Sidebar | white, `#E2E8F0` right border |
 
-**Pattern notes:** Hide Streamlit chrome (menu, footer, deploy). Kicker is uppercase teal, 0.72rem, letter-spacing 0.16em.
+**Pattern notes:** Hide Streamlit chrome (menu, footer, deploy). Kicker is uppercase teal, 0.72rem, letter-spacing 0.16em. Brand block lives at the top of the sidebar (`.sg-brand`).
+
+### KPI strip
+
+File: `frontend/chrome.py` (`sg-kpis`)
+
+| Property | Class / value |
+|---|---|
+| Grid | 5 columns, `0.75rem` gap |
+| Card | `.sg-kpi` — white, `#E2E8F0` border, 12px radius, soft shadow |
+| Label | 0.72rem / 600 / uppercase / `#475569` |
+| Value | IBM Plex Mono, 1.55rem, status color |
+
+**Pattern notes:** Counts come from `latest.label` on the view set. Do not poll 151 detail endpoints.
 
 ### Verdict banner
 
-File: `frontend/app.py` (`sg-verdict`)
+File: `frontend/views/station.py` (`sg-verdict`)
 
 | Property | Class / value |
 |---|---|
-| Background | `#101827` |
-| Border | `1px solid #1e2a3f`, left `4px` status color |
+| Background | `#FFFFFF` |
+| Border | `1px solid #E2E8F0`, left `4px` status color |
 | Radius | `12px` |
-| Text — headline | `1.15rem` / 600 / `#e8eef7` |
-| Text — meta | IBM Plex Mono, `#8b9bb4` |
+| Text — headline | `1.12rem` / 600 / `#0F172A` |
+| Text — meta | IBM Plex Mono, `#475569` |
 | Spacing | padding `1rem 1.15rem` |
 
-**Pattern notes:** Left-edge color encodes `pipeline_status`. Weather uses `sg-verdict-weather` (`#f5b942`), never hardware red.
+**Pattern notes:** Left-edge color encodes five-way `label` (fallback `pipeline_status`). Weather uses `sg-verdict-weather` (`#D97706`), never hardware rose.
 
-### Station rail + overlays
+### Alerts + overlays
 
-File: `frontend/app.py`
+File: `frontend/views/alerts.py`, `frontend/chrome.py`
 
 | Property | Class / value |
 |---|---|
-| Status pip | 4px bar under the button, `pipeline_color` |
-| Overlay chip | `#18233a` fill, `#f5b942` text, radius `8px` |
-| Alert row | left 3px status color, `#101827` fill, radius `0 8px 8px 0` |
+| Overlay chip | `#FFFBEB` fill, `#D97706` text, `#FDE68A` border, radius `8px` |
+| Alert row | left 3px status color, white fill, `#E2E8F0` border, radius `0 10px 10px 0` |
+| Buddy chip | canvas fill, `#E2E8F0` border, pill |
 
-**Pattern notes:** Selected station is Streamlit `type="primary"` (teal). Marker size 22 selected / 16 otherwise.
+**Pattern notes:** Selected station is Streamlit `type="primary"` (teal). Map marker size 22 selected / 16 otherwise. Contribution bars are 8px pills, not status-colored.

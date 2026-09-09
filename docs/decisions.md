@@ -88,6 +88,8 @@ Meteostat columns (`temp`, `pres`, `rhum`) map at fetch. ML columns map at the a
 
 The F0–F6 Streamlit page remains until the frontend rewrite. After integration it is not the product UI.
 
+**Shipped (F7–F11):** five-page light console (Network, Station, Alerts, Control, Guide). Still poll-only. Still contract-only.
+
 **Next lock (D17):** multi-page dashboard, station-wise view filter, observed + predicted overlays. Still poll-only. Still contract-only.
 
 ## D14 — One catalog: ML’s 151 stations + buddy graph

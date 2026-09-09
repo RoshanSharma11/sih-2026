@@ -7,8 +7,8 @@ alwaysApply: false
 # Frontend
 
 - Poll frozen REST only. Do not invent API fields. No SSE.
-- After I4, marker color comes from `latest` on `GET /stations?ids=` (do not N+1 151 stations).
-- `GENUINE_WEATHER` / `GENUINE_WEATHER_EVENT` is amber, never red. Verdict text comes from `GET /alerts`.
+- Prefer five-way `latest.label` on `GET /stations?ids=` for marker color (do not N+1 151 stations). Weather is amber, never rose.
+- Five-page light console: Network, Station, Alerts, Control, Guide.
 - Live faults go through `POST /demo/inject` (`neighborhood`, not `cluster`). Do not call `inject.py` from Streamlit.
 - Raw observed series stay visible; imputed/predicted is an overlay. Station filter is a view set; ingest still includes buddies.
 

@@ -17,7 +17,7 @@ Three packages in one repo, one live ingest path:
 - **Simulator / data engine** — clean historical Indian AWS hours, inject library, labeled eval, accelerated streamer. Catalog and buddy graph match ML (151 stations), not the old 4-station demo lock.
 - **Backend (product shell)** — FastAPI + SQLite. Persist raw, apply demo overlays, assemble 24h windows + buddy windows, call ML, store imputed/alerts/health, serve query APIs. It does **not** run its own QC tiers in production.
 - **ML QC engine** (`ml/`) — production 3-tier detector: physical rules → LSTM autoencoder → IDW buddy check. Trained weights and per-station scalers live here.
-- **Frontend (next)** — multi-page dashboard after integration. Station-wise filter for stream + prediction. The current one-page Streamlit console (F0–F6) stays until that rewrite.
+- **Frontend** — five-page light Streamlit console (`st.navigation`). Station-wise view filter; ingest still includes 1-hop buddies. Observed + predicted overlay. Poll REST only.
 
 ## What we are not building (this pass)
 

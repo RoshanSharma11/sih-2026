@@ -90,7 +90,7 @@ sih-2026/
       artifacts/           # weights, scalers, threshold
     scripts/
     test/
-  frontend/                 # F0–F6 one-page console (until rewrite)
+  frontend/                 # five-page light ops console (Network / Station / Alerts / Control / Guide)
   tests/
   scripts/
 ```

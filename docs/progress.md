@@ -1,6 +1,6 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-09 (F10: Alerts + Control. Next is F11).
+Last updated: 2026-09-09 (F11: Guide + polish. Frontend rewrite shipped).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -16,7 +16,7 @@ Nothing else needs a product decision. Language and D14–D18 are locked.
 
 **Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**. Live ingest uses **`ml.engine`**. Processed catalog is **151 stations**. Palam `42181` buddies: Safdarjung `42182` + `42139`. Storm inject is Palam’s neighborhood, not NORTH.
 
-Next: **F11** Guide page, empty/offline polish, judge script.
+Next: demo rehearsal (API + Palam stream + dashboard). No further frontend slices locked.
 
 | Slice | Commit | Why |
 |---|---|---|
@@ -32,7 +32,8 @@ Next: **F11** Guide page, empty/offline polish, judge script.
 | F7 | `1dc9dcd` | Lock five-page light console; no app code |
 | F8 | `6751edd` | st.navigation, light theme, view-set map |
 | F9 | `99c0729` | Station overlay charts + verdict + contribution |
-| F10 | (this change) | Alerts feed + Palam storm/spike Control |
+| F10 | `dc57291` | Alerts feed + Palam storm/spike Control |
+| F11 | (this change) | Guide, empty/offline, light polish |
 
 ## What works today (post-I6)
 
@@ -42,7 +43,7 @@ Next: **F11** Guide page, empty/offline polish, judge script.
 - Missing artifacts → persist anyway, `UNCONFIRMED_ANOMALY`. No 24h window → same.
 - Streamer: `--stations 42181 --with-buddies` (default true) seeds/POSTs the ingest set. CLI overrides `GET /demo/stream-filter`. Empty filter = full catalog.
 - Demo inject: `target=neighborhood` expands via the buddy graph. `target=cluster` is 400.
-- Dashboard: Network, Station, **Alerts**, **Control**. Guide still F11. Hero: Storm around Palam / Break Palam temperature / Reset.
+- Dashboard: five-page light console (Network, Station, Alerts, Control, Guide). Default view Palam∪buddies + Santacruz. Hero on Control.
 - ML standalone: `ml/ml/main.py` remains eval-only. Do not point the dashboard at 8001.
 - Tests: D18 mapping is unit-tested; live ingest covers two-buddy T3, isolate/one-buddy → `UNCONFIRMED_ANOMALY`, weather does not lower health. IdentityDetector / NORTH live-path tests are skipped. Engine integration skips when artifacts are missing.
 
@@ -54,7 +55,7 @@ Next: **F11** Guide page, empty/offline polish, judge script.
 | `src/skyguard/ml/`             | IdentityDetector stub   | **legacy**                   |
 | `ml/ml/engine.py`              | **production QC**       | unchanged                     |
 | `ml/ml/main.py`                | standalone eval only    | unchanged                     |
-| `frontend/`                    | four live pages         | F11 Guide + polish          |
+| `frontend/`                    | live demo               | five-page light console     |
 
 ## Locks that bite implementers
 
@@ -92,7 +93,7 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Next
 
-1. **F11** — Guide, empty/offline, 151 copy, polish.
+Nothing product-blocking. Rehearse the judge script in [frontend.md](frontend.md).
 
 ## Open issues
 

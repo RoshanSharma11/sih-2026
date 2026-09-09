@@ -13,7 +13,7 @@ To **fetch, run the API, stream, inject, or open the dashboard**, use the [root 
 5. [contracts.md](contracts.md) — payloads, DB, ML adapter (do not invent fields)
 6. [data-simulator.md](data-simulator.md) — catalog import, inject, stream, eval set
 7. [backend.md](backend.md) — FastAPI product shell
-8. [frontend.md](frontend.md) — five-page light Streamlit console (F7+; F0–F6 until F8)
+8. [frontend.md](frontend.md) — five-page light Streamlit console
 9. [implementation-plan.md](implementation-plan.md) — I0–I6 then F7+
 10. [backend-simulator-summary.md](backend-simulator-summary.md) — **legacy** data+API write-up (pre-ML engine)
 

@@ -107,7 +107,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 
 #### F11 — polish / judge script
 
-Empty/offline, 1 s poll, 151-station scalability copy.
+**Code is in.** Guide page, empty/offline copy, 151-station scalability card, light chrome, judge script in `frontend.md`.
 
 ### Parallelism
 
@@ -136,4 +136,4 @@ I3 and I4 can overlap after I2.
 
 - Judge filters to a handful of stations and sees stream + prediction
 - Map does not poll 151 detail endpoints
-- Weather amber, hardware red, unconfirmed slate
+- Weather amber, hardware rose, unconfirmed slate

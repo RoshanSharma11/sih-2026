@@ -2,7 +2,7 @@
 
 Quality-control service for Indian Automatic Weather Stations. Input is hourly **T / P / H only**. The API tells a real storm from a broken sensor, keeps raw readings intact, and tracks 7-day sensor health.
 
-**Handoff (2026-09-09):** I1–I5 are shipped. Live `/ingest` calls `ml/ml/engine.py` in-process (physical rules → LSTM → buddy graph). Catalog is **151 stations**. Next is **F7** (multi-page UI). Status: [docs/progress.md](docs/progress.md). Contracts: [docs/contracts.md](docs/contracts.md).
+**Handoff (2026-09-09):** I1–I6 and **F7–F11** are shipped. Live `/ingest` calls `ml/ml/engine.py` in-process. Catalog is **151 stations**. Dashboard is the five-page light Streamlit console. Status: [docs/progress.md](docs/progress.md). Contracts: [docs/contracts.md](docs/contracts.md).
 
 This repo is the **data engine + FastAPI product shell + ML QC package + Streamlit console**. Do not point the dashboard at the ML eval server on port 8001.
 
@@ -35,7 +35,7 @@ The processed catalog is already in tree. Re-run import only when ML raw files c
 
 ## Run the API, a filtered stream, and the dashboard
 
-Three terminals. Prefer Palam’s neighborhood — streaming all 151 will overwhelm the current one-page console.
+Three terminals. Prefer Palam’s neighborhood — streaming all 151 will overwhelm the live map. Default dashboard view is Palam ∪ buddies + Santacruz.
 
 ```text
 python scripts/run_api.py
@@ -53,7 +53,7 @@ Seeds 24 clean hours for the **ingest set** (view ∪ 1-hop buddies), then POSTs
 python scripts/run_dashboard.py
 ```
 
-http://127.0.0.1:8501 · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`. This is the shipped F0–F6 one-page console. F7 is the rewrite.
+http://127.0.0.1:8501 · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`. Pages: Network, Station, Alerts, Control, How QC works. Light theme. Polls the product API only.
 
 Tests: `pytest -q`. Engine integration skips when artifacts are missing; adapter unit tests still run.
 
