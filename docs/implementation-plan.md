@@ -1,163 +1,136 @@
-# Implementation Plan — Data, Simulator, Backend
+# Implementation Plan — Integration (ML QC + catalog + filter)
+
+Historical slices 0–7 and F0–F6 are **shipped**. Do not re-run them. This file is the build order from the ML drop onward.
 
 ### What we are building
 
-A Python package that (1) pulls and locks five complete Indian AWS hourly series in two spatial clusters, (2) injects labeled faults for evaluation, (3) streams clean observations into FastAPI, and (4) runs a 3-tier QC pipeline (range rules → pluggable detector → cluster buddy check) that writes raw+imputed telemetry, alerts, and a 7-day sensor health score. Live judge faults are applied in the API, not in the streamer.
+Wire the pulled `ml/` engine as **production QC**, import its 151-station catalog and buddy graph into simulator + backend, and add a station-wise **view** filter whose **ingest** set always includes 1-hop neighbors. Backend becomes persist + demo + adapter. Frontend rewrite (multi-page) starts only after that path is green.
 
 ### Language we agreed on
 
 See [context.md](context.md). Short form:
 
-- **Observation** — one station, one hour, T/P/H (null allowed)
-- **Anomaly / HARDWARE** — untrusted sensor or comms, not extreme weather
-- **Genuine weather** — physically consistent extreme, neighbors agree
-- **Reconstruction / imputed** — overlay estimate; raw is never overwritten
-- **Cluster** — ≤150 km buddy group; NORTH / WEST
-- **Identity detector** — stub so the API ships without weights
+- **Production QC** — `ml/ml/engine.py` only
+- **Backend** — product shell (SQLite, demo, query, adapter)
+- **View set vs ingest set** — UI filter vs streamer POSTs (view ∪ buddies)
+- **Neighborhood** — station + 1-hop ML buddies (storm target)
+- **Label** — five-way ML; `pipeline_status` is the four-way map (D18)
 
 ### Decisions made
 
-See [decisions.md](decisions.md). Highest impact: two clusters not five metros; clean stream + backend demo overlay; shared `inject.py`; SQLite; REST poll; seed 24h then stream.
+See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 station filter, D16 in-process ML, D3 storm = neighborhood, D11 needs two buddies.
 
 ### Assumptions
 
-- Meteostat will yield at least three Delhi-area stations with ≥85% T/P/H. If WEST fails, all five go in NORTH.
-- Frontend will poll the query APIs as specified; we will not add SSE in v1.
-- ML will implement `Detector` against `contracts.md` and drop a file on `MODEL_PATH`.
-- 48-hour hackathon: no auth, no Docker, no Postgres, no multi-worker uvicorn.
+- You will drop ML `data/raw/` (`stations.csv`, `buddy_edges.csv`, hourly CSVs) into `ml/data/raw/` (gitignored; not in the pull). I1 is blocked without it.
+- LSTM operating threshold stays val window-MSE p99 (`0.00605`) until ML freezes another value. Metadata says it is not frozen; we still ship with p99.
+- One product port. No Docker, auth, SSE, SHAP on ingest.
+- Current Streamlit page keeps working on a small view set via `pipeline_status` until F7.
 
 ### How to build it
 
-Do **contracts and package skeleton first**, then the two workstreams in parallel. Do not start Streamlit or training. **Commit after every slice and every finished feature** (`AGENTS.md`).
+**Commit after every slice** (`AGENTS.md`). Do not start the multi-page frontend before I5.
 
-#### Slice 0 — shared (half day)
+#### I0 — lock docs (this change)
 
-1. `pyproject.toml` (Python 3.10+, fastapi, uvicorn, sqlalchemy, pydantic, pandas, numpy, meteostat, pyarrow, httpx, pytest)
-2. Package tree exactly as [architecture.md](architecture.md)
-3. `schemas.py` copied from [contracts.md](contracts.md)
-4. `ml/protocol.py` + `IdentityDetector`
-5. Empty tests that import the package
+1. `context.md`, `decisions.md`, `architecture.md`, `contracts.md`, `backend.md`, `data-simulator.md`, `frontend.md`, `progress.md`, this file
+2. Ownership: QC → ML; backend shell; simulator catalog = ML
+3. No application code
 
-#### Slice 1a — catalog and clean data
+#### I1 — import ML catalog
 
-1. `catalog.py` + `fetch.py`: seed search, completeness filter, write `stations.json` + parquet
-2. Script: `python -m skyguard.data.fetch`
-3. Commit `stations.json` once locked; keep parquet in gitignore if large, plus a tiny fixture for tests
+1. Document expected files: `ml/data/raw/stations.csv`, `buddy_edges.csv`, `{station_id}.csv`
+2. `skyguard.data.import_ml_catalog` (or equivalent) → `data/processed/stations.json` + `buddy_edges.json`
+3. Map hours to parquet with public column names
+4. Upsert catalog + `station_buddies` on API boot
+5. Tests: scaler ids ⊂ catalog; Palam/Safdarjung/Santacruz/Colaba present; isolates have &lt;2 buddies
 
-#### Slice 1b — API skeleton (parallel with 1a)
+**Blocked** until the CSV dump exists.
 
-1. SQLAlchemy models + `create_all`
-2. Upsert catalog on startup (fixture stations if parquet is not fetched yet)
-3. `POST /ingest` persist-only + `GET /stations` + `GET /telemetry` + `GET /alerts` + `GET /healthz`
-4. 404 unknown station, 409 duplicate hour
+#### I2 — adapter + live ingest uses ML
 
-#### Slice 2a — inject + eval
+1. `engine/adapter.py`: field map, window, buddies
+2. `pipeline.py`: persist → adapter → `process_aws_data` → persist overlay/alert/health
+3. Stop calling `tier1` / `tier2` / `tier3` / `classify` / legacy `health.recompute`
+4. `GET /healthz` includes `model_loaded`, `threshold`, `n_stations`, `n_isolates`
+5. Integration test: Palam spike vs neighborhood storm using real artifacts (CPU)
 
-1. `inject.py` + unit tests (especially storm correlation and freeze constancy)
-2. `evalset.py` → 10k rows, 15% mix, print histogram
-3. Do not wire inject into the streamer
+#### I3 — streamer filter + neighborhood inject
 
-#### Slice 2b — Tier 1 + windows + seed
+1. Streamer `--stations` / `--with-buddies`; also honor `GET /demo/stream-filter`
+2. Seed and POST only the ingest set
+3. `POST /demo/inject` `target=neighborhood`; reject `target=cluster`
+4. DemoController expands via buddy graph
 
-1. `windows.py` deque per station, hydrate on boot
-2. `POST /stations/{id}/seed`
-3. `tier1.py` wired in pipeline
-4. Null → `COMM_ERROR` alert
+#### I4 — query APIs for 151 + view set
 
-#### Slice 3 — streamer
+1. `GET /stations?ids=`
+2. `latest` on each station summary (no N+1)
+3. `GET /buddy-map`
+4. `POST/GET /demo/stream-filter`
+5. `telemetry_logs.label`; alerts store `label`
+6. Drop required `cluster_id`
 
-1. Seed 24h, then POST all stations per hour, sleep 200 ms
-2. Manual test: 2 minutes of clean data, no 500s
+#### I5 — replace live-path tests
 
-#### Slice 4 — Tier 3 + classify + health (still no ML)
+1. New tests for D18 mapping, two-buddy T3, isolate → unconfirmed, health ignores weather
+2. Skip or quarantine tests that require IdentityDetector + NORTH cluster as the live path
+3. `pytest -q` green with artifacts present; CI without artifacts: adapter unit tests + skip engine integration
 
-1. Haversine + IDW buddy check inside cluster
-2. Classifier priority list
-3. Health score update
-4. Tests: storm+neighbors = weather; lone spike = hardware
+#### I6 — handoff README
 
-#### Slice 5 — demo control
+1. Root README: import catalog, run API, stream filtered, inject neighborhood, open old dashboard
+2. Progress: I1–I5 done; next is F7
 
-1. `DemoController` + `POST /demo/inject` + `/demo/reset` + `/demo/status`
-2. Manual: stream clean, inject storm on NORTH, inject temp spike on one station, confirm two different statuses
+---
 
-#### Slice 6 — Tier 2 hook
+## Frontend slices (after I5)
 
-1. Call `Detector.reconstruct` when window is full
-2. Contribution % + imputed columns
-3. Threshold from env (default `inf`)
-4. When ML delivers weights: set `MODEL_PATH`, add one integration test
+#### F7 — lock multi-page docs
 
-#### Slice 7 — harden for handoff
+`frontend.md` rewrite: pages, station filter, predicted overlay. No app code until the page list is in that file.
 
-1. OpenAPI is accurate (FastAPI default docs)
-2. README at repo root: how to fetch, run API, run stream, inject
-3. Give frontend the three GET shapes; give ML the parquet path and `Detector` protocol
+#### F8 — station filter + map
+
+View-set picker, `POST /demo/stream-filter`, map from `GET /stations?ids=`, marker color from `latest.label` or `pipeline_status`.
+
+#### F9 — stream + prediction
+
+Selected stations only: observed + imputed/predicted T/P/H.
+
+#### F10 — alerts, health, neighborhood inject
+
+Verdict from `/alerts`. Hero: storm around Palam, Palam spike, reset.
+
+#### F11 — polish / judge script
+
+Empty/offline, 1 s poll, 151-station scalability copy.
 
 ### Parallelism
 
 ```
-        Slice 0
-       /        \
-   1a fetch     1b API persist
-       \        /
-        2a inject   2b tier1+seed
-            \       /
-             3 streamer
-                 |
-             4 buddy+health
-                 |
-             5 demo inject
-                 |
-             6 detector hook
+I0 docs
+  → I1 catalog import   (needs your data/raw)
+  → I2 ML adapter on ingest
+       → I3 stream filter + neighborhood inject
+       → I4 query APIs
+            \
+             I5 tests → I6 README → F7…
 ```
 
-One person can take left (1a, 2a, 3), the other right (1b, 2b, 4, 5, 6), after Slice 0 together.
+I3 and I4 can overlap after I2.
 
-### Definition of done for data + backend
+### Definition of done for integration
 
-- Four stations catalogued and streamable (fifth failed completeness; both clusters still have a neighbor)
-- Labeled eval set on disk
-- API implements every route in contracts
-- Demo can show **storm ≠ broken sensor** with the identity detector
-- ML and frontend can work against frozen contracts without asking us
+- Live `/ingest` verdicts come from `ml.engine`, not backend tiers
+- Catalog/buddy graph match ML
+- View Palam only → ingest Palam ∪ buddies; UI charts Palam only
+- Neighborhood storm ≠ single-station spike
+- Raw T/P/H never overwritten
+- Old dashboard may look dated; it must not 500
 
----
+### Definition of done for the next dashboard (later)
 
-## Frontend slices (F0–F6)
-
-Dashboard work starts after Slice 7. Contracts stay frozen. See [frontend.md](frontend.md) and D13.
-
-#### F0 — lock docs
-
-`docs/frontend.md`, D13, architecture / progress / ownership. No app code.
-
-#### F1 — app shell
-
-`frontend/api.py` + Streamlit shell, dark theme, `GET /healthz`. `pip install -e ".[ui]"`.
-
-#### F2 — map + rail
-
-India Plotly geo, four markers colored by `latest.pipeline_status`, health badge, station select.
-
-#### F3 — telemetry
-
-T / P / H observed + imputed overlay for the selected station.
-
-#### F4 — verdict + alerts
-
-Status chip + `explainability_text` from `/alerts`. Weather vs hardware styling.
-
-#### F5 — inject
-
-Hero: NORTH storm, Palam temp spike, reset. Advanced: freeze / drift / comm.
-
-#### F6 — polish
-
-1 s fragment refresh, empty/offline states, README judge script.
-
-### Definition of done for the dashboard
-
-- Judge can run API + stream + dashboard and complete the storm-then-spike script without extra APIs
-- Map colors live `pipeline_status`; weather is not red
-- No contract fields invented
+- Judge filters to a handful of stations and sees stream + prediction
+- Map does not poll 151 detail endpoints
+- Weather amber, hardware red, unconfirmed slate

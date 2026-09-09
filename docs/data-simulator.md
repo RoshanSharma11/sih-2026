@@ -1,162 +1,108 @@
 # Data engine and simulator
 
-Owner: data + simulator. Output is files on disk plus a clean HTTP stream. Fault math is shared with the backend via `skyguard.data.inject`.
+Owner: data + simulator. Output is files on disk plus a clean HTTP stream. Fault math is shared with the backend via `skyguard.data.inject`. Catalog and neighbors **match ML** (D14).
 
 ## Goal
 
-1. A locked catalog of 5 complete Indian stations in 2 clusters
-2. Clean hourly parquet the ML person can train on
-3. A labeled eval set with a known 15% anomaly mix
-4. A streamer that seeds windows, then POSTs clean hours at demo speed
+1. Import ML’s 151-station catalog + buddy graph (not a new 4-station lock)
+2. Hourly series those stations can stream (same ids ML has scalers for)
+3. A labeled eval set (existing `simulate_corruption_eval.py` path is still valid)
+4. A streamer that seeds windows, POSTs clean hours, and honors the **view / ingest** filter (D15)
 
-## Source
+## Source of truth
 
-- Library: `meteostat`
-- Variables at the fetch boundary: `temp`, `pres`, `rhum` → map immediately to `temp_c`, `pres_hpa`, `rhum_pct`
-- Resolution: hourly
-- Geography: India only, seed list first (decision D2)
+Do **not** recrawl Meteostat to pick 5 keepers.
 
-## Seed inventory
+1. Copy ML `data/raw/stations.csv` + `buddy_edges.csv` (+ per-station CSVs if that is how hours are stored) into the working tree (paths below).
+2. `python -m skyguard.data.import_ml_catalog` writes `data/processed/stations.json` and `buddy_edges.json`.
+3. Hourly series: prefer ML CSVs mapped to parquet (`timestamp`, `temp_c`, `pres_hpa`, `rhum_pct`). If a station is in the catalog but has no local series, skip it in the streamer and log it — do not invent hours.
 
-Use Meteostat station search around these anchors. IDs below are **candidates** — the catalog script must resolve and verify them, not assume they exist.
+`station_id` is the string id in the scaler dict (WMO-like, e.g. `42181`, some ICAO-like `VOPB0`). Backend refuses ids without a scaler.
 
-| Anchor | Approx lat, lon | Desired cluster | How many keepers |
-|---|---|---|---|
-| Delhi NCR | 28.57, 77.12 | NORTH | 3 |
-| Mumbai | 19.09, 72.87 | WEST | 1–2 |
-| Pune | 18.58, 73.92 | WEST | 0–1 |
-
-Search radius 80 km around each anchor. Pull hourly data. Drop a station if any of T/P/H completeness < 85% on **2018-01-01 → 2024-12-31**. Completeness = non-null count / expected hours in that range.
-
-If WEST cannot produce 2 keepers within 150 km of each other, put all 5 keepers in NORTH (still 2+ stations so buddy check works). Write the decision into `stations.json` as `notes`.
-
-## Catalog file
+## Catalog files
 
 `data/processed/stations.json`
 
 ```json
 {
-  "generated_at": "2026-09-06T12:00:00Z",
+  "generated_at": "2026-09-09T00:00:00Z",
+  "source": "ml/data/raw/stations.csv",
+  "n_stations": 151,
   "stations": [
     {
-      "station_id": "42182",
-      "name": "Delhi Palam",
+      "station_id": "42181",
+      "name": "New Delhi / Palam",
       "latitude": 28.5667,
       "longitude": 77.1167,
-      "elevation_m": 216,
-      "cluster_id": "NORTH",
-      "completeness": {"temp_c": 0.93, "pres_hpa": 0.91, "rhum_pct": 0.90}
+      "elevation_m": 220.0,
+      "isolate": false,
+      "buddy_ids": ["42182"]
     }
   ]
 }
 ```
 
-`station_id` is the Meteostat/WMO id string. Backend boots by upserting this file into `stations`.
+`data/processed/buddy_edges.json` — list of `{primary_station_id, buddy_station_id, distance_km}`. Isolates = exported stations with fewer than 2 exported buddies (ML rule).
 
 ## Persist clean series
 
 One parquet per station: `data/processed/{station_id}.parquet`
 
-Columns: `timestamp` (UTC), `temp_c`, `pres_hpa`, `rhum_pct`. Sorted ascending. Do not interpolate gaps. Leave nulls — they are real comms gaps and become `COMM_ERROR` when streamed if we choose to pass them through. For **ML training export**, write a second file `data/processed/{station_id}.clean.parquet` that drops any row with a null (ML asked for complete windows).
+Columns: `timestamp` (UTC), `temp_c`, `pres_hpa`, `rhum_pct`. Sorted ascending. Do not interpolate gaps in the file.
 
-Do not inject faults into `processed/`. Injection is a separate step.
+Do not inject faults into `processed/`.
 
 ## Injection library
 
-`src/skyguard/data/inject.py` — pure functions, no I/O, no FastAPI imports.
+`src/skyguard/data/inject.py` — pure functions, no I/O, no FastAPI imports. Signatures in [contracts.md](contracts.md).
 
-Use the signatures in [contracts.md](contracts.md). Add helpers the backend demo controller needs:
+Storm live apply: backend expands `station_id` to the neighborhood, then calls `inject_storm` on each.
 
-```python
-def apply_live(
-    kind: FaultType,
-    observation: Observation,
-    channel: Channel | None,
-    hour_index: int,
-    std_dev: dict[Channel, float],
-) -> Observation:
-    ...
-```
+Eval `is_anomaly`: hardware labels true; `GENUINE_WEATHER` / `STORM` false **for F1 against hardware**. Live telemetry `is_anomaly` follows D18 (weather true). Do not mix those two meanings in one column without naming it.
 
-`hour_index` is how many hours this overlay has already been applied (0-based). Freeze holds the first observed value. Drift uses `slope * hour_index`. Storm ignores `channel` and mutates all three.
+## ML eval script
 
-Determinism: accept an optional `rng: np.random.Generator`. Eval set builder passes a seeded generator (`seed=26073`). Live demo may be random.
-
-## Eval set
-
-`scripts/build_evalset.py` → `data/eval/labeled.parquet`
-
-Target (blueprint): **10,000 hourly rows**, **15% anomalous**.
-
-Suggested mix of the 15% (1,500 rows). Remaining 8,500 stay clean, including some real extremes if the source has them.
-
-| Label | Share of anomalies | How |
-|---|---|---|
-| `SPIKE` | 25% | one channel, one hour |
-| `FREEZE` | 20% | 12-hour blocks, one channel |
-| `DRIFT` | 15% | 48-hour blocks, one channel |
-| `COMM_ERROR` | 15% | null one or all channels |
-| `GENUINE_WEATHER` | 25% | `inject_storm` on **all stations in that cluster at that hour** |
-
-Columns:
-
-```
-station_id, timestamp, temp_c, pres_hpa, rhum_pct,
-temp_c_raw, pres_hpa_raw, rhum_pct_raw,
-fault_type, channel, is_anomaly
-```
-
-`is_anomaly` is true only for hardware-like labels (`SPIKE`, `FREEZE`, `DRIFT`, `COMM_ERROR`). `GENUINE_WEATHER` has `is_anomaly=false` so false-positive rate is measured correctly.
-
-Never train the autoencoder on the eval file. Train on `*.clean.parquet` only.
-
-## ML eval script (does not change the streamer)
-
-Send **one file** to ML: [`scripts/simulate_corruption_eval.py`](../scripts/simulate_corruption_eval.py).
-
-It does not import SkyGuard and does not change the live simulator. Needs pandas, numpy, matplotlib.
-
-**This output is an eval set. Do not train on it.** Train on clean hours (`*.clean.parquet`).
+[`scripts/simulate_corruption_eval.py`](../scripts/simulate_corruption_eval.py) and the copy under `ml/scripts/` / `ml/eval_out/`. Offline only. **Do not train on it.**
 
 ```text
 python scripts/simulate_corruption_eval.py --clean test_2024.csv --out ./eval_out
 ```
 
-Writes `labeled_eval_seed42.csv` (original + corrupted + `fault_type`) and a PNG of the mix / traces. Notebook: `simulate_corruption(test_clean, seed=42)`.
-
 ## Streamer
 
 `scripts/run_stream.py` / `skyguard.data.stream`
 
-1. Load `stations.json` + processed parquet
-2. Wait until `GET /healthz` is ok
-3. For each station, `POST /seed` with the 24 hours **before** `demo_start`
-4. Walk hours from `demo_start` onward
-5. Each tick, POST `/ingest` for every station (same timestamp), then sleep `SKYGUARD_STREAM_MS`
-
-Default `demo_start`: first timestamp in the eval/demo range that exists on all five stations.
+1. Load imported catalog + parquet
+2. Resolve **ingest set**: CLI `--stations` (comma ids) and `--with-buddies` (default true), else `GET /demo/stream-filter`
+3. Wait until `GET /healthz` is ok and `model_loaded` is true (warn and continue if false — those hours will be `UNCONFIRMED_ANOMALY`)
+4. For each station in the ingest set, `POST /seed` with 24 hours **before** `demo_start`
+5. Walk hours from `demo_start` onward
+6. Each tick, POST `/ingest` for every ingest-set station (same timestamp), then sleep `SKYGUARD_STREAM_MS`
 
 CLI:
 
 ```text
 python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024-07-01T00:00:00Z
+python -m skyguard.data.stream --stations 42181,43003 --with-buddies
 ```
 
 The streamer does **not** take `--fault`. Live faults go through `/demo/inject`.
 
-If `/ingest` returns 409 (duplicate hour), log and skip. Do not crash the demo.
+If `/ingest` returns 409, log and skip. Do not crash the demo.
+
+`--with-buddies` false is allowed for LSTM-only debugging; do not use it in the judge script.
 
 ## What “done” looks like for this workstream
 
-- `stations.json` with 5 stations, cluster ids, completeness stats
-- Parquet on disk, inspectable in a notebook or `pandas`
-- `inject.py` unit tests for all 5 injectors (storm moves T↓ P↓ H↑ together)
-- `labeled.parquet` with the 15% mix and a printed class histogram
-- Streamer seeds + plays clean data into a running API
-- README snippet in this file is enough for ML and frontend to find the files
+- Imported catalog matches ML scaler ids
+- Buddy edges match `ml` `build_buddy_graph`
+- Streamer can run full catalog or a view∪buddies subset
+- `inject.py` still unit-tested
+- README in this file is enough to find the files
 
 ## Out of scope
 
 - Training
 - Plotting (frontend)
 - Applying faults inside the streamer
+- Recreating the 4-station NORTH/WEST lock

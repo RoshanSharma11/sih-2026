@@ -7,10 +7,10 @@ alwaysApply: false
 # Backend
 
 - Routes validate with Pydantic schemas from `skyguard.schemas` and call `engine.pipeline` only.
-- Persist raw observation before detection. Imputed columns are nullable overlays.
-- `Detector` is a protocol. Default is `IdentityDetector`. Do not import training code.
-- Lock per `station_id` around window update + pipeline.
+- Persist raw observation before QC. Imputed columns are ML `predicted` overlays.
+- Live QC is `ml.engine.process_aws_data` via the adapter (D16). Do not call `tier1`/`tier2`/`tier3`/`classify` on ingest. Do not import training notebooks.
+- Lock per `station_id` around window update + ML call.
 - Duplicate `(station_id, timestamp)` → 409. Unknown station → 404.
-- `GENUINE_WEATHER` is not `is_anomaly` and does not lower health.
+- `GENUINE_WEATHER_EVENT` is `is_anomaly=true` and does **not** lower health.
 
 See `docs/backend.md` and `docs/contracts.md`.

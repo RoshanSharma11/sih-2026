@@ -2,9 +2,11 @@
 
 Quality-control service for Indian Automatic Weather Stations. Input is hourly **T / P / H only**. The API tells a real storm from a broken sensor, keeps raw readings intact, and tracks 7-day sensor health.
 
-This package is the **data engine + FastAPI backend**. Streamlit and LSTM training are owned by the other pair. Frozen payloads: [docs/contracts.md](docs/contracts.md). Status: [docs/progress.md](docs/progress.md).
+**Handoff (2026-09-09):** docs I0 is locked. Production QC is `ml/` (151 stations + LSTM + buddy graph). **Live `/ingest` still runs the old backend tiers until slice I2.** Do not treat this README’s 4-station NORTH/WEST curl examples as the target architecture. Status and next slices: [docs/progress.md](docs/progress.md). Target contracts: [docs/contracts.md](docs/contracts.md).
 
-Catalog is **four** stations in two clusters (a fifth failed the 85% completeness bar). Buddy check stays inside a cluster (150 km). Delhi does not validate Mumbai.
+This repo is the **data engine + FastAPI product shell + ML QC package + Streamlit console**. Frozen payloads: [docs/contracts.md](docs/contracts.md).
+
+Until I1 imports ML’s catalog, the running demo catalog is still **four** stations. Buddy check on the live path is still NORTH/WEST. After I2, buddy check is the ML graph and Delhi still does not validate Mumbai.
 
 | Cluster | IDs |
 |---|---|
@@ -21,7 +23,7 @@ source .venv/bin/activate
 pip install -e ".[dev,ui]"
 ```
 
-Do not set `MODEL_PATH`. Leave `SKYGUARD_RECON_THRESHOLD` unset (default `inf`) until ML drops weights.
+Until I2, the running API still uses the identity stub. Do not set `MODEL_PATH`. After I2, weights load from `ml/ml/artifacts/` automatically.
 
 ## Fetch ground truth
 

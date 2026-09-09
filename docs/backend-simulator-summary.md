@@ -1,6 +1,8 @@
 # Backend and simulator — what we implemented
 
-Readable overview of the data engine (simulator) and FastAPI QC service as they exist today. Frozen field names live in [contracts.md](contracts.md). Build order and remaining ML work live in [progress.md](progress.md).
+**Legacy snapshot.** This file describes data + FastAPI **before** the ML engine was adopted as production QC (I0, 2026-09-09). For the live target architecture, read [progress.md](progress.md) and [architecture.md](architecture.md). Do not implement new ingest logic from this page.
+
+Readable overview of the data engine (simulator) and FastAPI QC service as they existed through F6. Frozen field names for the **integration** live in [contracts.md](contracts.md).
 
 SkyGuard’s job is to look at hourly temperature, pressure, and humidity from Indian Automatic Weather Stations and answer: **is this a real storm, or a broken sensor?** The simulator supplies clean historical hours. The backend judges each hour, stores raw plus a corrected overlay, and exposes that to the dashboard.
 

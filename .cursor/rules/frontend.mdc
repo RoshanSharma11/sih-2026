@@ -7,9 +7,9 @@ alwaysApply: false
 # Frontend
 
 - Poll frozen REST only. Do not invent API fields. No SSE.
-- Marker color = `latest.pipeline_status` from `GET /stations/{id}`. Health is a badge.
-- `GENUINE_WEATHER` is amber, never red. Verdict text comes from `GET /alerts`.
-- Live faults go through `POST /demo/inject`. Do not call `inject.py` from Streamlit.
-- Raw observed series stay visible; imputed is an overlay.
+- After I4, marker color comes from `latest` on `GET /stations?ids=` (do not N+1 151 stations).
+- `GENUINE_WEATHER` / `GENUINE_WEATHER_EVENT` is amber, never red. Verdict text comes from `GET /alerts`.
+- Live faults go through `POST /demo/inject` (`neighborhood`, not `cluster`). Do not call `inject.py` from Streamlit.
+- Raw observed series stay visible; imputed/predicted is an overlay. Station filter is a view set; ingest still includes buddies.
 
 See `docs/frontend.md` and `docs/contracts.md`.

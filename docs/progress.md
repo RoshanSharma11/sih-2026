@@ -1,68 +1,72 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-08 (ML eval script; streamer unchanged).
+Last updated: 2026-09-09 (I0: ML engine is production QC; docs locked).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
+## Needs from you (blocked without this)
+
+I1 cannot start until these exist on disk (they are gitignored and were **not** in the `ml` branch pull):
+
+| Path | Why |
+|---|---|
+| `ml/data/raw/stations.csv` | 151-station catalog ML trained on |
+| `ml/data/raw/buddy_edges.csv` | buddy graph (Tier 3) |
+| `ml/data/raw/{station_id}.csv` | hourly T/P/H to stream (or tell us another path) |
+
+Copy them in and say so. Do not commit the huge CSVs.
+
+Optional, not blocking: freeze a better LSTM threshold. Artifacts still use 2023 val window-MSE **p99 ≈ 0.00605**. `model_metadata.json` says `threshold_frozen: false`. LSTM-only 2024 F1 is weak on freeze/drift; that is why Tier 1 + buddy in `ml/engine.py` are the product, not a reason to delay I2.
+
+Nothing else needs a product decision. Language and D14–D18 are locked.
+
 ## Status
 
-**Done through F6.** Data + backend + live demo dashboard. Remaining work is ML (`MODEL_PATH`).
+**Shipped:** slices 0–7 (data + backend shell + legacy QC) and F0–F6 (one-page Streamlit). **`ml/` is in the tree** (engine, artifacts, reports). **Live ingest still uses backend tiers** until I2.
 
-Working tree should be clean on the current branch after each slice. Latest commits:
+Working tree may include uncommitted eval scripts and this I0 docs set. Next code slice is **I1** (catalog import) once `data/raw` is present, then **I2** (adapter).
 
 | Slice | Commit | Why |
 |---|---|---|
-| 0 | `c684382` | Package skeleton, frozen schemas, `IdentityDetector` |
-| 1a | `8d7cb71` | Locked catalog + completeness filter |
-| 1b | `bbf0f44` | SQLite persist-only API |
-| 2a | `0edca2c` | Shared `inject.py` + 10k eval set |
-| 2b | `6ee8d7d` | 24h windows, seed, Tier 1 |
-| 3 | `d16ea51` | Clean streamer |
-| 4 | `7c61604` | Cluster buddy check, classifier, health |
-| 5 | `cf19e83` | Live demo overlays on ingest |
-| 6 | `81b5937` | Detector hook + imputed overlay |
-| 7 | `de9ed33` | Root README + OpenAPI locked to contracts |
-| F0 | `f05c579` | Dashboard layout and poll rules locked |
-| F1 | `f130c3c` | Contract-only HTTP client for frozen GET shapes |
-| F2–F6 | `5e01b23` | One-page Streamlit console: map, series, alerts, inject |
+| 0–7 | see git log | Data + backend + identity detector + demo overlay |
+| F0–F6 | `5e01b23` | One-page ops console |
+| I0 | (this docs change) | ML owns QC; 151 catalog; view vs ingest filter |
+| I1–I6 | not started | Import catalog, adapter, stream filter, tests |
+| F7+ | not started | Multi-page UI |
 
-## What works
+## What works today (pre-I2)
 
-- Catalog: **four** stations (not five). Completeness bar dropped a fifth. Buddy check still works inside each cluster.
-  - NORTH: `42181` Palam, `42182` Safdarjung
-  - WEST: `43003` Santacruz, `43057` Colaba
-- Fetch: `python -m skyguard.data.fetch` → `data/processed/stations.json` + parquet (parquet is gitignored).
-- Inject library + eval builder. Streamer does **not** take `--fault`.
-- ML eval helper: send `scripts/simulate_corruption_eval.py` (standalone; pandas/numpy/matplotlib). Streamer unchanged.
-- API: `/healthz`, `/stations`, `/telemetry`, `/alerts`, `POST /ingest`, `POST /stations/{id}/seed`, `POST /demo/inject`, `POST /demo/reset`, `GET /demo/status`. OpenAPI at `/docs` matches `docs/contracts.md`.
-- Pipeline: persist raw → Tier 1 → `Detector.reconstruct` (full 24h, no nulls) → cluster IDW buddy → classify → 7-day health.
-- Detector is `IdentityDetector` until `MODEL_PATH` is set. `SKYGUARD_RECON_THRESHOLD` defaults to `inf`, so the stub never fires. Imputed columns are the reconstruction overlay; observed T/P/H are never overwritten.
-- Demo overlays apply `inject.apply_live` **before** detection. Storm targets a cluster; hardware targets one station. `demo_injected` is the overlay kind, not judge ground truth.
-- Storm on both stations in a cluster at the same hour → `GENUINE_WEATHER`. Lone spike vs a static neighbor → `HARDWARE`. No neighbor → `UNKNOWN` (D11). Weather alerts do not lower health.
-- Streamer: seed 24h before `demo_start` (default 2024-07-01Z), then POST every station each hour, sleep `SKYGUARD_STREAM_MS` (200). `409` is skipped, not a crash, and does not consume overlay hours.
-- Dashboard: `python scripts/run_dashboard.py` polls the frozen GET APIs at 1 s. Marker color = `latest.pipeline_status`. Hero buttons: NORTH storm, Palam temp spike. Weather is amber, never red.
+- Catalog on backend: **four** stations (NORTH/WEST). ML scalers include those four **and** 147 more.
+- API: `/healthz`, `/stations`, `/telemetry`, `/alerts`, `POST /ingest`, seed, `/demo/*`. Verdicts from **legacy** `skyguard.engine.*`.
+- Detector stub: `IdentityDetector`. `MODEL_PATH` unused.
+- Streamer: clean hours, 4 stations.
+- Dashboard: 4 markers, NORTH storm hero (will 400 after I3 until F7 switches to neighborhood).
+- ML standalone: `ml/ml/engine.py` + `ml/ml/main.py` (own `/ingest` with `temp/rhum/pres` + window + buddies). Not wired to the product port.
 
-## What is still a stub
+## What must not be confused
 
-| Owner | Files | Notes |
+| Piece | Role now | Role after I2 |
 |---|---|---|
-| ML | `ml/loader.py` | `MODEL_PATH` still raises `NotImplementedError`. When weights land: load them, set a real threshold, add one integration test |
-
-Out of scope unless asked: LSTM training, SSE, Docker, auth.
+| `src/skyguard/engine/tier*.py` | live QC | **legacy**, do not call |
+| `src/skyguard/ml/` | IdentityDetector | **legacy** |
+| `ml/ml/engine.py` | unused by product | **production QC** |
+| `ml/ml/main.py` | unused | standalone eval only |
+| `frontend/` | live demo | keep until F7; then rewrite |
 
 ## Locks that bite implementers
 
-- Fault math only in `skyguard.data.inject`. Live faults belong in the API demo overlay, not the streamer.
-- Raw T/P/H are immutable. Imputed is overlay. Demo-mutated values are what ingest persists and detects; the streamer still sent clean data.
-- Buddy check is cluster-local, 150 km. Delhi must not validate Mumbai.
-- Sequential ingest: the **first** station in a storm hour may be `UNKNOWN` until a same-hour neighbor exists; the **second** is the weather call.
-- Freeze is “exactly one channel stuck for 6 hours.” Flat P+H together is not a freeze (avoids false positives on still weather).
-- Do not invent API fields. Change `docs/contracts.md` in the same change if you must.
-- Dashboard: marker color = `latest.pipeline_status`; weather is amber not red; verdict from `/alerts`; poll `/stations/{id}` rather than adding list fields.
+- Fault math only in `skyguard.data.inject`. Live faults in the API demo overlay, **before** ML.
+- Raw T/P/H immutable. Imputed = ML `predicted`.
+- Buddy check = ML graph, **≥2** usable neighbors. Isolates → `UNCONFIRMED_ANOMALY`.
+- Public fields `temp_c` / `pres_hpa` / `rhum_pct`. ML names stay inside `ml/`.
+- View set ≠ ingest set. Filter Palam in the UI still streams Palam’s buddies.
+- Storm inject = neighborhood, not `cluster_id: NORTH`.
+- Do not invent API fields. `contracts.md` is the integration contract (updated in I0).
+- Do not `git pull` ML into `src/`. `ml/` is a sibling of `frontend/`.
 
-## How to run
+## How to run (today, pre-I1)
 
-See the [root README](../README.md). Short form:
+See the [root README](../README.md). Short form still:
 
 ```text
 python scripts/run_api.py
@@ -70,17 +74,33 @@ python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024
 python scripts/run_dashboard.py
 ```
 
-If processed parquet is missing locally (gitignored): `python -m skyguard.data.fetch` first.
+ML-only smoke (optional, needs `ml/data/raw` for a real window):
 
-`--hours N` on the streamer stops after N weather-hours. Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`.
+```text
+# from repo root, PYTHONPATH including ml/
+uvicorn ml.ml.main:app --port 8001
+```
+
+Do not point the dashboard at 8001 (field names differ).
+
+Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch` (see `ml/ml/requirements.txt`).
 
 ## Next
 
-ML: send `scripts/simulate_corruption_eval.py`. Implement `load_detector` when a `.pt` / ONNX file exists. Dashboard is ready to poll.
+1. **You:** drop `ml/data/raw/` files.
+2. **I1** — import catalog + edges + parquet.
+3. **I2** — adapter; live `/ingest` calls `process_aws_data`.
+4. **I3** — stream `--stations` / `--with-buddies`; neighborhood inject.
+5. **I4** — `GET /stations?ids=` + `latest`; stream-filter routes.
+6. **I5** — tests; **I6** README.
+7. **F7+** — multi-page UI, station-wise stream + prediction.
+
+Do not start F7 in the same turn as I2.
 
 ## Open issues
 
-- Real Meteostat parquet may be absent on a fresh clone; fetch is slow (2018–2024 hourly).
-- A 2-minute live stream soak against real parquet was not run here; Slice 3/4 used tests + a 120-hour fixture soak.
-- No `.pt` / ONNX file yet. Leave `MODEL_PATH` unset.
-- Dashboard AppTest was run against a local API; click-through inject was not armed so a running demo overlay would not be disturbed.
+- `ml/data/` missing in this clone.
+- Real Meteostat parquet for the old 4 stations may still be absent; after I1 we prefer ML CSVs.
+- LSTM threshold not frozen; freeze/drift are Tier 1 / window heuristics in ML, not the autoencoder.
+- Nested path `ml/ml/` is awkward; do not flatten during I-slices unless a later cleanup slice says so.
+- `docs/backend-simulator-summary.md` describes the **legacy** backend QC. Trust this file + `architecture.md` for the live path.

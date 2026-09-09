@@ -1,147 +1,147 @@
 # Architecture
 
-SkyGuard is a 3-tier quality-control service in front of a small Indian AWS network. Data and backend share one Python package so injection math and payload types cannot drift.
+SkyGuard is a 3-tier quality-control service in front of an Indian AWS network. **Production QC lives in `ml/`**. Backend is the product shell (persist, demo, query). Simulator streams the same catalog ML trained on.
 
 ## System
 
 ```
-Meteostat (hourly T/P/H)
+ML catalog (151) + hourly series
         │
         ▼
 ┌─────────────────────────────┐
 │  Data engine                │
-│  fetch → filter → persist   │
-│  inject.py (pure functions) │
+│  import ML catalog           │
+│  inject.py (pure functions)  │
 │  eval builder (labeled)     │
 │  streamer (CLEAN only)      │
+│  ingest set = view ∪ buddies│
 └─────────────┬───────────────┘
               │ POST /stations/{id}/seed
               │ POST /ingest
               ▼
 ┌─────────────────────────────┐
-│  FastAPI                    │
+│  Backend FastAPI (product) │
 │  DemoController (optional)  │
-│  Tier 1  range / step / null│
-│  Tier 2  Detector.reconstruct│
-│  Tier 3  cluster IDW buddy  │
-│  classify + health + explain│
+│  persist raw                │
+│  assemble window + buddies  │
+│  call ml.engine (in-process)│
 └─────────────┬───────────────┘
-              │ write
+              │
+              ▼
+┌─────────────────────────────┐
+│  ML QC engine                │
+│  Tier 1  physical rules     │
+│  Tier 2  LSTM autoencoder     │
+│  Tier 3  IDW buddy graph     │
+│  label + health + reason     │
+└─────────────┬───────────────┘
+              │ write overlay + alerts
               ▼
          SQLite
               │
               │ GET /stations /telemetry /alerts
               ▼
-         Streamlit dashboard (poll ~1s)
+         Dashboard (poll ~1s)
+         view set ⊆ ingest set
 ```
 
 ESP32, if it appears, is a parallel publisher of the same `/ingest` payload. It is not in this pair’s critical path.
+
+`ml/ml/main.py` is a standalone QC HTTP surface for eval. The judge demo does **not** run it as a second ingest server.
 
 ## Repo layout
 
 ```
 sih-2026/
-  docs/                     # this folder — source of truth
+  docs/
   data/
-    raw/                    # gitignored Meteostat dumps
+    raw/                    # gitignored dumps
     processed/
-      stations.json         # locked catalog + clusters
-      {station_id}.parquet  # clean hourly series
+      stations.json         # imported from ML catalog
+      buddy_edges.json      # imported buddy graph
+      {station_id}.parquet
     eval/
-      labeled.parquet       # injected + labels
-    skyguard.db             # gitignored runtime DB
+    skyguard.db
   src/skyguard/
-    schemas.py              # Pydantic = contracts.md
-    data/
-      fetch.py
-      catalog.py
-      inject.py             # ONLY fault math
-      evalset.py
-      ml_eval.py            # shim → scripts/simulate_corruption_eval.py
-      stream.py
-    api/
-      main.py
-      routes_ingest.py
-      routes_query.py
-      routes_demo.py
+    schemas.py
+    data/                   # fetch/import, inject, stream
+    api/                    # product FastAPI
     engine/
-      pipeline.py           # orchestrates tiers
-      tier1.py
-      tier2.py              # talks to Detector
+      pipeline.py           # persist + demo + ML adapter (live path)
+      adapter.py            # SkyGuard payload ↔ ml.engine
+      demo.py
+      windows.py
+      tier1.py             # LEGACY — do not call from live ingest
+      tier2.py
       tier3.py
       classify.py
-      health.py
-      windows.py
-      demo.py
+      health.py             # LEGACY health formula; live health from ML
     db/
-      models.py
-      session.py
+    ml/                     # LEGACY Detector protocol / IdentityDetector
+  ml/                       # production QC (sibling of frontend/)
     ml/
-      protocol.py           # Detector ABC
-      identity.py           # stub
-      loader.py             # later: load .pt
+      engine.py
+      physical_rules.py
+      lstm_inference.py
+      buddy_check.py
+      root_cause.py
+      catalog.py
+      main.py               # standalone uvicorn, not the product port
+      artifacts/           # weights, scalers, threshold
+    scripts/
+    test/
+  frontend/                 # F0–F6 one-page console (until rewrite)
   tests/
-  frontend/                 # Streamlit ops console (poll only)
-    app.py
-    api.py
-  .streamlit/config.toml
   scripts/
-    fetch_stations.py
-    build_evalset.py
-    eval_model.py
-    simulate_corruption_eval.py   # standalone file to send ML
-    run_stream.py
-    run_api.py
-    run_dashboard.py
 ```
-
-Do not put business logic in `scripts/` except `simulate_corruption_eval.py`, which is a copyable ML drop (no package import).
 
 ## Request path (`POST /ingest`)
 
-1. Validate payload (Pydantic). Reject malformed JSON with 422.
-2. If a demo overlay is armed for this station/cluster, apply `inject.py` **before** detection. Record `injected_fault` on the demo session, not on the observation, unless we are writing the eval set.
+1. Validate payload (Pydantic, public field names). Reject malformed JSON with 422. Unknown station → 404. Duplicate hour → 409.
+2. If a demo overlay is armed for this station or its neighborhood, apply `inject.py` **before** QC. Record `demo_injected` on the result, not as judge ground truth.
 3. Persist the **raw** observation immediately (nulls allowed).
-4. **Tier 1**
-   - Null / missing packet → `COMM_ERROR`, skip Tier 2.
-   - Hard range or step violation → `SPIKE` (or range fault), still run Tier 2/3 if values are numeric so explainability exists.
-5. Append numeric points to the 24-hour window. If window length < 24, Tier 2 returns `skipped=true` and imputation is null unless Tier 1 already failed.
-6. **Tier 2** — `Detector.reconstruct(window)` → `mse`, `mse_vector`, `reconstructed`, `contribution_pct`. Compare scalar MSE to `RECON_THRESHOLD` (config, default from ML later; stub uses `+inf` so it never fires).
-7. **Tier 3** — only if Tier 1 flagged, or Tier 2 loss > threshold, or a storm-shaped move is large. Compare to cluster neighbors.
-8. **Classify** — `FaultType` + confidence + severity + one-sentence `explainability_text`.
-9. Write imputed overlay (from reconstruction) when we have a reconstruction.
-10. Update 7-day `health_score` / `status` on the station.
-11. Insert `anomaly_alerts` when status is not `CLEAN`.
-12. Return the ingest result JSON (frontend and streamer both use this).
+4. Build the 24h window for this station from `WindowStore` / SQLite. Build buddy payloads from the ML graph + last 24h of each neighbor.
+5. Call `ml.engine.process_aws_data` (in-process) with ML field names.
+6. Map `label` → `pipeline_status`, `predicted` → imputed columns, `reason` → `explainability_text`, `health` → `health_score` / `status`.
+7. Write imputed overlay when ML returned predictions. Insert `anomaly_alerts` when `label != CLEAN`.
+8. Return the ingest result JSON.
 
-## Status after the pipeline
+Legacy backend tiers are not in this path.
 
-| Status | Meaning | Hardware alert? |
-|---|---|---|
-| `CLEAN` | Trusted observation | No |
-| `GENUINE_WEATHER` | Extreme, physics + neighbors agree | No (weather notice only) |
-| `HARDWARE` | Sensor/comms fault | Yes |
-| `UNKNOWN` | Anomalous, cannot separate | Yes, low confidence |
+## Status after QC
 
-`is_anomaly` on `telemetry_logs` is **true only for `HARDWARE`**. Weather events are a separate alert type so the map can show them without tanking health.
+| ML `label` | Meaning | Map color (via `pipeline_status`) | Hardware health hit? |
+|---|---|---|---|
+| `CLEAN` | Trusted observation | teal | No |
+| `GENUINE_WEATHER_EVENT` | Extreme, neighbors agree | amber | No |
+| `PHYSICAL_FAULT` | Range / step / null | red | Yes |
+| `HARDWARE_ANOMALY` | LSTM + neighbors disagree | red | Yes |
+| `UNCONFIRMED_ANOMALY` | Flagged or incomplete, no buddy call | slate | Yes |
 
-## Scaling story (for judges, not for v1)
+`is_anomaly` on `telemetry_logs` is true when `label != CLEAN` (includes weather). Health ignores weather.
 
-Ingest is stateless per request except for per-station window + demo flags. SQLite → Postgres is a connection-string change. One process can handle thousands of stations at <15 ms if the detector stays on CPU. We do not pretend to have that load in the hackathon.
+## Station filter
+
+```
+view set  --UI / GET ?ids= / stream-filter.view-->
+ingest set = view ∪ 1-hop buddies   (streamer POSTs these)
+```
+
+`GET /stations` may return 151 rows. For the map, each summary includes `latest` so the client does not N+1 poll.
 
 ## Config
-
-Environment / `.env` (no secrets required):
 
 | Key | Default | Purpose |
 |---|---|---|
 | `SKYGUARD_DB` | `data/skyguard.db` | SQLite path |
 | `SKYGUARD_WINDOW` | `24` | Hours in the LSTM window |
-| `SKYGUARD_RECON_THRESHOLD` | `inf` | Until ML supplies a real value |
-| `SKYGUARD_BUDDY_KM` | `150` | Cluster / IDW cutoff |
-| `SKYGUARD_IDW_POWER` | `2` | IDW exponent |
 | `SKYGUARD_STREAM_MS` | `200` | Weather-hour → wall-clock ms |
-| `MODEL_PATH` | empty | If set, load real detector |
+| `SKYGUARD_STATIONS` | `data/processed/stations.json` | Imported catalog |
+| `SKYGUARD_BUDDY_EDGES` | `data/processed/buddy_edges.json` | Imported graph |
+| `SKYGUARD_VIEW_IDS` | empty = all | Optional default view set |
+| `SKYGUARD_INCLUDE_BUDDIES` | `true` | Expand view → ingest set |
+
+LSTM threshold and scalers load from `ml/ml/artifacts/`, not from `SKYGUARD_RECON_THRESHOLD`. That env var is legacy.
 
 ## Non-goals in this architecture
 
@@ -149,3 +149,5 @@ Environment / `.env` (no secrets required):
 - Training loops inside FastAPI
 - Authenticating the API
 - Writing SHAP values into SQLite
+- Running backend tiers “just in case” beside ML
+- Borrowing another station’s scaler

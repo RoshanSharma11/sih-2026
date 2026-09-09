@@ -2,99 +2,133 @@
 
 These choices change the build. Treat them as locked unless we explicitly update this file.
 
-## D1 — Two clusters, five stations (not five distant metros)
+Superseded locks are marked. Do not revive them on the live path.
 
-Buddy check is meaningless if the five stations are Delhi, Mumbai, Chennai, Pune, and Bengaluru. A monsoon in Delhi will not appear in Chennai.
+## D1 — SUPERSEDED by D14
 
-**Lock:** 2 spatial clusters, 5 stations total after the 85% completeness filter.
+Old lock: 2 named clusters (NORTH / WEST), 5 stations after an 85% completeness filter. Completeness dropped us to 4 keepers. That catalog was a demo stand-in **before** ML delivered 151 trained stations.
 
-- Cluster `NORTH`: 3 stations in / around Delhi NCR
-- Cluster `WEST`: 2 stations in Mumbai–Pune (only if both pass completeness and are ≤150 km; otherwise put all 5 in NORTH)
+**Do not** keep NORTH/WEST as the buddy boundary. Delhi still must not validate Mumbai — the ML buddy graph already enforces that.
 
-Buddy radius: **150 km**. Power for IDW: **2**.
+## D2 — Catalog source is ML, not a new Meteostat crawl
 
-## D2 — Curated seed fetch, not a full-India crawl
+**Lock:** Station list, coordinates, and buddy edges come from ML’s training export (`stations.csv` + `buddy_edges.csv`, 151 ids with per-station scalers). Backend and simulator **import** that catalog into `data/processed/`. Do not re-filter to 4/5 keepers. Do not invent stations that have no scaler.
 
-A 2015–2025 scan of every Indian Meteostat station is slow and mostly incomplete on `pres` / `rhum`.
+Training range (already used by ML): 2020–2022 train, 2023 val, 2024 test.
+Eval / demo replay: 2024 hours (streamer default start still `2024-07-01Z` unless a station lacks that hour).
 
-**Lock:** Start from a seed inventory of ~15 known Indian stations. Keep those with ≥85% complete `temp`, `pres`, and `rhum` on the chosen range. Persist the keep-list to `data/processed/stations.json`. Do not block the backend on a national crawl.
-
-Training range (ML, later): 2018-01-01 → 2024-06-30.
-Eval / demo replay range: 2024-07-01 → 2025-12-31 (or last complete year if 2025 is thin).
+If the CSV dump is missing, integration is blocked (see [progress.md](progress.md)).
 
 ## D3 — Simulator is clean; backend owns live injection
 
-If the streamer mutates data **and** the UI has an inject button, we get two sources of truth and the eval math drifts.
+Unchanged.
 
 **Lock:**
 
 - `skyguard.data.inject` is the only place fault math lives.
 - Offline eval builder calls it and writes labels.
 - Simulator POSTs **clean** payloads (plus optional `sequence_id`).
-- Backend `DemoController` applies the same functions to the next N ingest events for a station or cluster.
-- Storm inject = **entire cluster**. Hardware inject = **one station**, one channel.
+- Backend `DemoController` applies the same functions to the next N ingest events **before** the ML call.
+- Storm inject = **neighborhood** of a station (station + 1-hop buddies). Hardware inject = **one station**, one channel.
 
-## D4 — Identity `Detector` until ML drops weights
+`cluster_id: NORTH | WEST` is no longer a storm target. Old dashboard hero “Storm on NORTH” becomes “storm around Palam” (`42181` neighborhood) after slice I3.
 
-We own ingest and the pipeline. We do not own training.
+## D4 — SUPERSEDED by D16
 
-**Lock:** Backend depends on a `Detector` protocol. Ship `IdentityDetector`. When a `.pt` / ONNX file appears, ML replaces the implementation. `/ingest` must work end-to-end with the stub (Tier 1 + Tier 3 + demo inject still demoable).
+Old lock: `IdentityDetector` until `MODEL_PATH`. Backend owned Tier 1 + 3 so the demo worked without weights.
+
+Production QC is the ML engine with artifacts in `ml/ml/artifacts/`. Backend tiers are not a standby brain.
 
 ## D5 — SQLite now, schema ready for Postgres later
 
+Unchanged.
+
 **Lock:** SQLite file at `data/skyguard.db`. SQLAlchemy models, no raw SQL in route handlers. Do not introduce Redis, Kafka, or Docker for v1.
 
-## D6 — In-memory 24h windows, hydrate from DB on startup
+## D6 — Backend keeps 24h windows to feed ML
 
-**Lock:** Each station has an in-memory deque of the last 24 valid hourly points. On process start, load the latest 24 rows per station from `telemetry_logs`. Missing hours stay missing; do not invent them.
+**Lock:** Backend still hydrates a 24-hour deque per station from `telemetry_logs` on boot. On ingest it sends that window (and buddy windows) into `process_aws_data`. ML also has a fallback buffer; the product path must not rely on it. Missing hours stay missing in SQLite; ML may interpolate ≤2 h **only inside the model window**.
 
 ## D7 — REST + poll, not SSE, for v1
 
-Frontend can poll. SSE is extra surface area.
-
-**Lock:** JSON REST only. Dashboard poll interval target: 1s. No websocket/SSE until someone needs it.
+Unchanged. JSON REST only. Dashboard poll interval target: 1 s. No websocket/SSE until someone needs it.
 
 ## D8 — Raw is immutable; imputed is overlay
 
-**Lock:** `temp_observed` / `pres_observed` / `rhum_observed` are exactly what arrived (null allowed). Imputed columns are nullable overlays. Alerts reference the observation, they do not edit it.
+Unchanged. `temp_observed` / `pres_observed` / `rhum_observed` are exactly what arrived (null allowed). Imputed columns are ML `predicted` mapped onto overlay columns. Alerts reference the observation, they do not edit it.
 
-## D9 — Live explainability is error contribution, not SHAP
+## D9 — Live explainability is ML `reason` + contribution, not SHAP
 
-**Lock:** Hot path computes per-channel contribution %. No SHAP in `/ingest`. If frontend wants SHAP later, it is an offline/audit job.
+**Lock:** Hot path stores ML `reason` as `explainability_text` and per-channel contribution from Tier 2. No SHAP in `/ingest`. Offline SHAP remains optional later.
 
 ## D10 — Seed history before the live stream
 
-A 24-step LSTM window cannot exist at t=0.
+Unchanged. `POST /stations/{id}/seed` fills windows. Simulator seeds 24 clean hours for every station in the **ingest set**, then streams. Default **1 weather-hour per 200 ms**.
 
-**Lock:** `POST /stations/{id}/seed` accepts a batch of historical hours. Simulator calls seed (last 24 clean hours) for every station, then streams the following hours at an accelerated rate (default **1 weather-hour per 200 ms**).
+## D11 — Tier 3 abstains without two usable buddies
 
-## D11 — Tier 3 abstains when it has no neighbor
+**Lock:** ML requires `MIN_USABLE_BUDDIES = 2`. Isolates and hours with fewer than two usable neighbors skip Tier 3. Label = `UNCONFIRMED_ANOMALY` (mapped `pipeline_status=UNKNOWN`). Prefer honesty over a fake buddy check. One neighbor is not enough.
 
-**Lock:** If a cluster has fewer than 1 usable neighbor observation within 1 hour, do not call it hardware or weather. Status = `UNKNOWN`, confidence low/medium. Prefer honesty over a fake buddy check.
+## D12 — Public field names stay SkyGuard; ML names stay inside `ml/`
 
-## D12 — Language and field names
+| Concept | Public API / SQLite | ML engine |
+|---|---|---|
+| Temperature °C | `temp_c` | `temp` |
+| Pressure hPa | `pres_hpa` | `pres` |
+| Humidity % | `rhum_pct` | `rhum` |
+| Imputed | `temp_imputed`, … | `predicted` / `reconstructed` |
+| QC five-way | `label` | `label` |
+| Map four-way | `pipeline_status` | derived |
+| Health 0–100 | `health_score` | `health.index_7d * 100` |
+| Health state | `status` | `health.state` |
 
-Use the glossary names in code:
+Meteostat columns (`temp`, `pres`, `rhum`) map at fetch. ML columns map at the adapter. Do not rename files inside `ml/`.
 
-| Concept | Code name |
-|---|---|
-| Temperature °C | `temp_c` |
-| Pressure hPa | `pres_hpa` |
-| Humidity % | `rhum_pct` |
-| Imputed values | `temp_imputed`, `pres_imputed`, `rhum_imputed` |
-| Fault enum | `FaultType` |
-| Station health 0–100 | `health_score` |
+## D13 — One-page console is shipped; next UI is multi-page
 
-Meteostat columns (`temp`, `pres`, `rhum`) are mapped at the fetch boundary only.
+The F0–F6 Streamlit page remains until the frontend rewrite. After integration it is not the product UI.
 
-## D13 — One-page dark demo console
+**Next lock (D17):** multi-page dashboard, station-wise view filter, observed + predicted overlays. Still poll-only. Still contract-only.
 
-Judges have ~30 seconds. A multi-page app hides the moat.
+## D14 — One catalog: ML’s 151 stations + buddy graph
+
+**Lock:** Source of truth for who exists and who may buddy whom is ML. Backend upserts all exported ids. LSTM **refuses** a station with no train scaler (do not borrow another station’s scaler).
+
+Named clusters (NORTH/WEST) may remain as optional UI region tags if the CSV has them. They are not used for QC.
+
+## D15 — Station-wise filter is a view; ingest keeps neighbors
+
+**Lock:** Operators can select stations and see **only** those stations’ stream and predicted overlay.
+
+- **View set** — UI / `GET` query `ids=` / stream-filter `view`.
+- **Ingest set** — view set **union** each selected station’s 1-hop buddies (`include_buddies=true` by default).
+
+Never ingest a lone station and expect `GENUINE_WEATHER_EVENT`. If the user turns `include_buddies` off, Tier 3 will skip and those hours land as `UNCONFIRMED_ANOMALY`.
+
+## D16 — Production QC is the ML engine, in-process
 
 **Lock:**
 
-- Streamlit + Plotly, custom dark ops theme (not default chrome).
-- One page: map + series + alerts + inject.
-- Marker color = latest `pipeline_status` from `GET /stations/{id}`. `health_score` is a badge. Weather is amber, never red.
-- Two hero actions: storm on NORTH, Palam `temp_c` spike. Other demo kinds live in Advanced.
-- Poll ~1 s. No new contract fields. Verdict text comes from `GET /alerts`.
+- One product port: backend FastAPI (`scripts/run_api.py`).
+- On ingest: validate → demo overlay → persist raw → assemble window + buddies → `ml.engine.process_aws_data` **in-process** → persist overlay/alert/health → return mapped result.
+- Do not HTTP-proxy to `ml.main:app` in the judge demo (second process, two ports, CORS). `ml/ml/main.py` remains valid for standalone ML eval.
+- Backend `tier1.py` / `tier2.py` / `tier3.py` / `classify.py` / `IdentityDetector` stay on disk as legacy. Live `/ingest` must not call them.
+- If artifacts fail to load: persist anyway, `label=UNCONFIRMED_ANOMALY`, do not run legacy tiers.
+
+## D17 — Frontend rewrite comes after integration
+
+**Lock:** Do not rebuild the dashboard until slices I1–I5 work. Then multi-page UI with station filter, 151-station map (or filtered subset), predicted overlay, health, alerts, inject on neighborhoods.
+
+## D18 — Label mapping (ML → existing dashboard)
+
+Until the new UI ships, keep `pipeline_status` so F0–F6 does not go dark.
+
+| ML `label` | `pipeline_status` | `is_anomaly` | Lowers health? |
+|---|---|---|---|
+| `CLEAN` | `CLEAN` | false | no |
+| `PHYSICAL_FAULT` | `HARDWARE` | true | yes |
+| `HARDWARE_ANOMALY` | `HARDWARE` | true | yes |
+| `GENUINE_WEATHER_EVENT` | `GENUINE_WEATHER` | true | **no** |
+| `UNCONFIRMED_ANOMALY` | `UNKNOWN` | true | yes |
+
+`is_anomaly` follows ML (true for weather). Health follows ML’s `SENSOR_HEALTH_LABELS` (weather excluded).
