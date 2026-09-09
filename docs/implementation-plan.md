@@ -25,7 +25,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 - You will drop ML `data/raw/` (`stations.csv`, `buddy_edges.csv`, hourly CSVs) into `ml/data/raw/` (gitignored; not in the pull). **Done.** Catalog JSON is written.
 - LSTM operating threshold stays val window-MSE p99 (`0.00605`) until ML freezes another value. Metadata says it is not frozen; we still ship with p99.
 - One product port. No Docker, auth, SSE, SHAP on ingest.
-- Current Streamlit page keeps working on a small view set via `pipeline_status` until F7.
+- Current Streamlit page keeps working on a small view set via `pipeline_status` until F8 rewrites `frontend/`. F7 locked the page list.
 
 ### How to build it
 
@@ -83,7 +83,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 
 #### I6 — handoff README
 
-**Code is in.** Root README: import ML catalog, run API, stream Palam∪buddies, inject neighborhood vs spike, open the F0–F6 dashboard. Progress: I1–I6 done; next is F7.
+**Code is in.** Root README: import ML catalog, run API, stream Palam∪buddies, inject neighborhood vs spike, open the dashboard. Progress: I1–I6 done; F7 page lock is next.
 
 ---
 
@@ -91,7 +91,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 
 #### F7 — lock multi-page docs
 
-`frontend.md` rewrite: pages, station filter, predicted overlay. No app code until the page list is in that file.
+**Code is in.** `frontend.md` lists five pages (Network, Station, Alerts, Control, Guide), light tokens, default view Palam∪buddies + Santacruz, poll rules. No `frontend/` edits in this slice.
 
 #### F8 — station filter + map
 
