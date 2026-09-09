@@ -15,6 +15,13 @@ Do **not** recrawl Meteostat to pick 5 keepers.
 
 1. Copy ML `data/raw/stations.csv` + `buddy_edges.csv` (+ per-station CSVs if that is how hours are stored) into the working tree (paths below).
 2. `python -m skyguard.data.import_ml_catalog` writes `data/processed/stations.json` and `buddy_edges.json`.
+
+```text
+python -m skyguard.data.import_ml_catalog
+python -m skyguard.data.import_ml_catalog --raw-dir /path/to/ml/data/raw --no-hours
+```
+
+Exits with the expected-file list if `stations.csv` is missing. Hourly `{station_id}.csv` files are optional; missing hours are skipped, not invented.
 3. Hourly series: prefer ML CSVs mapped to parquet (`timestamp`, `temp_c`, `pres_hpa`, `rhum_pct`). If a station is in the catalog but has no local series, skip it in the streamer and log it — do not invent hours.
 
 `station_id` is the string id in the scaler dict (WMO-like, e.g. `42181`, some ICAO-like `VOPB0`). Backend refuses ids without a scaler.

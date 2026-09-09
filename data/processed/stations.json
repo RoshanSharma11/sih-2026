@@ -1,37 +1,10 @@
 {
-  "generated_at": "2026-09-06T17:22:09Z",
-  "notes": "Only 4 stations met the 85% completeness bar.",
-  "range": {
-    "start": "2018-01-01T00:00:00",
-    "end": "2024-12-31T23:00:00"
-  },
+  "generated_at": "2026-09-09T09:13:36Z",
+  "source": "/Users/roshansharma/development/hackathon/sih-2026/ml/data/raw/stations.csv",
+  "n_stations": 151,
+  "n_isolates": 24,
+  "notes": "Imported from ML catalog. cluster_id is a UI region tag only; QC uses buddy_ids. isolate = fewer than 2 exported buddies.",
   "stations": [
-    {
-      "station_id": "42181",
-      "name": "New Delhi / Palam",
-      "latitude": 28.5667,
-      "longitude": 77.1167,
-      "elevation_m": 220.0,
-      "cluster_id": "NORTH",
-      "completeness": {
-        "temp_c": 0.9986,
-        "pres_hpa": 0.9932,
-        "rhum_pct": 0.9985
-      }
-    },
-    {
-      "station_id": "42182",
-      "name": "New Delhi / Safdarjung",
-      "latitude": 28.5833,
-      "longitude": 77.2,
-      "elevation_m": 211.0,
-      "cluster_id": "NORTH",
-      "completeness": {
-        "temp_c": 0.9479,
-        "pres_hpa": 0.9479,
-        "rhum_pct": 0.9479
-      }
-    },
     {
       "station_id": "43003",
       "name": "Bombay / Santacruz",
@@ -39,11 +12,14 @@
       "longitude": 72.85,
       "elevation_m": 8.0,
       "cluster_id": "WEST",
-      "completeness": {
-        "temp_c": 0.9998,
-        "pres_hpa": 0.9982,
-        "rhum_pct": 0.9998
-      }
+      "isolate": false,
+      "buddy_ids": [
+        "43002",
+        "43057",
+        "43058",
+        "43005",
+        "43001"
+      ]
     },
     {
       "station_id": "43057",
@@ -52,11 +28,2025 @@
       "longitude": 72.8167,
       "elevation_m": 10.0,
       "cluster_id": "WEST",
-      "completeness": {
-        "temp_c": 0.9451,
-        "pres_hpa": 0.9451,
-        "rhum_pct": 0.9451
-      }
+      "isolate": false,
+      "buddy_ids": [
+        "43002",
+        "43003",
+        "43058",
+        "43005"
+      ]
+    },
+    {
+      "station_id": "42182",
+      "name": "New Delhi / Safdarjung",
+      "latitude": 28.5833,
+      "longitude": 77.2,
+      "elevation_m": 211.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42181",
+        "42139"
+      ]
+    },
+    {
+      "station_id": "43371",
+      "name": "Thiruvananthapuram",
+      "latitude": 8.4833,
+      "longitude": 76.95,
+      "elevation_m": 60.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43372",
+        "43354",
+        "43377",
+        "43376"
+      ]
+    },
+    {
+      "station_id": "42809",
+      "name": "Calcutta / Dum Dum",
+      "latitude": 22.65,
+      "longitude": 88.45,
+      "elevation_m": 4.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42807",
+        "42812",
+        "42811",
+        "42711"
+      ]
+    },
+    {
+      "station_id": "43372",
+      "name": "Thiruvananthapuram",
+      "latitude": 8.4667,
+      "longitude": 76.95,
+      "elevation_m": 4.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43371",
+        "43354",
+        "43377",
+        "43376"
+      ]
+    },
+    {
+      "station_id": "43279",
+      "name": "Madras / Minambakkam",
+      "latitude": 13.0,
+      "longitude": 80.1833,
+      "elevation_m": 10.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43278",
+        "43275",
+        "VOTP0"
+      ]
+    },
+    {
+      "station_id": "42181",
+      "name": "New Delhi / Palam",
+      "latitude": 28.5667,
+      "longitude": 77.1167,
+      "elevation_m": 220.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42182",
+        "42139"
+      ]
+    },
+    {
+      "station_id": "42369",
+      "name": "Lucknow / Amausi",
+      "latitude": 26.75,
+      "longitude": 80.8833,
+      "elevation_m": 122.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42367",
+        "42372",
+        "42271"
+      ]
+    },
+    {
+      "station_id": "43344",
+      "name": "Tiruchchirapalli",
+      "latitude": 10.7667,
+      "longitude": 78.7167,
+      "elevation_m": 85.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43342",
+        "43348"
+      ]
+    },
+    {
+      "station_id": "42492",
+      "name": "Patna",
+      "latitude": 25.6,
+      "longitude": 85.1,
+      "elevation_m": 51.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": []
+    },
+    {
+      "station_id": "42971",
+      "name": "Bhubaneswar",
+      "latitude": 20.25,
+      "longitude": 85.8333,
+      "elevation_m": 45.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42970",
+        "43053",
+        "42976"
+      ]
+    },
+    {
+      "station_id": "43194",
+      "name": "Goa / Dabolim Airport",
+      "latitude": 15.3833,
+      "longitude": 73.8167,
+      "elevation_m": 42.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43196",
+        "43192",
+        "43225",
+        "43197"
+      ]
+    },
+    {
+      "station_id": "VOBL0",
+      "name": "Bangalore / Bengaluru / Devenahalli / BIAL 2 Wheeler Parking",
+      "latitude": 13.1979,
+      "longitude": 77.7063,
+      "elevation_m": 897.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "43271"
+      ]
+    },
+    {
+      "station_id": "VOCI0",
+      "name": "Cochin / K?ladi",
+      "latitude": 10.152,
+      "longitude": 76.4019,
+      "elevation_m": 9.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43353",
+        "43357",
+        "43355",
+        "43335",
+        "43356"
+      ]
+    },
+    {
+      "station_id": "VOVZ0",
+      "name": "Vizagapatam / Gajuwaka",
+      "latitude": 17.7167,
+      "longitude": 83.2333,
+      "elevation_m": 5.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43150",
+        "43147"
+      ]
+    },
+    {
+      "station_id": "43128",
+      "name": "Hyderabad Airport",
+      "latitude": 17.45,
+      "longitude": 78.4667,
+      "elevation_m": 530.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOHS0",
+        "43083"
+      ]
+    },
+    {
+      "station_id": "VOHS0",
+      "name": "Hyderabad / Anthredigudam",
+      "latitude": 17.2406,
+      "longitude": 78.4289,
+      "elevation_m": 617.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43128",
+        "43083"
+      ]
+    },
+    {
+      "station_id": "42410",
+      "name": "Gauhati",
+      "latitude": 26.1,
+      "longitude": 91.5833,
+      "elevation_m": 47.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42408",
+        "42414"
+      ]
+    },
+    {
+      "station_id": "VOCL0",
+      "name": "Calicut / Kondotti",
+      "latitude": 11.1368,
+      "longitude": 75.9553,
+      "elevation_m": 104.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43314",
+        "43357",
+        "43335"
+      ]
+    },
+    {
+      "station_id": "42314",
+      "name": "Dibrugarh / Mohanbari",
+      "latitude": 27.4833,
+      "longitude": 95.0167,
+      "elevation_m": 110.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": []
+    },
+    {
+      "station_id": "VOTP0",
+      "name": "Tirupati / Renigunta",
+      "latitude": 13.6325,
+      "longitude": 79.5433,
+      "elevation_m": 107.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43275",
+        "43303",
+        "43279",
+        "43278"
+      ]
+    },
+    {
+      "station_id": "VORY0",
+      "name": "Rajahmundry / R?j?nagaram",
+      "latitude": 17.1104,
+      "longitude": 81.8182,
+      "elevation_m": 46.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43189",
+        "43147"
+      ]
+    },
+    {
+      "station_id": "VASU0",
+      "name": "Surat / Magdala",
+      "latitude": 21.1141,
+      "longitude": 72.7418,
+      "elevation_m": 5.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42840",
+        "42838",
+        "42837"
+      ]
+    },
+    {
+      "station_id": "VAUD0",
+      "name": "Udaipur / Naramagra",
+      "latitude": 24.6177,
+      "longitude": 73.8961,
+      "elevation_m": 513.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": [
+        "42546"
+      ]
+    },
+    {
+      "station_id": "43002",
+      "name": "Bombay / Juhu",
+      "latitude": 19.1167,
+      "longitude": 72.8333,
+      "elevation_m": 4.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43003",
+        "43057",
+        "43058",
+        "43005",
+        "43001"
+      ]
+    },
+    {
+      "station_id": "42737",
+      "name": "Rajkot",
+      "latitude": 22.3,
+      "longitude": 70.7833,
+      "elevation_m": 134.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "42639"
+      ]
+    },
+    {
+      "station_id": "42675",
+      "name": "Jabalpur",
+      "latitude": 23.2,
+      "longitude": 79.95,
+      "elevation_m": 391.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": [
+        "42674"
+      ]
+    },
+    {
+      "station_id": "42895",
+      "name": "Balasore",
+      "latitude": 21.5167,
+      "longitude": 86.9333,
+      "elevation_m": 18.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42973",
+        "42900"
+      ]
+    },
+    {
+      "station_id": "42933",
+      "name": "Akola",
+      "latitude": 20.7,
+      "longitude": 77.0333,
+      "elevation_m": 280.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42937",
+        "42931"
+      ]
+    },
+    {
+      "station_id": "42730",
+      "name": "Okha",
+      "latitude": 22.4833,
+      "longitude": 69.1167,
+      "elevation_m": 5.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42731",
+        "42631"
+      ]
+    },
+    {
+      "station_id": "42731",
+      "name": "Dwarka",
+      "latitude": 22.3667,
+      "longitude": 69.0833,
+      "elevation_m": 10.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "42730"
+      ]
+    },
+    {
+      "station_id": "42840",
+      "name": "Surat",
+      "latitude": 21.2,
+      "longitude": 72.8333,
+      "elevation_m": 10.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VASU0",
+        "42838"
+      ]
+    },
+    {
+      "station_id": "42634",
+      "name": "Bhuj-Rudramata",
+      "latitude": 23.25,
+      "longitude": 69.6667,
+      "elevation_m": 78.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42638",
+        "42639",
+        "42631"
+      ]
+    },
+    {
+      "station_id": "43053",
+      "name": "Puri",
+      "latitude": 19.8,
+      "longitude": 85.8167,
+      "elevation_m": 5.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42971",
+        "42970"
+      ]
+    },
+    {
+      "station_id": "42101",
+      "name": "Patiala",
+      "latitude": 30.3333,
+      "longitude": 76.4667,
+      "elevation_m": 249.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42103",
+        "42105",
+        "42099",
+        "42137"
+      ]
+    },
+    {
+      "station_id": "42973",
+      "name": "Chandbali",
+      "latitude": 20.7833,
+      "longitude": 86.7333,
+      "elevation_m": 5.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42976",
+        "42895",
+        "42970"
+      ]
+    },
+    {
+      "station_id": "43189",
+      "name": "Kakinada",
+      "latitude": 16.95,
+      "longitude": 82.2333,
+      "elevation_m": 2.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VORY0",
+        "43147"
+      ]
+    },
+    {
+      "station_id": "43192",
+      "name": "Goa / Panjim",
+      "latitude": 15.4833,
+      "longitude": 73.8167,
+      "elevation_m": 58.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43196",
+        "43194",
+        "43225",
+        "43197",
+        "43198"
+      ]
+    },
+    {
+      "station_id": "42874",
+      "name": "Pbo Raipur",
+      "latitude": 21.2167,
+      "longitude": 81.6667,
+      "elevation_m": 294.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42872",
+        "42948"
+      ]
+    },
+    {
+      "station_id": "42631",
+      "name": "Naliya",
+      "latitude": 23.25,
+      "longitude": 68.85,
+      "elevation_m": 20.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42634",
+        "42730"
+      ]
+    },
+    {
+      "station_id": "43333",
+      "name": "Port Blair",
+      "latitude": 11.6667,
+      "longitude": 92.7167,
+      "elevation_m": 73.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOPB0",
+        "43310"
+      ]
+    },
+    {
+      "station_id": "42559",
+      "name": "Guna",
+      "latitude": 24.65,
+      "longitude": 77.3167,
+      "elevation_m": 477.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": [
+        "42459"
+      ]
+    },
+    {
+      "station_id": "43110",
+      "name": "Ratnagiri",
+      "latitude": 16.9833,
+      "longitude": 73.3333,
+      "elevation_m": 75.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43109",
+        "43113"
+      ]
+    },
+    {
+      "station_id": "43346",
+      "name": "Karaikal",
+      "latitude": 10.9167,
+      "longitude": 79.8333,
+      "elevation_m": 7.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43347",
+        "43207",
+        "43348",
+        "43329"
+      ]
+    },
+    {
+      "station_id": "43198",
+      "name": "Belgaum / Sambra",
+      "latitude": 15.85,
+      "longitude": 74.6167,
+      "elevation_m": 758.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43197",
+        "43200",
+        "43192"
+      ]
+    },
+    {
+      "station_id": "43243",
+      "name": "Kavali",
+      "latitude": 14.9,
+      "longitude": 79.9833,
+      "elevation_m": 17.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "43245"
+      ]
+    },
+    {
+      "station_id": "43311",
+      "name": "Amini Divi",
+      "latitude": 11.1167,
+      "longitude": 72.7333,
+      "elevation_m": 3.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43266",
+        "VOAT0"
+      ]
+    },
+    {
+      "station_id": "43329",
+      "name": "Cuddalore",
+      "latitude": 11.7667,
+      "longitude": 79.7667,
+      "elevation_m": 5.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43331",
+        "VOPC0",
+        "43207",
+        "43346"
+      ]
+    },
+    {
+      "station_id": "43331",
+      "name": "M.O. Pondicherry / Puducherry",
+      "latitude": 11.9667,
+      "longitude": 79.8167,
+      "elevation_m": 38.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOPC0",
+        "43329",
+        "43207"
+      ]
+    },
+    {
+      "station_id": "42111",
+      "name": "Dehradun",
+      "latitude": 30.3167,
+      "longitude": 78.0333,
+      "elevation_m": 683.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "VIDN0",
+        "42143"
+      ]
+    },
+    {
+      "station_id": "42170",
+      "name": "Churu",
+      "latitude": 28.25,
+      "longitude": 74.9167,
+      "elevation_m": 290.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42174",
+        "42249"
+      ]
+    },
+    {
+      "station_id": "42103",
+      "name": "Ambala",
+      "latitude": 30.3833,
+      "longitude": 76.7667,
+      "elevation_m": 271.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42101",
+        "42105",
+        "42137",
+        "VISM0",
+        "42099",
+        "42080"
+      ]
+    },
+    {
+      "station_id": "42189",
+      "name": "Bareilly",
+      "latitude": 28.3667,
+      "longitude": 79.4,
+      "elevation_m": 167.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42266",
+        "42148"
+      ]
+    },
+    {
+      "station_id": "43348",
+      "name": "Atiramapattinam",
+      "latitude": 10.3333,
+      "longitude": 79.3833,
+      "elevation_m": 4.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43347",
+        "43361",
+        "43346",
+        "43344"
+      ]
+    },
+    {
+      "station_id": "42807",
+      "name": "Calcutta / Alipore",
+      "latitude": 22.5333,
+      "longitude": 88.3333,
+      "elevation_m": 5.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42809",
+        "42811",
+        "42812",
+        "42711"
+      ]
+    },
+    {
+      "station_id": "43377",
+      "name": "Kanniyakumari",
+      "latitude": 8.0833,
+      "longitude": 77.5,
+      "elevation_m": 36.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43372",
+        "43371",
+        "43376"
+      ]
+    },
+    {
+      "station_id": "43361",
+      "name": "Tondi",
+      "latitude": 9.7333,
+      "longitude": 79.0333,
+      "elevation_m": 4.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "43348"
+      ]
+    },
+    {
+      "station_id": "42811",
+      "name": "Diamond Harbour",
+      "latitude": 22.1833,
+      "longitude": 88.2,
+      "elevation_m": 4.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42807",
+        "42812",
+        "42809",
+        "42900"
+      ]
+    },
+    {
+      "station_id": "43147",
+      "name": "Tuni",
+      "latitude": 17.35,
+      "longitude": 82.55,
+      "elevation_m": 35.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43189",
+        "VORY0",
+        "VOVZ0",
+        "43150"
+      ]
+    },
+    {
+      "station_id": "42463",
+      "name": "Jhansi",
+      "latitude": 25.45,
+      "longitude": 78.5833,
+      "elevation_m": 250.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42562",
+        "42459",
+        "42467"
+      ]
+    },
+    {
+      "station_id": "43314",
+      "name": "Kozhikode",
+      "latitude": 11.25,
+      "longitude": 75.7833,
+      "elevation_m": 4.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOCL0",
+        "43357"
+      ]
+    },
+    {
+      "station_id": "43353",
+      "name": "Cochin / Willingdon",
+      "latitude": 9.95,
+      "longitude": 76.2667,
+      "elevation_m": 1.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOCI0",
+        "43355",
+        "43357",
+        "43356"
+      ]
+    },
+    {
+      "station_id": "43157",
+      "name": "Kolhapur",
+      "latitude": 16.7,
+      "longitude": 74.2333,
+      "elevation_m": 569.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43158",
+        "43113",
+        "43197"
+      ]
+    },
+    {
+      "station_id": "43245",
+      "name": "Nellore",
+      "latitude": 14.45,
+      "longitude": 79.9833,
+      "elevation_m": 19.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43243",
+        "43275"
+      ]
+    },
+    {
+      "station_id": "43226",
+      "name": "Honavar",
+      "latitude": 14.2833,
+      "longitude": 74.45,
+      "elevation_m": 8.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43229",
+        "43225"
+      ]
+    },
+    {
+      "station_id": "43347",
+      "name": "Nagappattinam",
+      "latitude": 10.7667,
+      "longitude": 79.85,
+      "elevation_m": 2.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43346",
+        "43348",
+        "43207"
+      ]
+    },
+    {
+      "station_id": "43081",
+      "name": "Nizamabad",
+      "latitude": 18.6667,
+      "longitude": 78.1,
+      "elevation_m": 379.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43083",
+        "43021"
+      ]
+    },
+    {
+      "station_id": "VOAT0",
+      "name": "Agatti / Kavaratti",
+      "latitude": 10.8237,
+      "longitude": 72.176,
+      "elevation_m": 4.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43266",
+        "43311"
+      ]
+    },
+    {
+      "station_id": "43278",
+      "name": "Madras",
+      "latitude": 13.0667,
+      "longitude": 80.25,
+      "elevation_m": 6.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43279",
+        "43275",
+        "VOTP0"
+      ]
+    },
+    {
+      "station_id": "42976",
+      "name": "Paradip C. W. R.",
+      "latitude": 20.3,
+      "longitude": 86.6833,
+      "elevation_m": 4.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42973",
+        "42970",
+        "42971"
+      ]
+    },
+    {
+      "station_id": "43001",
+      "name": "Dahanu",
+      "latitude": 19.9667,
+      "longitude": 72.7167,
+      "elevation_m": 4.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43002",
+        "43003"
+      ]
+    },
+    {
+      "station_id": "42105",
+      "name": "Chandigarh / S?rajpur",
+      "latitude": 30.7333,
+      "longitude": 76.8833,
+      "elevation_m": 347.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42103",
+        "VISM0",
+        "42101",
+        "42080",
+        "42099"
+      ]
+    },
+    {
+      "station_id": "43275",
+      "name": "Tirupathi",
+      "latitude": 13.6667,
+      "longitude": 79.5833,
+      "elevation_m": 110.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOTP0",
+        "43303",
+        "43245",
+        "43278",
+        "43279"
+      ]
+    },
+    {
+      "station_id": "42567",
+      "name": "Khajuraho",
+      "latitude": 24.9833,
+      "longitude": 79.9167,
+      "elevation_m": 217.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42467",
+        "42473"
+      ]
+    },
+    {
+      "station_id": "42812",
+      "name": "Canning",
+      "latitude": 22.25,
+      "longitude": 88.6667,
+      "elevation_m": 3.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42807",
+        "42811",
+        "42809"
+      ]
+    },
+    {
+      "station_id": "42099",
+      "name": "Ludhiana",
+      "latitude": 30.8667,
+      "longitude": 75.9333,
+      "elevation_m": 255.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42101",
+        "42080",
+        "42105",
+        "42103"
+      ]
+    },
+    {
+      "station_id": "42148",
+      "name": "Pantnagar",
+      "latitude": 29.0333,
+      "longitude": 79.4667,
+      "elevation_m": 233.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": [
+        "42189"
+      ]
+    },
+    {
+      "station_id": "VIDN0",
+      "name": "Dehradun / R?ni Pokhri",
+      "latitude": 30.1897,
+      "longitude": 78.1803,
+      "elevation_m": 558.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42111",
+        "42143"
+      ]
+    },
+    {
+      "station_id": "43303",
+      "name": "Vellore",
+      "latitude": 12.9167,
+      "longitude": 79.15,
+      "elevation_m": 213.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43302",
+        "VOTP0",
+        "43275",
+        "43271"
+      ]
+    },
+    {
+      "station_id": "42372",
+      "name": "Fursatganj / R?e Bareli",
+      "latitude": 26.25,
+      "longitude": 81.3667,
+      "elevation_m": 107.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42369",
+        "42367"
+      ]
+    },
+    {
+      "station_id": "43225",
+      "name": "Karwar",
+      "latitude": 14.7833,
+      "longitude": 74.1333,
+      "elevation_m": 3.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43226",
+        "43194",
+        "43196",
+        "43192",
+        "43229"
+      ]
+    },
+    {
+      "station_id": "42139",
+      "name": "Meerut",
+      "latitude": 29.0167,
+      "longitude": 77.6333,
+      "elevation_m": 221.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42182",
+        "42181",
+        "42137",
+        "42143"
+      ]
+    },
+    {
+      "station_id": "43109",
+      "name": "Harnai",
+      "latitude": 17.8167,
+      "longitude": 73.1,
+      "elevation_m": 17.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43058",
+        "43110"
+      ]
+    },
+    {
+      "station_id": "42838",
+      "name": "Bhaunagar",
+      "latitude": 21.75,
+      "longitude": 72.2,
+      "elevation_m": 5.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42837",
+        "42840",
+        "VASU0"
+      ]
+    },
+    {
+      "station_id": "42931",
+      "name": "Buldana",
+      "latitude": 20.5333,
+      "longitude": 76.2333,
+      "elevation_m": 648.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42933",
+        "42851"
+      ]
+    },
+    {
+      "station_id": "42939",
+      "name": "Wardha",
+      "latitude": 20.6667,
+      "longitude": 78.5833,
+      "elevation_m": 282.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "42937"
+      ]
+    },
+    {
+      "station_id": "42937",
+      "name": "Amraoti",
+      "latitude": 20.9333,
+      "longitude": 77.7833,
+      "elevation_m": 367.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42933",
+        "42939"
+      ]
+    },
+    {
+      "station_id": "43325",
+      "name": "Salem",
+      "latitude": 11.65,
+      "longitude": 78.1667,
+      "elevation_m": 279.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43301",
+        "43342"
+      ]
+    },
+    {
+      "station_id": "43005",
+      "name": "T.B.I.A",
+      "latitude": 19.15,
+      "longitude": 72.0,
+      "elevation_m": 13.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43002",
+        "43003",
+        "43057"
+      ]
+    },
+    {
+      "station_id": "42618",
+      "name": "Kailashahar",
+      "latitude": 24.3167,
+      "longitude": 92.0,
+      "elevation_m": 27.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": []
+    },
+    {
+      "station_id": "42080",
+      "name": "Bilaspur",
+      "latitude": 31.25,
+      "longitude": 76.6667,
+      "elevation_m": 589.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "VISM0",
+        "42105",
+        "42099",
+        "42103"
+      ]
+    },
+    {
+      "station_id": "42638",
+      "name": "Kandla Aerodrome",
+      "latitude": 23.15,
+      "longitude": 70.1167,
+      "elevation_m": 29.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42639",
+        "42634"
+      ]
+    },
+    {
+      "station_id": "42639",
+      "name": "New Kandla",
+      "latitude": 23.0,
+      "longitude": 70.2167,
+      "elevation_m": 10.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42638",
+        "42634",
+        "42737"
+      ]
+    },
+    {
+      "station_id": "42662",
+      "name": "Ujjain",
+      "latitude": 23.1833,
+      "longitude": 75.7833,
+      "elevation_m": 488.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": []
+    },
+    {
+      "station_id": "42467",
+      "name": "Nowgong",
+      "latitude": 25.0667,
+      "longitude": 79.45,
+      "elevation_m": 226.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42567",
+        "42562",
+        "42463"
+      ]
+    },
+    {
+      "station_id": "42914",
+      "name": "Diu",
+      "latitude": 20.7167,
+      "longitude": 70.9167,
+      "elevation_m": 10.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "42837"
+      ]
+    },
+    {
+      "station_id": "42872",
+      "name": "Mana / Raipur",
+      "latitude": 21.2333,
+      "longitude": 81.65,
+      "elevation_m": 313.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42874",
+        "42948"
+      ]
+    },
+    {
+      "station_id": "42837",
+      "name": "Mahuva",
+      "latitude": 21.0833,
+      "longitude": 71.7833,
+      "elevation_m": 8.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42838",
+        "42914",
+        "VASU0"
+      ]
+    },
+    {
+      "station_id": "42674",
+      "name": "Damoh",
+      "latitude": 23.8333,
+      "longitude": 79.45,
+      "elevation_m": 369.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": [
+        "42675"
+      ]
+    },
+    {
+      "station_id": "42523",
+      "name": "Lumding",
+      "latitude": 25.75,
+      "longitude": 93.1833,
+      "elevation_m": 147.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42522",
+        "42414"
+      ]
+    },
+    {
+      "station_id": "43310",
+      "name": "Long Island",
+      "latitude": 12.4167,
+      "longitude": 92.9333,
+      "elevation_m": 12.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43333",
+        "VOPB0"
+      ]
+    },
+    {
+      "station_id": "43301",
+      "name": "Dharmapuri",
+      "latitude": 12.1333,
+      "longitude": 78.0333,
+      "elevation_m": 396.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43325",
+        "43302"
+      ]
+    },
+    {
+      "station_id": "43083",
+      "name": "Medak",
+      "latitude": 18.05,
+      "longitude": 78.2667,
+      "elevation_m": 472.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43128",
+        "43081",
+        "VOHS0"
+      ]
+    },
+    {
+      "station_id": "43196",
+      "name": "Mormugao",
+      "latitude": 15.4167,
+      "longitude": 73.7833,
+      "elevation_m": 61.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43194",
+        "43192",
+        "43225",
+        "43197"
+      ]
+    },
+    {
+      "station_id": "42473",
+      "name": "Banda",
+      "latitude": 25.4667,
+      "longitude": 80.3667,
+      "elevation_m": 120.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42469",
+        "42567"
+      ]
+    },
+    {
+      "station_id": "42367",
+      "name": "Kanpur / Chakeri",
+      "latitude": 26.4,
+      "longitude": 80.4,
+      "elevation_m": 123.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42469",
+        "42369",
+        "42372"
+      ]
+    },
+    {
+      "station_id": "43302",
+      "name": "Tiruppattur",
+      "latitude": 12.4833,
+      "longitude": 78.5667,
+      "elevation_m": 385.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43301",
+        "43303"
+      ]
+    },
+    {
+      "station_id": "42469",
+      "name": "Hamirpur",
+      "latitude": 25.95,
+      "longitude": 80.15,
+      "elevation_m": 109.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42367",
+        "42473"
+      ]
+    },
+    {
+      "station_id": "42143",
+      "name": "Najibabad",
+      "latitude": 29.6167,
+      "longitude": 78.3833,
+      "elevation_m": 269.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "VIDN0",
+        "42111",
+        "42139"
+      ]
+    },
+    {
+      "station_id": "42266",
+      "name": "Shahjahanpur",
+      "latitude": 27.8833,
+      "longitude": 79.9,
+      "elevation_m": 155.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42271",
+        "42189"
+      ]
+    },
+    {
+      "station_id": "42271",
+      "name": "Hardoi",
+      "latitude": 27.3833,
+      "longitude": 80.1667,
+      "elevation_m": 141.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42266",
+        "42369"
+      ]
+    },
+    {
+      "station_id": "43266",
+      "name": "M.O. Agathi Airport / Kavaratti",
+      "latitude": 10.85,
+      "longitude": 72.4667,
+      "elevation_m": 3.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOAT0",
+        "43311"
+      ]
+    },
+    {
+      "station_id": "43335",
+      "name": "Palakkad",
+      "latitude": 10.7667,
+      "longitude": 76.65,
+      "elevation_m": 95.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43357",
+        "VOCI0",
+        "VOCL0"
+      ]
+    },
+    {
+      "station_id": "43113",
+      "name": "Satara",
+      "latitude": 17.5167,
+      "longitude": 74.05,
+      "elevation_m": 610.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43069",
+        "43157",
+        "43158",
+        "43110"
+      ]
+    },
+    {
+      "station_id": "42522",
+      "name": "Haflong",
+      "latitude": 25.1667,
+      "longitude": 93.0167,
+      "elevation_m": 680.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": [
+        "42523"
+      ]
+    },
+    {
+      "station_id": "43342",
+      "name": "K. Paramathy",
+      "latitude": 10.95,
+      "longitude": 78.0833,
+      "elevation_m": 182.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43344",
+        "43325"
+      ]
+    },
+    {
+      "station_id": "42249",
+      "name": "Sikar",
+      "latitude": 27.6167,
+      "longitude": 75.1333,
+      "elevation_m": 431.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42170",
+        "42174"
+      ]
+    },
+    {
+      "station_id": "43229",
+      "name": "Shirali",
+      "latitude": 14.0667,
+      "longitude": 74.5333,
+      "elevation_m": 45.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43226",
+        "43225"
+      ]
+    },
+    {
+      "station_id": "43197",
+      "name": "Belgaum",
+      "latitude": 15.85,
+      "longitude": 74.5333,
+      "elevation_m": 751.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43198",
+        "43200",
+        "43192",
+        "43194",
+        "43196",
+        "43157"
+      ]
+    },
+    {
+      "station_id": "43354",
+      "name": "Punalur",
+      "latitude": 9.0,
+      "longitude": 76.9167,
+      "elevation_m": 33.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43371",
+        "43372",
+        "43355",
+        "43376"
+      ]
+    },
+    {
+      "station_id": "43355",
+      "name": "Kottayam",
+      "latitude": 9.5833,
+      "longitude": 76.5167,
+      "elevation_m": 39.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43353",
+        "VOCI0",
+        "43354",
+        "43356"
+      ]
+    },
+    {
+      "station_id": "43271",
+      "name": "Arogyavaram",
+      "latitude": 13.5333,
+      "longitude": 78.5,
+      "elevation_m": 696.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOBL0",
+        "43303"
+      ]
+    },
+    {
+      "station_id": "42851",
+      "name": "Jalgaon",
+      "latitude": 21.05,
+      "longitude": 75.5667,
+      "elevation_m": 200.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "42931"
+      ]
+    },
+    {
+      "station_id": "43207",
+      "name": "Parangipettai",
+      "latitude": 11.5,
+      "longitude": 79.7667,
+      "elevation_m": 3.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43329",
+        "43331",
+        "VOPC0",
+        "43346",
+        "43347"
+      ]
+    },
+    {
+      "station_id": "43357",
+      "name": "Thrissur",
+      "latitude": 10.5167,
+      "longitude": 76.2167,
+      "elevation_m": 40.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOCI0",
+        "43335",
+        "43353",
+        "VOCL0",
+        "43314"
+      ]
+    },
+    {
+      "station_id": "42744",
+      "name": "Vallabh Vidyanagar",
+      "latitude": 22.5667,
+      "longitude": 72.9333,
+      "elevation_m": 41.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": []
+    },
+    {
+      "station_id": "42546",
+      "name": "Chittorgarh",
+      "latitude": 24.8833,
+      "longitude": 74.6333,
+      "elevation_m": 404.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": [
+        "VAUD0"
+      ]
+    },
+    {
+      "station_id": "42174",
+      "name": "Pilani",
+      "latitude": 28.3333,
+      "longitude": 75.5833,
+      "elevation_m": 300.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42170",
+        "42249"
+      ]
+    },
+    {
+      "station_id": "42948",
+      "name": "Rajnandgaon / R?j N?ndgaon",
+      "latitude": 21.1,
+      "longitude": 81.0333,
+      "elevation_m": 329.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "42872",
+        "42874"
+      ]
+    },
+    {
+      "station_id": "43069",
+      "name": "Baramati",
+      "latitude": 18.15,
+      "longitude": 74.5833,
+      "elevation_m": 550.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "43113"
+      ]
+    },
+    {
+      "station_id": "43021",
+      "name": "Nanded",
+      "latitude": 19.0833,
+      "longitude": 77.3333,
+      "elevation_m": 355.0,
+      "cluster_id": "WEST",
+      "isolate": true,
+      "buddy_ids": [
+        "43081"
+      ]
+    },
+    {
+      "station_id": "42969",
+      "name": "Angul",
+      "latitude": 20.8333,
+      "longitude": 85.1,
+      "elevation_m": 137.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": [
+        "42970"
+      ]
+    },
+    {
+      "station_id": "VOPC0",
+      "name": "Pondicherry / Auroville",
+      "latitude": 11.9687,
+      "longitude": 79.8101,
+      "elevation_m": 36.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43331",
+        "43329",
+        "43207"
+      ]
+    },
+    {
+      "station_id": "42970",
+      "name": "Cuttack",
+      "latitude": 20.4667,
+      "longitude": 85.9333,
+      "elevation_m": 27.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42971",
+        "43053",
+        "42976",
+        "42973",
+        "42969"
+      ]
+    },
+    {
+      "station_id": "43376",
+      "name": "Palayankottai",
+      "latitude": 8.7333,
+      "longitude": 77.75,
+      "elevation_m": 45.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43377",
+        "43371",
+        "43372",
+        "43354"
+      ]
+    },
+    {
+      "station_id": "42459",
+      "name": "Shivpuri",
+      "latitude": 25.3333,
+      "longitude": 77.65,
+      "elevation_m": 463.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42559",
+        "42463"
+      ]
+    },
+    {
+      "station_id": "42705",
+      "name": "Purulia",
+      "latitude": 23.3333,
+      "longitude": 86.4167,
+      "elevation_m": 254.0,
+      "cluster_id": "NORTH",
+      "isolate": true,
+      "buddy_ids": []
+    },
+    {
+      "station_id": "42900",
+      "name": "Contai",
+      "latitude": 21.7833,
+      "longitude": 87.75,
+      "elevation_m": 10.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42811",
+        "42895"
+      ]
+    },
+    {
+      "station_id": "42414",
+      "name": "Chaparmukh",
+      "latitude": 26.2,
+      "longitude": 92.5167,
+      "elevation_m": 64.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42523",
+        "42408",
+        "42410"
+      ]
+    },
+    {
+      "station_id": "43356",
+      "name": "Periakulum / Ellakkal",
+      "latitude": 10.0,
+      "longitude": 77.1333,
+      "elevation_m": 300.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOCI0",
+        "43355",
+        "43353"
+      ]
+    },
+    {
+      "station_id": "43058",
+      "name": "Alibag",
+      "latitude": 18.6333,
+      "longitude": 72.8667,
+      "elevation_m": 5.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43057",
+        "43003",
+        "43002",
+        "43109"
+      ]
+    },
+    {
+      "station_id": "42137",
+      "name": "Karnal",
+      "latitude": 29.7,
+      "longitude": 77.0333,
+      "elevation_m": 248.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42103",
+        "42101",
+        "42139"
+      ]
+    },
+    {
+      "station_id": "43200",
+      "name": "Dharwad",
+      "latitude": 15.4833,
+      "longitude": 74.9833,
+      "elevation_m": 678.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43198",
+        "43197"
+      ]
+    },
+    {
+      "station_id": "42562",
+      "name": "Tikamgarh",
+      "latitude": 24.7667,
+      "longitude": 78.8333,
+      "elevation_m": 344.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42467",
+        "42463"
+      ]
+    },
+    {
+      "station_id": "VISM0",
+      "name": "Shimla / Kanda",
+      "latitude": 31.0818,
+      "longitude": 77.068,
+      "elevation_m": 1546.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42080",
+        "42105",
+        "42103"
+      ]
+    },
+    {
+      "station_id": "VOPB0",
+      "name": "Port Blair / Portblair / Austin?b?d",
+      "latitude": 11.6412,
+      "longitude": 92.7297,
+      "elevation_m": 4.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43333",
+        "43310"
+      ]
+    },
+    {
+      "station_id": "42408",
+      "name": "Rangia",
+      "latitude": 26.4333,
+      "longitude": 91.6167,
+      "elevation_m": 57.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42410",
+        "42414"
+      ]
+    },
+    {
+      "station_id": "42711",
+      "name": "Krishnanagar",
+      "latitude": 23.4,
+      "longitude": 88.5167,
+      "elevation_m": 12.0,
+      "cluster_id": "NORTH",
+      "isolate": false,
+      "buddy_ids": [
+        "42809",
+        "42807"
+      ]
+    },
+    {
+      "station_id": "43158",
+      "name": "Sangli",
+      "latitude": 16.85,
+      "longitude": 74.6,
+      "elevation_m": 545.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "43157",
+        "43113"
+      ]
+    },
+    {
+      "station_id": "43150",
+      "name": "Cwc Vishakhapatnam / Waltair",
+      "latitude": 17.7,
+      "longitude": 83.3,
+      "elevation_m": 45.0,
+      "cluster_id": "WEST",
+      "isolate": false,
+      "buddy_ids": [
+        "VOVZ0",
+        "43147"
+      ]
     }
   ]
 }

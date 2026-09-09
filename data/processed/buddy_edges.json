@@ -1,0 +1,1946 @@
+{
+  "generated_at": "2026-09-09T09:13:36Z",
+  "n_edges": 388,
+  "edges": [
+    {
+      "primary_station_id": "42080",
+      "buddy_station_id": "VISM0",
+      "distance_km": 42.517
+    },
+    {
+      "primary_station_id": "42080",
+      "buddy_station_id": "42105",
+      "distance_km": 61.052
+    },
+    {
+      "primary_station_id": "42080",
+      "buddy_station_id": "42099",
+      "distance_km": 81.834
+    },
+    {
+      "primary_station_id": "42080",
+      "buddy_station_id": "42103",
+      "distance_km": 96.845
+    },
+    {
+      "primary_station_id": "42099",
+      "buddy_station_id": "42101",
+      "distance_km": 78.257
+    },
+    {
+      "primary_station_id": "42099",
+      "buddy_station_id": "42080",
+      "distance_km": 81.834
+    },
+    {
+      "primary_station_id": "42099",
+      "buddy_station_id": "42105",
+      "distance_km": 91.941
+    },
+    {
+      "primary_station_id": "42099",
+      "buddy_station_id": "42103",
+      "distance_km": 96.168
+    },
+    {
+      "primary_station_id": "42101",
+      "buddy_station_id": "42103",
+      "distance_km": 29.316
+    },
+    {
+      "primary_station_id": "42101",
+      "buddy_station_id": "42105",
+      "distance_km": 59.752
+    },
+    {
+      "primary_station_id": "42101",
+      "buddy_station_id": "42099",
+      "distance_km": 78.257
+    },
+    {
+      "primary_station_id": "42101",
+      "buddy_station_id": "42137",
+      "distance_km": 89.078
+    },
+    {
+      "primary_station_id": "42103",
+      "buddy_station_id": "42101",
+      "distance_km": 29.316
+    },
+    {
+      "primary_station_id": "42103",
+      "buddy_station_id": "42105",
+      "distance_km": 40.488
+    },
+    {
+      "primary_station_id": "42103",
+      "buddy_station_id": "42137",
+      "distance_km": 80.196
+    },
+    {
+      "primary_station_id": "42103",
+      "buddy_station_id": "VISM0",
+      "distance_km": 82.837
+    },
+    {
+      "primary_station_id": "42103",
+      "buddy_station_id": "42099",
+      "distance_km": 96.168
+    },
+    {
+      "primary_station_id": "42103",
+      "buddy_station_id": "42080",
+      "distance_km": 96.845
+    },
+    {
+      "primary_station_id": "42105",
+      "buddy_station_id": "42103",
+      "distance_km": 40.488
+    },
+    {
+      "primary_station_id": "42105",
+      "buddy_station_id": "VISM0",
+      "distance_km": 42.57
+    },
+    {
+      "primary_station_id": "42105",
+      "buddy_station_id": "42101",
+      "distance_km": 59.752
+    },
+    {
+      "primary_station_id": "42105",
+      "buddy_station_id": "42080",
+      "distance_km": 61.052
+    },
+    {
+      "primary_station_id": "42105",
+      "buddy_station_id": "42099",
+      "distance_km": 91.941
+    },
+    {
+      "primary_station_id": "42111",
+      "buddy_station_id": "VIDN0",
+      "distance_km": 19.97
+    },
+    {
+      "primary_station_id": "42111",
+      "buddy_station_id": "42143",
+      "distance_km": 84.825
+    },
+    {
+      "primary_station_id": "42137",
+      "buddy_station_id": "42103",
+      "distance_km": 80.196
+    },
+    {
+      "primary_station_id": "42137",
+      "buddy_station_id": "42101",
+      "distance_km": 89.078
+    },
+    {
+      "primary_station_id": "42137",
+      "buddy_station_id": "42139",
+      "distance_km": 95.677
+    },
+    {
+      "primary_station_id": "42139",
+      "buddy_station_id": "42182",
+      "distance_km": 64.071
+    },
+    {
+      "primary_station_id": "42139",
+      "buddy_station_id": "42181",
+      "distance_km": 70.979
+    },
+    {
+      "primary_station_id": "42139",
+      "buddy_station_id": "42137",
+      "distance_km": 95.677
+    },
+    {
+      "primary_station_id": "42139",
+      "buddy_station_id": "42143",
+      "distance_km": 98.684
+    },
+    {
+      "primary_station_id": "42143",
+      "buddy_station_id": "VIDN0",
+      "distance_km": 66.652
+    },
+    {
+      "primary_station_id": "42143",
+      "buddy_station_id": "42111",
+      "distance_km": 84.825
+    },
+    {
+      "primary_station_id": "42143",
+      "buddy_station_id": "42139",
+      "distance_km": 98.684
+    },
+    {
+      "primary_station_id": "42148",
+      "buddy_station_id": "42189",
+      "distance_km": 74.408
+    },
+    {
+      "primary_station_id": "42170",
+      "buddy_station_id": "42174",
+      "distance_km": 65.922
+    },
+    {
+      "primary_station_id": "42170",
+      "buddy_station_id": "42249",
+      "distance_km": 73.564
+    },
+    {
+      "primary_station_id": "42174",
+      "buddy_station_id": "42170",
+      "distance_km": 65.922
+    },
+    {
+      "primary_station_id": "42174",
+      "buddy_station_id": "42249",
+      "distance_km": 91.116
+    },
+    {
+      "primary_station_id": "42181",
+      "buddy_station_id": "42182",
+      "distance_km": 8.341
+    },
+    {
+      "primary_station_id": "42181",
+      "buddy_station_id": "42139",
+      "distance_km": 70.979
+    },
+    {
+      "primary_station_id": "42182",
+      "buddy_station_id": "42181",
+      "distance_km": 8.341
+    },
+    {
+      "primary_station_id": "42182",
+      "buddy_station_id": "42139",
+      "distance_km": 64.071
+    },
+    {
+      "primary_station_id": "42189",
+      "buddy_station_id": "42266",
+      "distance_km": 72.756
+    },
+    {
+      "primary_station_id": "42189",
+      "buddy_station_id": "42148",
+      "distance_km": 74.408
+    },
+    {
+      "primary_station_id": "42249",
+      "buddy_station_id": "42170",
+      "distance_km": 73.564
+    },
+    {
+      "primary_station_id": "42249",
+      "buddy_station_id": "42174",
+      "distance_km": 91.116
+    },
+    {
+      "primary_station_id": "42266",
+      "buddy_station_id": "42271",
+      "distance_km": 61.493
+    },
+    {
+      "primary_station_id": "42266",
+      "buddy_station_id": "42189",
+      "distance_km": 72.756
+    },
+    {
+      "primary_station_id": "42271",
+      "buddy_station_id": "42266",
+      "distance_km": 61.493
+    },
+    {
+      "primary_station_id": "42271",
+      "buddy_station_id": "42369",
+      "distance_km": 99.968
+    },
+    {
+      "primary_station_id": "42367",
+      "buddy_station_id": "42469",
+      "distance_km": 55.912
+    },
+    {
+      "primary_station_id": "42367",
+      "buddy_station_id": "42369",
+      "distance_km": 61.844
+    },
+    {
+      "primary_station_id": "42367",
+      "buddy_station_id": "42372",
+      "distance_km": 97.777
+    },
+    {
+      "primary_station_id": "42369",
+      "buddy_station_id": "42367",
+      "distance_km": 61.844
+    },
+    {
+      "primary_station_id": "42369",
+      "buddy_station_id": "42372",
+      "distance_km": 73.519
+    },
+    {
+      "primary_station_id": "42369",
+      "buddy_station_id": "42271",
+      "distance_km": 99.968
+    },
+    {
+      "primary_station_id": "42372",
+      "buddy_station_id": "42369",
+      "distance_km": 73.519
+    },
+    {
+      "primary_station_id": "42372",
+      "buddy_station_id": "42367",
+      "distance_km": 97.777
+    },
+    {
+      "primary_station_id": "42408",
+      "buddy_station_id": "42410",
+      "distance_km": 37.211
+    },
+    {
+      "primary_station_id": "42408",
+      "buddy_station_id": "42414",
+      "distance_km": 93.379
+    },
+    {
+      "primary_station_id": "42410",
+      "buddy_station_id": "42408",
+      "distance_km": 37.211
+    },
+    {
+      "primary_station_id": "42410",
+      "buddy_station_id": "42414",
+      "distance_km": 93.827
+    },
+    {
+      "primary_station_id": "42414",
+      "buddy_station_id": "42523",
+      "distance_km": 83.331
+    },
+    {
+      "primary_station_id": "42414",
+      "buddy_station_id": "42408",
+      "distance_km": 93.379
+    },
+    {
+      "primary_station_id": "42414",
+      "buddy_station_id": "42410",
+      "distance_km": 93.827
+    },
+    {
+      "primary_station_id": "42459",
+      "buddy_station_id": "42559",
+      "distance_km": 83.074
+    },
+    {
+      "primary_station_id": "42459",
+      "buddy_station_id": "42463",
+      "distance_km": 94.647
+    },
+    {
+      "primary_station_id": "42463",
+      "buddy_station_id": "42562",
+      "distance_km": 80.041
+    },
+    {
+      "primary_station_id": "42463",
+      "buddy_station_id": "42459",
+      "distance_km": 94.647
+    },
+    {
+      "primary_station_id": "42463",
+      "buddy_station_id": "42467",
+      "distance_km": 97.021
+    },
+    {
+      "primary_station_id": "42467",
+      "buddy_station_id": "42567",
+      "distance_km": 47.929
+    },
+    {
+      "primary_station_id": "42467",
+      "buddy_station_id": "42562",
+      "distance_km": 70.573
+    },
+    {
+      "primary_station_id": "42467",
+      "buddy_station_id": "42463",
+      "distance_km": 97.021
+    },
+    {
+      "primary_station_id": "42469",
+      "buddy_station_id": "42367",
+      "distance_km": 55.912
+    },
+    {
+      "primary_station_id": "42469",
+      "buddy_station_id": "42473",
+      "distance_km": 57.96
+    },
+    {
+      "primary_station_id": "42473",
+      "buddy_station_id": "42469",
+      "distance_km": 57.96
+    },
+    {
+      "primary_station_id": "42473",
+      "buddy_station_id": "42567",
+      "distance_km": 70.273
+    },
+    {
+      "primary_station_id": "42522",
+      "buddy_station_id": "42523",
+      "distance_km": 66.982
+    },
+    {
+      "primary_station_id": "42523",
+      "buddy_station_id": "42522",
+      "distance_km": 66.982
+    },
+    {
+      "primary_station_id": "42523",
+      "buddy_station_id": "42414",
+      "distance_km": 83.331
+    },
+    {
+      "primary_station_id": "42546",
+      "buddy_station_id": "VAUD0",
+      "distance_km": 80.087
+    },
+    {
+      "primary_station_id": "42559",
+      "buddy_station_id": "42459",
+      "distance_km": 83.074
+    },
+    {
+      "primary_station_id": "42562",
+      "buddy_station_id": "42467",
+      "distance_km": 70.573
+    },
+    {
+      "primary_station_id": "42562",
+      "buddy_station_id": "42463",
+      "distance_km": 80.041
+    },
+    {
+      "primary_station_id": "42567",
+      "buddy_station_id": "42467",
+      "distance_km": 47.929
+    },
+    {
+      "primary_station_id": "42567",
+      "buddy_station_id": "42473",
+      "distance_km": 70.273
+    },
+    {
+      "primary_station_id": "42631",
+      "buddy_station_id": "42634",
+      "distance_km": 83.438
+    },
+    {
+      "primary_station_id": "42631",
+      "buddy_station_id": "42730",
+      "distance_km": 89.525
+    },
+    {
+      "primary_station_id": "42634",
+      "buddy_station_id": "42638",
+      "distance_km": 47.317
+    },
+    {
+      "primary_station_id": "42634",
+      "buddy_station_id": "42639",
+      "distance_km": 62.738
+    },
+    {
+      "primary_station_id": "42634",
+      "buddy_station_id": "42631",
+      "distance_km": 83.438
+    },
+    {
+      "primary_station_id": "42638",
+      "buddy_station_id": "42639",
+      "distance_km": 19.566
+    },
+    {
+      "primary_station_id": "42638",
+      "buddy_station_id": "42634",
+      "distance_km": 47.317
+    },
+    {
+      "primary_station_id": "42639",
+      "buddy_station_id": "42638",
+      "distance_km": 19.566
+    },
+    {
+      "primary_station_id": "42639",
+      "buddy_station_id": "42634",
+      "distance_km": 62.738
+    },
+    {
+      "primary_station_id": "42639",
+      "buddy_station_id": "42737",
+      "distance_km": 97.155
+    },
+    {
+      "primary_station_id": "42674",
+      "buddy_station_id": "42675",
+      "distance_km": 86.936
+    },
+    {
+      "primary_station_id": "42675",
+      "buddy_station_id": "42674",
+      "distance_km": 86.936
+    },
+    {
+      "primary_station_id": "42711",
+      "buddy_station_id": "42809",
+      "distance_km": 83.675
+    },
+    {
+      "primary_station_id": "42711",
+      "buddy_station_id": "42807",
+      "distance_km": 98.185
+    },
+    {
+      "primary_station_id": "42730",
+      "buddy_station_id": "42731",
+      "distance_km": 13.412
+    },
+    {
+      "primary_station_id": "42730",
+      "buddy_station_id": "42631",
+      "distance_km": 89.525
+    },
+    {
+      "primary_station_id": "42731",
+      "buddy_station_id": "42730",
+      "distance_km": 13.412
+    },
+    {
+      "primary_station_id": "42737",
+      "buddy_station_id": "42639",
+      "distance_km": 97.155
+    },
+    {
+      "primary_station_id": "42807",
+      "buddy_station_id": "42809",
+      "distance_km": 17.661
+    },
+    {
+      "primary_station_id": "42807",
+      "buddy_station_id": "42811",
+      "distance_km": 41.262
+    },
+    {
+      "primary_station_id": "42807",
+      "buddy_station_id": "42812",
+      "distance_km": 46.554
+    },
+    {
+      "primary_station_id": "42807",
+      "buddy_station_id": "42711",
+      "distance_km": 98.185
+    },
+    {
+      "primary_station_id": "42809",
+      "buddy_station_id": "42807",
+      "distance_km": 17.661
+    },
+    {
+      "primary_station_id": "42809",
+      "buddy_station_id": "42812",
+      "distance_km": 49.742
+    },
+    {
+      "primary_station_id": "42809",
+      "buddy_station_id": "42811",
+      "distance_km": 57.909
+    },
+    {
+      "primary_station_id": "42809",
+      "buddy_station_id": "42711",
+      "distance_km": 83.675
+    },
+    {
+      "primary_station_id": "42811",
+      "buddy_station_id": "42807",
+      "distance_km": 41.262
+    },
+    {
+      "primary_station_id": "42811",
+      "buddy_station_id": "42812",
+      "distance_km": 48.611
+    },
+    {
+      "primary_station_id": "42811",
+      "buddy_station_id": "42809",
+      "distance_km": 57.909
+    },
+    {
+      "primary_station_id": "42811",
+      "buddy_station_id": "42900",
+      "distance_km": 64.275
+    },
+    {
+      "primary_station_id": "42812",
+      "buddy_station_id": "42807",
+      "distance_km": 46.554
+    },
+    {
+      "primary_station_id": "42812",
+      "buddy_station_id": "42811",
+      "distance_km": 48.611
+    },
+    {
+      "primary_station_id": "42812",
+      "buddy_station_id": "42809",
+      "distance_km": 49.742
+    },
+    {
+      "primary_station_id": "42837",
+      "buddy_station_id": "42838",
+      "distance_km": 85.77
+    },
+    {
+      "primary_station_id": "42837",
+      "buddy_station_id": "42914",
+      "distance_km": 98.821
+    },
+    {
+      "primary_station_id": "42837",
+      "buddy_station_id": "VASU0",
+      "distance_km": 99.494
+    },
+    {
+      "primary_station_id": "42838",
+      "buddy_station_id": "42837",
+      "distance_km": 85.77
+    },
+    {
+      "primary_station_id": "42838",
+      "buddy_station_id": "42840",
+      "distance_km": 89.635
+    },
+    {
+      "primary_station_id": "42838",
+      "buddy_station_id": "VASU0",
+      "distance_km": 90.248
+    },
+    {
+      "primary_station_id": "42840",
+      "buddy_station_id": "VASU0",
+      "distance_km": 13.464
+    },
+    {
+      "primary_station_id": "42840",
+      "buddy_station_id": "42838",
+      "distance_km": 89.635
+    },
+    {
+      "primary_station_id": "42851",
+      "buddy_station_id": "42931",
+      "distance_km": 90.016
+    },
+    {
+      "primary_station_id": "42872",
+      "buddy_station_id": "42874",
+      "distance_km": 2.531
+    },
+    {
+      "primary_station_id": "42872",
+      "buddy_station_id": "42948",
+      "distance_km": 65.643
+    },
+    {
+      "primary_station_id": "42874",
+      "buddy_station_id": "42872",
+      "distance_km": 2.531
+    },
+    {
+      "primary_station_id": "42874",
+      "buddy_station_id": "42948",
+      "distance_km": 66.952
+    },
+    {
+      "primary_station_id": "42895",
+      "buddy_station_id": "42973",
+      "distance_km": 84.147
+    },
+    {
+      "primary_station_id": "42895",
+      "buddy_station_id": "42900",
+      "distance_km": 89.461
+    },
+    {
+      "primary_station_id": "42900",
+      "buddy_station_id": "42811",
+      "distance_km": 64.275
+    },
+    {
+      "primary_station_id": "42900",
+      "buddy_station_id": "42895",
+      "distance_km": 89.461
+    },
+    {
+      "primary_station_id": "42914",
+      "buddy_station_id": "42837",
+      "distance_km": 98.821
+    },
+    {
+      "primary_station_id": "42931",
+      "buddy_station_id": "42933",
+      "distance_km": 85.297
+    },
+    {
+      "primary_station_id": "42931",
+      "buddy_station_id": "42851",
+      "distance_km": 90.016
+    },
+    {
+      "primary_station_id": "42933",
+      "buddy_station_id": "42937",
+      "distance_km": 82.156
+    },
+    {
+      "primary_station_id": "42933",
+      "buddy_station_id": "42931",
+      "distance_km": 85.297
+    },
+    {
+      "primary_station_id": "42937",
+      "buddy_station_id": "42933",
+      "distance_km": 82.156
+    },
+    {
+      "primary_station_id": "42937",
+      "buddy_station_id": "42939",
+      "distance_km": 88.284
+    },
+    {
+      "primary_station_id": "42939",
+      "buddy_station_id": "42937",
+      "distance_km": 88.284
+    },
+    {
+      "primary_station_id": "42948",
+      "buddy_station_id": "42872",
+      "distance_km": 65.643
+    },
+    {
+      "primary_station_id": "42948",
+      "buddy_station_id": "42874",
+      "distance_km": 66.952
+    },
+    {
+      "primary_station_id": "42969",
+      "buddy_station_id": "42970",
+      "distance_km": 95.81
+    },
+    {
+      "primary_station_id": "42970",
+      "buddy_station_id": "42971",
+      "distance_km": 26.254
+    },
+    {
+      "primary_station_id": "42970",
+      "buddy_station_id": "43053",
+      "distance_km": 75.127
+    },
+    {
+      "primary_station_id": "42970",
+      "buddy_station_id": "42976",
+      "distance_km": 80.342
+    },
+    {
+      "primary_station_id": "42970",
+      "buddy_station_id": "42973",
+      "distance_km": 90.391
+    },
+    {
+      "primary_station_id": "42970",
+      "buddy_station_id": "42969",
+      "distance_km": 95.81
+    },
+    {
+      "primary_station_id": "42971",
+      "buddy_station_id": "42970",
+      "distance_km": 26.254
+    },
+    {
+      "primary_station_id": "42971",
+      "buddy_station_id": "43053",
+      "distance_km": 50.068
+    },
+    {
+      "primary_station_id": "42971",
+      "buddy_station_id": "42976",
+      "distance_km": 88.834
+    },
+    {
+      "primary_station_id": "42973",
+      "buddy_station_id": "42976",
+      "distance_km": 53.992
+    },
+    {
+      "primary_station_id": "42973",
+      "buddy_station_id": "42895",
+      "distance_km": 84.147
+    },
+    {
+      "primary_station_id": "42973",
+      "buddy_station_id": "42970",
+      "distance_km": 90.391
+    },
+    {
+      "primary_station_id": "42976",
+      "buddy_station_id": "42973",
+      "distance_km": 53.992
+    },
+    {
+      "primary_station_id": "42976",
+      "buddy_station_id": "42970",
+      "distance_km": 80.342
+    },
+    {
+      "primary_station_id": "42976",
+      "buddy_station_id": "42971",
+      "distance_km": 88.834
+    },
+    {
+      "primary_station_id": "43001",
+      "buddy_station_id": "43002",
+      "distance_km": 95.302
+    },
+    {
+      "primary_station_id": "43001",
+      "buddy_station_id": "43003",
+      "distance_km": 95.542
+    },
+    {
+      "primary_station_id": "43002",
+      "buddy_station_id": "43003",
+      "distance_km": 1.755
+    },
+    {
+      "primary_station_id": "43002",
+      "buddy_station_id": "43057",
+      "distance_km": 24.159
+    },
+    {
+      "primary_station_id": "43002",
+      "buddy_station_id": "43058",
+      "distance_km": 53.866
+    },
+    {
+      "primary_station_id": "43002",
+      "buddy_station_id": "43005",
+      "distance_km": 87.618
+    },
+    {
+      "primary_station_id": "43002",
+      "buddy_station_id": "43001",
+      "distance_km": 95.302
+    },
+    {
+      "primary_station_id": "43003",
+      "buddy_station_id": "43002",
+      "distance_km": 1.755
+    },
+    {
+      "primary_station_id": "43003",
+      "buddy_station_id": "43057",
+      "distance_km": 24.349
+    },
+    {
+      "primary_station_id": "43003",
+      "buddy_station_id": "43058",
+      "distance_km": 53.78
+    },
+    {
+      "primary_station_id": "43003",
+      "buddy_station_id": "43005",
+      "distance_km": 89.371
+    },
+    {
+      "primary_station_id": "43003",
+      "buddy_station_id": "43001",
+      "distance_km": 95.542
+    },
+    {
+      "primary_station_id": "43005",
+      "buddy_station_id": "43002",
+      "distance_km": 87.618
+    },
+    {
+      "primary_station_id": "43005",
+      "buddy_station_id": "43003",
+      "distance_km": 89.371
+    },
+    {
+      "primary_station_id": "43005",
+      "buddy_station_id": "43057",
+      "distance_km": 90.241
+    },
+    {
+      "primary_station_id": "43021",
+      "buddy_station_id": "43081",
+      "distance_km": 93.023
+    },
+    {
+      "primary_station_id": "43053",
+      "buddy_station_id": "42971",
+      "distance_km": 50.068
+    },
+    {
+      "primary_station_id": "43053",
+      "buddy_station_id": "42970",
+      "distance_km": 75.127
+    },
+    {
+      "primary_station_id": "43057",
+      "buddy_station_id": "43002",
+      "distance_km": 24.159
+    },
+    {
+      "primary_station_id": "43057",
+      "buddy_station_id": "43003",
+      "distance_km": 24.349
+    },
+    {
+      "primary_station_id": "43057",
+      "buddy_station_id": "43058",
+      "distance_km": 30.119
+    },
+    {
+      "primary_station_id": "43057",
+      "buddy_station_id": "43005",
+      "distance_km": 90.241
+    },
+    {
+      "primary_station_id": "43058",
+      "buddy_station_id": "43057",
+      "distance_km": 30.119
+    },
+    {
+      "primary_station_id": "43058",
+      "buddy_station_id": "43003",
+      "distance_km": 53.78
+    },
+    {
+      "primary_station_id": "43058",
+      "buddy_station_id": "43002",
+      "distance_km": 53.866
+    },
+    {
+      "primary_station_id": "43058",
+      "buddy_station_id": "43109",
+      "distance_km": 94.086
+    },
+    {
+      "primary_station_id": "43069",
+      "buddy_station_id": "43113",
+      "distance_km": 90.253
+    },
+    {
+      "primary_station_id": "43081",
+      "buddy_station_id": "43083",
+      "distance_km": 70.795
+    },
+    {
+      "primary_station_id": "43081",
+      "buddy_station_id": "43021",
+      "distance_km": 93.023
+    },
+    {
+      "primary_station_id": "43083",
+      "buddy_station_id": "43128",
+      "distance_km": 69.998
+    },
+    {
+      "primary_station_id": "43083",
+      "buddy_station_id": "43081",
+      "distance_km": 70.795
+    },
+    {
+      "primary_station_id": "43083",
+      "buddy_station_id": "VOHS0",
+      "distance_km": 91.628
+    },
+    {
+      "primary_station_id": "43109",
+      "buddy_station_id": "43058",
+      "distance_km": 94.086
+    },
+    {
+      "primary_station_id": "43109",
+      "buddy_station_id": "43110",
+      "distance_km": 95.919
+    },
+    {
+      "primary_station_id": "43110",
+      "buddy_station_id": "43109",
+      "distance_km": 95.919
+    },
+    {
+      "primary_station_id": "43110",
+      "buddy_station_id": "43113",
+      "distance_km": 96.49
+    },
+    {
+      "primary_station_id": "43113",
+      "buddy_station_id": "43069",
+      "distance_km": 90.253
+    },
+    {
+      "primary_station_id": "43113",
+      "buddy_station_id": "43157",
+      "distance_km": 92.879
+    },
+    {
+      "primary_station_id": "43113",
+      "buddy_station_id": "43158",
+      "distance_km": 94.39
+    },
+    {
+      "primary_station_id": "43113",
+      "buddy_station_id": "43110",
+      "distance_km": 96.49
+    },
+    {
+      "primary_station_id": "43128",
+      "buddy_station_id": "VOHS0",
+      "distance_km": 23.627
+    },
+    {
+      "primary_station_id": "43128",
+      "buddy_station_id": "43083",
+      "distance_km": 69.998
+    },
+    {
+      "primary_station_id": "43147",
+      "buddy_station_id": "43189",
+      "distance_km": 55.773
+    },
+    {
+      "primary_station_id": "43147",
+      "buddy_station_id": "VORY0",
+      "distance_km": 82.16
+    },
+    {
+      "primary_station_id": "43147",
+      "buddy_station_id": "VOVZ0",
+      "distance_km": 83.136
+    },
+    {
+      "primary_station_id": "43147",
+      "buddy_station_id": "43150",
+      "distance_km": 88.538
+    },
+    {
+      "primary_station_id": "43150",
+      "buddy_station_id": "VOVZ0",
+      "distance_km": 7.305
+    },
+    {
+      "primary_station_id": "43150",
+      "buddy_station_id": "43147",
+      "distance_km": 88.538
+    },
+    {
+      "primary_station_id": "43157",
+      "buddy_station_id": "43158",
+      "distance_km": 42.454
+    },
+    {
+      "primary_station_id": "43157",
+      "buddy_station_id": "43113",
+      "distance_km": 92.879
+    },
+    {
+      "primary_station_id": "43157",
+      "buddy_station_id": "43197",
+      "distance_km": 99.793
+    },
+    {
+      "primary_station_id": "43158",
+      "buddy_station_id": "43157",
+      "distance_km": 42.454
+    },
+    {
+      "primary_station_id": "43158",
+      "buddy_station_id": "43113",
+      "distance_km": 94.39
+    },
+    {
+      "primary_station_id": "43189",
+      "buddy_station_id": "VORY0",
+      "distance_km": 47.601
+    },
+    {
+      "primary_station_id": "43189",
+      "buddy_station_id": "43147",
+      "distance_km": 55.773
+    },
+    {
+      "primary_station_id": "43192",
+      "buddy_station_id": "43196",
+      "distance_km": 8.225
+    },
+    {
+      "primary_station_id": "43192",
+      "buddy_station_id": "43194",
+      "distance_km": 11.12
+    },
+    {
+      "primary_station_id": "43192",
+      "buddy_station_id": "43225",
+      "distance_km": 84.932
+    },
+    {
+      "primary_station_id": "43192",
+      "buddy_station_id": "43197",
+      "distance_km": 86.884
+    },
+    {
+      "primary_station_id": "43192",
+      "buddy_station_id": "43198",
+      "distance_km": 94.862
+    },
+    {
+      "primary_station_id": "43194",
+      "buddy_station_id": "43196",
+      "distance_km": 5.159
+    },
+    {
+      "primary_station_id": "43194",
+      "buddy_station_id": "43192",
+      "distance_km": 11.12
+    },
+    {
+      "primary_station_id": "43194",
+      "buddy_station_id": "43225",
+      "distance_km": 74.877
+    },
+    {
+      "primary_station_id": "43194",
+      "buddy_station_id": "43197",
+      "distance_km": 92.64
+    },
+    {
+      "primary_station_id": "43196",
+      "buddy_station_id": "43194",
+      "distance_km": 5.159
+    },
+    {
+      "primary_station_id": "43196",
+      "buddy_station_id": "43192",
+      "distance_km": 8.225
+    },
+    {
+      "primary_station_id": "43196",
+      "buddy_station_id": "43225",
+      "distance_km": 79.827
+    },
+    {
+      "primary_station_id": "43196",
+      "buddy_station_id": "43197",
+      "distance_km": 93.655
+    },
+    {
+      "primary_station_id": "43197",
+      "buddy_station_id": "43198",
+      "distance_km": 8.921
+    },
+    {
+      "primary_station_id": "43197",
+      "buddy_station_id": "43200",
+      "distance_km": 63.117
+    },
+    {
+      "primary_station_id": "43197",
+      "buddy_station_id": "43192",
+      "distance_km": 86.884
+    },
+    {
+      "primary_station_id": "43197",
+      "buddy_station_id": "43194",
+      "distance_km": 92.64
+    },
+    {
+      "primary_station_id": "43197",
+      "buddy_station_id": "43196",
+      "distance_km": 93.655
+    },
+    {
+      "primary_station_id": "43197",
+      "buddy_station_id": "43157",
+      "distance_km": 99.793
+    },
+    {
+      "primary_station_id": "43198",
+      "buddy_station_id": "43197",
+      "distance_km": 8.921
+    },
+    {
+      "primary_station_id": "43198",
+      "buddy_station_id": "43200",
+      "distance_km": 56.596
+    },
+    {
+      "primary_station_id": "43198",
+      "buddy_station_id": "43192",
+      "distance_km": 94.862
+    },
+    {
+      "primary_station_id": "43200",
+      "buddy_station_id": "43198",
+      "distance_km": 56.596
+    },
+    {
+      "primary_station_id": "43200",
+      "buddy_station_id": "43197",
+      "distance_km": 63.117
+    },
+    {
+      "primary_station_id": "43207",
+      "buddy_station_id": "43329",
+      "distance_km": 29.656
+    },
+    {
+      "primary_station_id": "43207",
+      "buddy_station_id": "43331",
+      "distance_km": 52.179
+    },
+    {
+      "primary_station_id": "43207",
+      "buddy_station_id": "VOPC0",
+      "distance_km": 52.331
+    },
+    {
+      "primary_station_id": "43207",
+      "buddy_station_id": "43346",
+      "distance_km": 65.266
+    },
+    {
+      "primary_station_id": "43207",
+      "buddy_station_id": "43347",
+      "distance_km": 82.044
+    },
+    {
+      "primary_station_id": "43225",
+      "buddy_station_id": "43226",
+      "distance_km": 65.216
+    },
+    {
+      "primary_station_id": "43225",
+      "buddy_station_id": "43194",
+      "distance_km": 74.877
+    },
+    {
+      "primary_station_id": "43225",
+      "buddy_station_id": "43196",
+      "distance_km": 79.827
+    },
+    {
+      "primary_station_id": "43225",
+      "buddy_station_id": "43192",
+      "distance_km": 84.932
+    },
+    {
+      "primary_station_id": "43225",
+      "buddy_station_id": "43229",
+      "distance_km": 90.58
+    },
+    {
+      "primary_station_id": "43226",
+      "buddy_station_id": "43229",
+      "distance_km": 25.705
+    },
+    {
+      "primary_station_id": "43226",
+      "buddy_station_id": "43225",
+      "distance_km": 65.216
+    },
+    {
+      "primary_station_id": "43229",
+      "buddy_station_id": "43226",
+      "distance_km": 25.705
+    },
+    {
+      "primary_station_id": "43229",
+      "buddy_station_id": "43225",
+      "distance_km": 90.58
+    },
+    {
+      "primary_station_id": "43243",
+      "buddy_station_id": "43245",
+      "distance_km": 50.038
+    },
+    {
+      "primary_station_id": "43245",
+      "buddy_station_id": "43243",
+      "distance_km": 50.038
+    },
+    {
+      "primary_station_id": "43245",
+      "buddy_station_id": "43275",
+      "distance_km": 97.2
+    },
+    {
+      "primary_station_id": "43266",
+      "buddy_station_id": "VOAT0",
+      "distance_km": 31.882
+    },
+    {
+      "primary_station_id": "43266",
+      "buddy_station_id": "43311",
+      "distance_km": 41.55
+    },
+    {
+      "primary_station_id": "43271",
+      "buddy_station_id": "VOBL0",
+      "distance_km": 93.615
+    },
+    {
+      "primary_station_id": "43271",
+      "buddy_station_id": "43303",
+      "distance_km": 98.241
+    },
+    {
+      "primary_station_id": "43275",
+      "buddy_station_id": "VOTP0",
+      "distance_km": 5.757
+    },
+    {
+      "primary_station_id": "43275",
+      "buddy_station_id": "43303",
+      "distance_km": 95.674
+    },
+    {
+      "primary_station_id": "43275",
+      "buddy_station_id": "43245",
+      "distance_km": 97.2
+    },
+    {
+      "primary_station_id": "43275",
+      "buddy_station_id": "43278",
+      "distance_km": 98.251
+    },
+    {
+      "primary_station_id": "43275",
+      "buddy_station_id": "43279",
+      "distance_km": 98.54
+    },
+    {
+      "primary_station_id": "43278",
+      "buddy_station_id": "43279",
+      "distance_km": 10.355
+    },
+    {
+      "primary_station_id": "43278",
+      "buddy_station_id": "43275",
+      "distance_km": 98.251
+    },
+    {
+      "primary_station_id": "43278",
+      "buddy_station_id": "VOTP0",
+      "distance_km": 99.015
+    },
+    {
+      "primary_station_id": "43279",
+      "buddy_station_id": "43278",
+      "distance_km": 10.355
+    },
+    {
+      "primary_station_id": "43279",
+      "buddy_station_id": "43275",
+      "distance_km": 98.54
+    },
+    {
+      "primary_station_id": "43279",
+      "buddy_station_id": "VOTP0",
+      "distance_km": 98.702
+    },
+    {
+      "primary_station_id": "43301",
+      "buddy_station_id": "43325",
+      "distance_km": 55.666
+    },
+    {
+      "primary_station_id": "43301",
+      "buddy_station_id": "43302",
+      "distance_km": 69.804
+    },
+    {
+      "primary_station_id": "43302",
+      "buddy_station_id": "43301",
+      "distance_km": 69.804
+    },
+    {
+      "primary_station_id": "43302",
+      "buddy_station_id": "43303",
+      "distance_km": 79.536
+    },
+    {
+      "primary_station_id": "43303",
+      "buddy_station_id": "43302",
+      "distance_km": 79.536
+    },
+    {
+      "primary_station_id": "43303",
+      "buddy_station_id": "VOTP0",
+      "distance_km": 90.26
+    },
+    {
+      "primary_station_id": "43303",
+      "buddy_station_id": "43275",
+      "distance_km": 95.674
+    },
+    {
+      "primary_station_id": "43303",
+      "buddy_station_id": "43271",
+      "distance_km": 98.241
+    },
+    {
+      "primary_station_id": "43310",
+      "buddy_station_id": "43333",
+      "distance_km": 86.659
+    },
+    {
+      "primary_station_id": "43310",
+      "buddy_station_id": "VOPB0",
+      "distance_km": 89.029
+    },
+    {
+      "primary_station_id": "43311",
+      "buddy_station_id": "43266",
+      "distance_km": 41.55
+    },
+    {
+      "primary_station_id": "43311",
+      "buddy_station_id": "VOAT0",
+      "distance_km": 69.011
+    },
+    {
+      "primary_station_id": "43314",
+      "buddy_station_id": "VOCL0",
+      "distance_km": 22.593
+    },
+    {
+      "primary_station_id": "43314",
+      "buddy_station_id": "43357",
+      "distance_km": 94.278
+    },
+    {
+      "primary_station_id": "43325",
+      "buddy_station_id": "43301",
+      "distance_km": 55.666
+    },
+    {
+      "primary_station_id": "43325",
+      "buddy_station_id": "43342",
+      "distance_km": 78.366
+    },
+    {
+      "primary_station_id": "43329",
+      "buddy_station_id": "43331",
+      "distance_km": 22.895
+    },
+    {
+      "primary_station_id": "43329",
+      "buddy_station_id": "VOPC0",
+      "distance_km": 22.953
+    },
+    {
+      "primary_station_id": "43329",
+      "buddy_station_id": "43207",
+      "distance_km": 29.656
+    },
+    {
+      "primary_station_id": "43329",
+      "buddy_station_id": "43346",
+      "distance_km": 94.794
+    },
+    {
+      "primary_station_id": "43331",
+      "buddy_station_id": "VOPC0",
+      "distance_km": 0.752
+    },
+    {
+      "primary_station_id": "43331",
+      "buddy_station_id": "43329",
+      "distance_km": 22.895
+    },
+    {
+      "primary_station_id": "43331",
+      "buddy_station_id": "43207",
+      "distance_km": 52.179
+    },
+    {
+      "primary_station_id": "43333",
+      "buddy_station_id": "VOPB0",
+      "distance_km": 3.169
+    },
+    {
+      "primary_station_id": "43333",
+      "buddy_station_id": "43310",
+      "distance_km": 86.659
+    },
+    {
+      "primary_station_id": "43335",
+      "buddy_station_id": "43357",
+      "distance_km": 54.909
+    },
+    {
+      "primary_station_id": "43335",
+      "buddy_station_id": "VOCI0",
+      "distance_km": 73.539
+    },
+    {
+      "primary_station_id": "43335",
+      "buddy_station_id": "VOCL0",
+      "distance_km": 86.286
+    },
+    {
+      "primary_station_id": "43342",
+      "buddy_station_id": "43344",
+      "distance_km": 72.11
+    },
+    {
+      "primary_station_id": "43342",
+      "buddy_station_id": "43325",
+      "distance_km": 78.366
+    },
+    {
+      "primary_station_id": "43344",
+      "buddy_station_id": "43342",
+      "distance_km": 72.11
+    },
+    {
+      "primary_station_id": "43344",
+      "buddy_station_id": "43348",
+      "distance_km": 87.364
+    },
+    {
+      "primary_station_id": "43346",
+      "buddy_station_id": "43347",
+      "distance_km": 16.779
+    },
+    {
+      "primary_station_id": "43346",
+      "buddy_station_id": "43207",
+      "distance_km": 65.266
+    },
+    {
+      "primary_station_id": "43346",
+      "buddy_station_id": "43348",
+      "distance_km": 81.406
+    },
+    {
+      "primary_station_id": "43346",
+      "buddy_station_id": "43329",
+      "distance_km": 94.794
+    },
+    {
+      "primary_station_id": "43347",
+      "buddy_station_id": "43346",
+      "distance_km": 16.779
+    },
+    {
+      "primary_station_id": "43347",
+      "buddy_station_id": "43348",
+      "distance_km": 70.18
+    },
+    {
+      "primary_station_id": "43347",
+      "buddy_station_id": "43207",
+      "distance_km": 82.044
+    },
+    {
+      "primary_station_id": "43348",
+      "buddy_station_id": "43347",
+      "distance_km": 70.18
+    },
+    {
+      "primary_station_id": "43348",
+      "buddy_station_id": "43361",
+      "distance_km": 76.94
+    },
+    {
+      "primary_station_id": "43348",
+      "buddy_station_id": "43346",
+      "distance_km": 81.406
+    },
+    {
+      "primary_station_id": "43348",
+      "buddy_station_id": "43344",
+      "distance_km": 87.364
+    },
+    {
+      "primary_station_id": "43353",
+      "buddy_station_id": "VOCI0",
+      "distance_km": 26.901
+    },
+    {
+      "primary_station_id": "43353",
+      "buddy_station_id": "43355",
+      "distance_km": 49.124
+    },
+    {
+      "primary_station_id": "43353",
+      "buddy_station_id": "43357",
+      "distance_km": 63.251
+    },
+    {
+      "primary_station_id": "43353",
+      "buddy_station_id": "43356",
+      "distance_km": 95.068
+    },
+    {
+      "primary_station_id": "43354",
+      "buddy_station_id": "43371",
+      "distance_km": 57.571
+    },
+    {
+      "primary_station_id": "43354",
+      "buddy_station_id": "43372",
+      "distance_km": 59.413
+    },
+    {
+      "primary_station_id": "43354",
+      "buddy_station_id": "43355",
+      "distance_km": 78.317
+    },
+    {
+      "primary_station_id": "43354",
+      "buddy_station_id": "43376",
+      "distance_km": 96.235
+    },
+    {
+      "primary_station_id": "43355",
+      "buddy_station_id": "43353",
+      "distance_km": 49.124
+    },
+    {
+      "primary_station_id": "43355",
+      "buddy_station_id": "VOCI0",
+      "distance_km": 64.475
+    },
+    {
+      "primary_station_id": "43355",
+      "buddy_station_id": "43354",
+      "distance_km": 78.317
+    },
+    {
+      "primary_station_id": "43355",
+      "buddy_station_id": "43356",
+      "distance_km": 81.926
+    },
+    {
+      "primary_station_id": "43356",
+      "buddy_station_id": "VOCI0",
+      "distance_km": 81.838
+    },
+    {
+      "primary_station_id": "43356",
+      "buddy_station_id": "43355",
+      "distance_km": 81.926
+    },
+    {
+      "primary_station_id": "43356",
+      "buddy_station_id": "43353",
+      "distance_km": 95.068
+    },
+    {
+      "primary_station_id": "43357",
+      "buddy_station_id": "VOCI0",
+      "distance_km": 45.332
+    },
+    {
+      "primary_station_id": "43357",
+      "buddy_station_id": "43335",
+      "distance_km": 54.909
+    },
+    {
+      "primary_station_id": "43357",
+      "buddy_station_id": "43353",
+      "distance_km": 63.251
+    },
+    {
+      "primary_station_id": "43357",
+      "buddy_station_id": "VOCL0",
+      "distance_km": 74.629
+    },
+    {
+      "primary_station_id": "43357",
+      "buddy_station_id": "43314",
+      "distance_km": 94.278
+    },
+    {
+      "primary_station_id": "43361",
+      "buddy_station_id": "43348",
+      "distance_km": 76.94
+    },
+    {
+      "primary_station_id": "43371",
+      "buddy_station_id": "43372",
+      "distance_km": 1.846
+    },
+    {
+      "primary_station_id": "43371",
+      "buddy_station_id": "43354",
+      "distance_km": 57.571
+    },
+    {
+      "primary_station_id": "43371",
+      "buddy_station_id": "43377",
+      "distance_km": 75.106
+    },
+    {
+      "primary_station_id": "43371",
+      "buddy_station_id": "43376",
+      "distance_km": 92.242
+    },
+    {
+      "primary_station_id": "43372",
+      "buddy_station_id": "43371",
+      "distance_km": 1.846
+    },
+    {
+      "primary_station_id": "43372",
+      "buddy_station_id": "43354",
+      "distance_km": 59.413
+    },
+    {
+      "primary_station_id": "43372",
+      "buddy_station_id": "43377",
+      "distance_km": 74.029
+    },
+    {
+      "primary_station_id": "43372",
+      "buddy_station_id": "43376",
+      "distance_km": 92.817
+    },
+    {
+      "primary_station_id": "43376",
+      "buddy_station_id": "43377",
+      "distance_km": 77.332
+    },
+    {
+      "primary_station_id": "43376",
+      "buddy_station_id": "43371",
+      "distance_km": 92.242
+    },
+    {
+      "primary_station_id": "43376",
+      "buddy_station_id": "43372",
+      "distance_km": 92.817
+    },
+    {
+      "primary_station_id": "43376",
+      "buddy_station_id": "43354",
+      "distance_km": 96.235
+    },
+    {
+      "primary_station_id": "43377",
+      "buddy_station_id": "43372",
+      "distance_km": 74.029
+    },
+    {
+      "primary_station_id": "43377",
+      "buddy_station_id": "43371",
+      "distance_km": 75.106
+    },
+    {
+      "primary_station_id": "43377",
+      "buddy_station_id": "43376",
+      "distance_km": 77.332
+    },
+    {
+      "primary_station_id": "VASU0",
+      "buddy_station_id": "42840",
+      "distance_km": 13.464
+    },
+    {
+      "primary_station_id": "VASU0",
+      "buddy_station_id": "42838",
+      "distance_km": 90.248
+    },
+    {
+      "primary_station_id": "VASU0",
+      "buddy_station_id": "42837",
+      "distance_km": 99.494
+    },
+    {
+      "primary_station_id": "VAUD0",
+      "buddy_station_id": "42546",
+      "distance_km": 80.087
+    },
+    {
+      "primary_station_id": "VIDN0",
+      "buddy_station_id": "42111",
+      "distance_km": 19.97
+    },
+    {
+      "primary_station_id": "VIDN0",
+      "buddy_station_id": "42143",
+      "distance_km": 66.652
+    },
+    {
+      "primary_station_id": "VISM0",
+      "buddy_station_id": "42080",
+      "distance_km": 42.517
+    },
+    {
+      "primary_station_id": "VISM0",
+      "buddy_station_id": "42105",
+      "distance_km": 42.57
+    },
+    {
+      "primary_station_id": "VISM0",
+      "buddy_station_id": "42103",
+      "distance_km": 82.837
+    },
+    {
+      "primary_station_id": "VOAT0",
+      "buddy_station_id": "43266",
+      "distance_km": 31.882
+    },
+    {
+      "primary_station_id": "VOAT0",
+      "buddy_station_id": "43311",
+      "distance_km": 69.011
+    },
+    {
+      "primary_station_id": "VOBL0",
+      "buddy_station_id": "43271",
+      "distance_km": 93.615
+    },
+    {
+      "primary_station_id": "VOCI0",
+      "buddy_station_id": "43353",
+      "distance_km": 26.901
+    },
+    {
+      "primary_station_id": "VOCI0",
+      "buddy_station_id": "43357",
+      "distance_km": 45.332
+    },
+    {
+      "primary_station_id": "VOCI0",
+      "buddy_station_id": "43355",
+      "distance_km": 64.475
+    },
+    {
+      "primary_station_id": "VOCI0",
+      "buddy_station_id": "43335",
+      "distance_km": 73.539
+    },
+    {
+      "primary_station_id": "VOCI0",
+      "buddy_station_id": "43356",
+      "distance_km": 81.838
+    },
+    {
+      "primary_station_id": "VOCL0",
+      "buddy_station_id": "43314",
+      "distance_km": 22.593
+    },
+    {
+      "primary_station_id": "VOCL0",
+      "buddy_station_id": "43357",
+      "distance_km": 74.629
+    },
+    {
+      "primary_station_id": "VOCL0",
+      "buddy_station_id": "43335",
+      "distance_km": 86.286
+    },
+    {
+      "primary_station_id": "VOHS0",
+      "buddy_station_id": "43128",
+      "distance_km": 23.627
+    },
+    {
+      "primary_station_id": "VOHS0",
+      "buddy_station_id": "43083",
+      "distance_km": 91.628
+    },
+    {
+      "primary_station_id": "VOPB0",
+      "buddy_station_id": "43333",
+      "distance_km": 3.169
+    },
+    {
+      "primary_station_id": "VOPB0",
+      "buddy_station_id": "43310",
+      "distance_km": 89.029
+    },
+    {
+      "primary_station_id": "VOPC0",
+      "buddy_station_id": "43331",
+      "distance_km": 0.752
+    },
+    {
+      "primary_station_id": "VOPC0",
+      "buddy_station_id": "43329",
+      "distance_km": 22.953
+    },
+    {
+      "primary_station_id": "VOPC0",
+      "buddy_station_id": "43207",
+      "distance_km": 52.331
+    },
+    {
+      "primary_station_id": "VORY0",
+      "buddy_station_id": "43189",
+      "distance_km": 47.601
+    },
+    {
+      "primary_station_id": "VORY0",
+      "buddy_station_id": "43147",
+      "distance_km": 82.16
+    },
+    {
+      "primary_station_id": "VOTP0",
+      "buddy_station_id": "43275",
+      "distance_km": 5.757
+    },
+    {
+      "primary_station_id": "VOTP0",
+      "buddy_station_id": "43303",
+      "distance_km": 90.26
+    },
+    {
+      "primary_station_id": "VOTP0",
+      "buddy_station_id": "43279",
+      "distance_km": 98.702
+    },
+    {
+      "primary_station_id": "VOTP0",
+      "buddy_station_id": "43278",
+      "distance_km": 99.015
+    },
+    {
+      "primary_station_id": "VOVZ0",
+      "buddy_station_id": "43150",
+      "distance_km": 7.305
+    },
+    {
+      "primary_station_id": "VOVZ0",
+      "buddy_station_id": "43147",
+      "distance_km": 83.136
+    }
+  ]
+}

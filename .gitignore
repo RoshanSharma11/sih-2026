@@ -12,7 +12,10 @@ build/
 .DS_Store
 .streamlit/secrets.toml
 
+.mplconfig/
+
 data/raw/
+ml/data/raw/
 data/processed/*.parquet
 data/eval/*.parquet
 data/eval/*.png

@@ -22,7 +22,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 
 ### Assumptions
 
-- You will drop ML `data/raw/` (`stations.csv`, `buddy_edges.csv`, hourly CSVs) into `ml/data/raw/` (gitignored; not in the pull). I1 is blocked without it.
+- You will drop ML `data/raw/` (`stations.csv`, `buddy_edges.csv`, hourly CSVs) into `ml/data/raw/` (gitignored; not in the pull). **Done.** Catalog JSON is written.
 - LSTM operating threshold stays val window-MSE p99 (`0.00605`) until ML freezes another value. Metadata says it is not frozen; we still ship with p99.
 - One product port. No Docker, auth, SSE, SHAP on ingest.
 - Current Streamlit page keeps working on a small view set via `pipeline_status` until F7.
@@ -45,7 +45,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 4. Upsert catalog + `station_buddies` on API boot
 5. Tests: scaler ids ⊂ catalog (fixture covering all scalers); Palam/Safdarjung/Santacruz/Colaba present; isolates have &lt;2 buddies
 
-**Code is in.** Real 151-station JSON is not written until you drop `ml/data/raw/`. The committed 4-station `stations.json` is unchanged. Wipe `data/skyguard.db` after a real import (new `isolate` column + `station_buddies` table).
+**Code is in.** `data/processed/stations.json` is 151 stations (scaler ids match). `buddy_edges.json` has 388 edges / 24 isolates. Hourly parquet written for every catalog id. Wipe `data/skyguard.db` after a real import (done). Palam `42181` has two exported buddies (`42182`, `42139`).
 
 #### I2 — adapter + live ingest uses ML
 
