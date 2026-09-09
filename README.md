@@ -58,10 +58,10 @@ Wait for `Application startup complete`. Interactive docs: http://127.0.0.1:8000
 In a second terminal, seed 24 clean hours then POST every station each weather-hour (default 200 ms):
 
 ```text
-python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024-07-01T00:00:00Z
+python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024-07-01T00:00:00Z --stations 42181 --with-buddies
 ```
 
-`--hours N` stops after N weather-hours. The streamer has **no** `--fault` flag. `409` duplicate hours are skipped, not a crash.
+`--hours N` stops after N weather-hours. The streamer has **no** `--fault` flag. `409` duplicate hours are skipped, not a crash. `--stations` is a view set; `--with-buddies` (default) expands to the ingest set. CLI overrides `GET /demo/stream-filter`.
 
 Tests: `pytest -q`.
 
@@ -72,18 +72,19 @@ While the stream is running:
 ```text
 curl -X POST http://127.0.0.1:8000/demo/inject \
   -H 'Content-Type: application/json' \
-  -d '{"target":"cluster","cluster_id":"NORTH","kind":"GENUINE_WEATHER"}'
+  -d '{"target":"neighborhood","station_id":"42181","kind":"GENUINE_WEATHER"}'
 
 curl -X POST http://127.0.0.1:8000/demo/inject \
   -H 'Content-Type: application/json' \
   -d '{"target":"station","station_id":"42181","kind":"SPIKE","channel":"temp_c"}'
 ```
 
-- Storm must target a **cluster**. Hardware (spike / freeze / drift / comm) must target **one station**.
+- Storm must target a **neighborhood** (station + 1-hop buddies). Hardware (spike / freeze / drift / comm) must target **one station**.
+- Legacy `target: cluster` is rejected with 400.
 - `GET /demo/status` lists armed overlays. `POST /demo/reset` clears them.
 - `demo_injected` on `POST /ingest` is the overlay kind. It is not ground truth for judges.
 
-Poll `/stations` and `/alerts` at ~1 s. Expect two different `pipeline_status` values: cluster storm → `GENUINE_WEATHER`, lone spike → `HARDWARE`. The first station in a storm hour may be `UNKNOWN` until a same-hour neighbor exists.
+Poll `/stations` and `/alerts` at ~1 s. Expect two different `pipeline_status` values: neighborhood storm → `GENUINE_WEATHER`, lone spike → `HARDWARE`. The first station in a storm hour may be `UNKNOWN` until a same-hour neighbor exists.
 
 ## Dashboard
 
@@ -99,7 +100,7 @@ Default: http://127.0.0.1:8501 · `SKYGUARD_API` defaults to `http://127.0.0.1:8
 **30-second judge script**
 
 1. Four teal markers (clean stream).
-2. **Storm on NORTH** → both Delhi markers go amber; Mumbai stays teal. Neighbors agree, not a fault. Health does not crash.
+2. **Storm around Palam** → Palam and its buddies go amber; Mumbai stays teal. Neighbors agree, not a fault. Health does not crash.
 3. **Reset**, then **Break Palam temperature** → only Palam goes red; Safdarjung stays teal.
 4. Point at the map: Delhi does not validate Mumbai.
 

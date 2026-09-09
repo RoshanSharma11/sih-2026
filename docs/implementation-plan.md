@@ -64,12 +64,14 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 3. `POST /demo/inject` `target=neighborhood`; reject `target=cluster`
 4. DemoController expands via buddy graph
 
+**Code is in.** CLI `--stations` expands 1-hop buddies (default) and overrides `GET /demo/stream-filter`. `POST /demo/inject` arms a neighborhood; `target=cluster` is 400. F0–F6 hero is Palam neighborhood.
+
 #### I4 — query APIs for 151 + view set
 
 1. `GET /stations?ids=`
 2. `latest` on each station summary (no N+1)
 3. `GET /buddy-map`
-4. `POST/GET /demo/stream-filter`
+4. `POST/GET /demo/stream-filter` — **done in I3**
 5. `telemetry_logs.label`; alerts store `label`
 6. Drop required `cluster_id`
 

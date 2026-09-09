@@ -151,3 +151,50 @@ def write_catalog(document: dict[str, Any], path: Path | None = None) -> Path:
 def read_catalog(path: Path | None = None) -> dict[str, Any]:
     target = path or STATIONS_PATH
     return json.loads(target.read_text(encoding="utf-8"))
+
+
+def parse_station_ids(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def catalog_station_ids(catalog: dict[str, Any]) -> list[str]:
+    return [str(station["station_id"]) for station in catalog.get("stations", [])]
+
+
+def buddy_map_from_catalog(catalog: dict[str, Any]) -> dict[str, list[str]]:
+    mapping: dict[str, list[str]] = {}
+    for station in catalog.get("stations", []):
+        station_id = str(station["station_id"])
+        mapping[station_id] = [str(buddy) for buddy in station.get("buddy_ids") or []]
+    return mapping
+
+
+def expand_ingest_set(
+    view: list[str],
+    include_buddies: bool,
+    buddy_map: dict[str, list[str]],
+    known_ids: list[str] | None = None,
+) -> list[str]:
+    known = set(known_ids if known_ids is not None else list(buddy_map) + list(view))
+    ingest = {station_id for station_id in view if station_id in known}
+    if include_buddies:
+        for station_id in list(ingest):
+            for buddy_id in buddy_map.get(station_id, []):
+                if buddy_id in known:
+                    ingest.add(buddy_id)
+    return sorted(ingest)
+
+
+def resolve_view_and_ingest(
+    station_ids: list[str],
+    include_buddies: bool,
+    known_ids: list[str],
+    buddy_map: dict[str, list[str]],
+) -> tuple[list[str], list[str]]:
+    if not station_ids:
+        return list(known_ids), list(known_ids)
+    known = set(known_ids)
+    view = [station_id for station_id in station_ids if station_id in known]
+    return view, expand_ingest_set(view, include_buddies, buddy_map, known_ids)

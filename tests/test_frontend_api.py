@@ -71,7 +71,7 @@ def _app(request: httpx.Request) -> httpx.Response:
     if path == "/demo/status":
         return httpx.Response(200, json={"overlays": []})
     if path == "/demo/inject":
-        return httpx.Response(400, json={"detail": "GENUINE_WEATHER inject must target a cluster"})
+        return httpx.Response(400, json={"detail": "GENUINE_WEATHER inject must target a neighborhood"})
     if path == "/demo/reset":
         return httpx.Response(200, json={"overlays": []})
     return httpx.Response(404, json={"detail": "missing"})
@@ -93,7 +93,7 @@ def test_inject_error_surfaces_detail() -> None:
     try:
         _client().inject({"target": "station", "station_id": "42181", "kind": "GENUINE_WEATHER"})
     except SkyGuardApiError as exc:
-        assert "cluster" in str(exc)
+        assert "neighborhood" in str(exc)
         assert exc.status_code == 400
     else:
         raise AssertionError("expected SkyGuardApiError")

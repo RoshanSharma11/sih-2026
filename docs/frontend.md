@@ -36,7 +36,7 @@ Alerts          newest first; weather ≠ hardware styling
 Advanced        freeze / drift / comm
 ```
 
-Hero must switch from `cluster_id: NORTH` to `target: neighborhood, station_id: 42181` when I3 lands. Until then the old hero 400s.
+Hero is Palam neighborhood: `target: neighborhood, station_id: 42181`. Legacy `cluster_id: NORTH` is 400.
 
 ## How we read live status
 

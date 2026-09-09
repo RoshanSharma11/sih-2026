@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from skyguard.db.models import Station, StationBuddy
+from skyguard.errors import StationNotFound
 from skyguard.schemas import StationStatus
 
 
@@ -97,6 +98,34 @@ def upsert_buddies(
         count += 1
     session.flush()
     return count
+
+
+def catalog_station_ids(session: Session) -> list[str]:
+    return list(session.scalars(select(Station.station_id).order_by(Station.station_id)).all())
+
+
+def buddy_map_from_db(session: Session) -> dict[str, list[str]]:
+    mapping: dict[str, list[str]] = {}
+    rows = session.execute(
+        select(StationBuddy.station_id, StationBuddy.buddy_id).order_by(
+            StationBuddy.station_id, StationBuddy.buddy_id
+        )
+    ).all()
+    for station_id, buddy_id in rows:
+        mapping.setdefault(station_id, []).append(buddy_id)
+    return mapping
+
+
+def neighborhood_ids(session: Session, station_id: str) -> list[str]:
+    station = session.get(Station, station_id)
+    if station is None:
+        raise StationNotFound(station_id)
+    buddies = session.scalars(
+        select(StationBuddy.buddy_id)
+        .where(StationBuddy.station_id == station_id)
+        .order_by(StationBuddy.buddy_id)
+    ).all()
+    return [station_id, *[buddy_id for buddy_id in buddies if buddy_id != station_id]]
 
 
 def load_buddy_edges_document(document: dict[str, Any]) -> list[dict[str, Any]]:

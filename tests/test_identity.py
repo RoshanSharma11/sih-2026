@@ -3,7 +3,7 @@ import pytest
 from pydantic import ValidationError
 
 from skyguard.ml import IdentityDetector, load_detector
-from skyguard.schemas import Channel, ClusterId, DemoInjectRequest, DemoKind
+from skyguard.schemas import Channel, DemoInjectRequest, DemoKind
 
 
 def test_identity_reconstructs_last_row() -> None:
@@ -32,7 +32,7 @@ def test_load_detector_rejects_unset_weights(monkeypatch: pytest.MonkeyPatch) ->
         load_detector()
 
 
-def test_storm_inject_requires_cluster() -> None:
+def test_storm_inject_requires_neighborhood() -> None:
     with pytest.raises(ValidationError):
         DemoInjectRequest(
             target="station",
@@ -47,15 +47,15 @@ def test_storm_inject_requires_cluster() -> None:
             kind=DemoKind.GENUINE_WEATHER,
         )
     req = DemoInjectRequest(
-        target="cluster",
-        cluster_id=ClusterId.NORTH,
+        target="neighborhood",
+        station_id="42181",
         kind=DemoKind.GENUINE_WEATHER,
     )
-    assert req.cluster_id is ClusterId.NORTH
+    assert req.station_id == "42181"
     with pytest.raises(ValidationError):
         DemoInjectRequest(
-            target="cluster",
-            cluster_id=ClusterId.NORTH,
+            target="neighborhood",
+            station_id="42181",
             kind=DemoKind.SPIKE,
             channel=Channel.TEMP_C,
         )

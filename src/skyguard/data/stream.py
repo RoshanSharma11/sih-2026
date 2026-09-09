@@ -12,7 +12,13 @@ import httpx
 import pandas as pd
 
 from skyguard.config import DEMO_START, PROCESSED_DIR, STATIONS_PATH, STREAM_MS, WINDOW_HOURS
-from skyguard.data.catalog import read_catalog
+from skyguard.data.catalog import (
+    buddy_map_from_catalog,
+    catalog_station_ids,
+    expand_ingest_set,
+    parse_station_ids,
+    read_catalog,
+)
 
 CHANNELS = ("temp_c", "pres_hpa", "rhum_pct")
 
@@ -67,22 +73,25 @@ def load_hourly(path: Path) -> pd.DataFrame:
 def load_station_frames(
     catalog: dict,
     processed_dir: Path | None = None,
+    station_ids: list[str] | None = None,
 ) -> dict[str, pd.DataFrame]:
     out_dir = processed_dir or PROCESSED_DIR
+    wanted = station_ids if station_ids is not None else catalog_station_ids(catalog)
     missing: list[str] = []
     frames: dict[str, pd.DataFrame] = {}
-    for station in catalog["stations"]:
-        station_id = station["station_id"]
+    for station_id in wanted:
         path = out_dir / f"{station_id}.parquet"
         if not path.exists():
             missing.append(station_id)
             continue
         frames[station_id] = load_hourly(path)
     if missing:
+        print("skip (no parquet): " + ", ".join(missing))
+    if not frames:
         raise FileNotFoundError(
             "Missing processed parquet for "
-            + ", ".join(missing)
-            + f". Run `python -m skyguard.data.fetch` and look in {out_dir}."
+            + ", ".join(missing or wanted)
+            + f". Run `python -m skyguard.data.import_ml_catalog` and look in {out_dir}."
         )
     return frames
 
@@ -136,13 +145,43 @@ def wait_healthy(
     while time.monotonic() < deadline:
         try:
             response = client.get("/healthz")
-            if response.status_code == 200 and response.json().get("ok") is True:
-                return
+            if response.status_code == 200:
+                body = response.json()
+                if body.get("ok") is True:
+                    if body.get("model_loaded") is False:
+                        print("warn: /healthz ok but model_loaded=false; hours will be UNCONFIRMED_ANOMALY")
+                    return
             last = response.status_code
         except httpx.HTTPError as exc:
             last = exc
         time.sleep(interval_s)
     raise TimeoutError(f"API /healthz not ready: {last}")
+
+
+def fetch_stream_filter(client: httpx.Client) -> list[str] | None:
+    try:
+        response = client.get("/demo/stream-filter")
+    except httpx.HTTPError:
+        return None
+    if response.status_code != 200:
+        return None
+    ingest = response.json().get("ingest")
+    if not isinstance(ingest, list):
+        return None
+    return [str(station_id) for station_id in ingest]
+
+
+def resolve_cli_ingest(
+    catalog: dict,
+    stations: list[str],
+    with_buddies: bool,
+) -> list[str]:
+    known = catalog_station_ids(catalog)
+    known_set = set(known)
+    unknown = [station_id for station_id in stations if station_id not in known_set]
+    if unknown:
+        raise ValueError("Unknown station_id(s): " + ", ".join(unknown))
+    return expand_ingest_set(stations, with_buddies, buddy_map_from_catalog(catalog), known)
 
 
 def _row_at(frame: pd.DataFrame, tick: pd.Timestamp) -> pd.Series | None:
@@ -204,10 +243,11 @@ def run(
     client: httpx.Client | None = None,
     sleep_fn=time.sleep,
     health_timeout_s: float = 60.0,
+    stations: list[str] | None = None,
+    with_buddies: bool = True,
 ) -> StreamStats:
     catalog = read_catalog(stations_path or STATIONS_PATH)
-    frames = load_station_frames(catalog, processed_dir=processed_dir)
-    demo_start = shared_start(frames, requested=start)
+    cli_ingest = resolve_cli_ingest(catalog, stations, with_buddies) if stations else None
     delay_s = (STREAM_MS if ms is None else ms) / 1000.0
     stats = StreamStats()
 
@@ -215,6 +255,12 @@ def run(
     http = client or httpx.Client(base_url=api.rstrip("/"), timeout=30.0)
     try:
         wait_healthy(http, timeout_s=health_timeout_s)
+        if cli_ingest is not None:
+            ingest_ids = cli_ingest
+        else:
+            ingest_ids = fetch_stream_filter(http) or catalog_station_ids(catalog)
+        frames = load_station_frames(catalog, processed_dir=processed_dir, station_ids=ingest_ids)
+        demo_start = shared_start(frames, requested=start)
         for station_id, frame in frames.items():
             window = hours_before(frame, demo_start)
             if len(window) > 48:
@@ -231,7 +277,15 @@ def run(
         sequence_id = 1
         try:
             for tick in ticks:
-                sequence_id = ingest_hour(http, frames, pd.Timestamp(tick), sequence_id, stats)
+                if cli_ingest is None:
+                    wanted = fetch_stream_filter(http)
+                    if wanted is not None:
+                        tick_frames = {sid: frame for sid, frame in frames.items() if sid in set(wanted)}
+                    else:
+                        tick_frames = frames
+                else:
+                    tick_frames = frames
+                sequence_id = ingest_hour(http, tick_frames, pd.Timestamp(tick), sequence_id, stats)
                 print(
                     f"{iso_z(tick)} ingested={stats.ingested} skip409={stats.skipped_duplicate}"
                 )
@@ -251,8 +305,27 @@ def main() -> None:
     parser.add_argument("--ms", type=int, default=None, help="Sleep between weather-hours (default SKYGUARD_STREAM_MS).")
     parser.add_argument("--start", type=parse_start, default=None, help="First hour to ingest, ISO-8601 UTC.")
     parser.add_argument("--hours", type=int, default=None, help="Stop after this many weather-hours.")
+    parser.add_argument(
+        "--stations",
+        default=None,
+        help="Comma-separated view set. Overrides GET /demo/stream-filter.",
+    )
+    parser.add_argument(
+        "--with-buddies",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Expand --stations with 1-hop buddies (default true). Ignored without --stations.",
+    )
     args = parser.parse_args()
-    run(api=args.api, ms=args.ms, start=args.start, hours=args.hours)
+    view = parse_station_ids(args.stations) or None
+    run(
+        api=args.api,
+        ms=args.ms,
+        start=args.start,
+        hours=args.hours,
+        stations=view,
+        with_buddies=args.with_buddies,
+    )
 
 
 if __name__ == "__main__":

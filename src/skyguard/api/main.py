@@ -15,7 +15,7 @@ from skyguard.data.catalog import read_catalog
 from skyguard.db.catalog import load_buddy_edges_document, upsert_buddies, upsert_catalog
 from skyguard.db.session import create_tables, make_engine, make_session_factory
 from skyguard.engine.adapter import load_qc_engine
-from skyguard.engine.demo import DemoController
+from skyguard.engine.demo import DemoController, StreamFilterController
 from skyguard.engine.windows import WindowStore
 
 
@@ -37,6 +37,7 @@ def create_app(
         app.state.catalog_ready = False
         app.state.windows = WindowStore()
         app.state.demo = DemoController()
+        app.state.stream_filter = StreamFilterController()
         app.state.qc_engine = load_qc_engine()
         session = factory()
         try:

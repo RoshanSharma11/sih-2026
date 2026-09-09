@@ -11,6 +11,7 @@ CONTRACT_PATHS = {
     "/demo/inject": {"post"},
     "/demo/reset": {"post"},
     "/demo/status": {"get"},
+    "/demo/stream-filter": {"get", "post"},
 }
 
 CONTRACT_PROPERTIES = {
@@ -100,6 +101,8 @@ CONTRACT_PROPERTIES = {
     },
     "DemoStatus": {"overlays"},
     "DemoOverlayStatus": {"kind", "station_ids", "channel", "remaining_hours", "hour_index"},
+    "StreamFilterRequest": {"station_ids", "include_buddies"},
+    "StreamFilterStatus": {"view", "ingest", "include_buddies"},
     "Healthz": {"ok", "model_loaded", "threshold", "n_stations", "n_isolates"},
     "SeedResult": {"station_id", "accepted", "skipped"},
     "ChannelValues": {"temp_c", "pres_hpa", "rhum_pct"},

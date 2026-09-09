@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field
 
+from skyguard.data.catalog import resolve_view_and_ingest
 from skyguard.data.inject import Observation, apply_live, default_rng
 from skyguard.errors import InvalidDemoRequest
 from skyguard.schemas import (
@@ -14,6 +15,7 @@ from skyguard.schemas import (
     DemoOverlayStatus,
     DemoStatus,
     FaultType,
+    StreamFilterStatus,
 )
 
 DEFAULT_DURATION = {
@@ -148,3 +150,35 @@ class DemoController:
         overlay.remaining[station_id] = remaining - 1
         overlay.applied[station_id] = hour_index + 1
         return mutated, overlay.kind
+
+
+class StreamFilterController:
+    """In-memory view/ingest sets. Empty view means the full catalog."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._station_ids: list[str] = []
+        self._include_buddies = True
+
+    def set(self, station_ids: list[str], include_buddies: bool) -> None:
+        with self._lock:
+            self._station_ids = list(dict.fromkeys(station_ids))
+            self._include_buddies = include_buddies
+
+    def snapshot(
+        self,
+        known_ids: list[str],
+        buddy_map: dict[str, list[str]],
+    ) -> StreamFilterStatus:
+        with self._lock:
+            view, ingest = resolve_view_and_ingest(
+                self._station_ids,
+                self._include_buddies,
+                known_ids,
+                buddy_map,
+            )
+            return StreamFilterStatus(
+                view=view,
+                ingest=ingest,
+                include_buddies=self._include_buddies,
+            )

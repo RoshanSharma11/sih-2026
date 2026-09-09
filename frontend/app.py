@@ -21,7 +21,7 @@ from status import (
 from theme import CSS
 
 PALAM = "42181"
-HERO_STORM = {"target": "cluster", "cluster_id": "NORTH", "kind": "GENUINE_WEATHER"}
+HERO_STORM = {"target": "neighborhood", "station_id": PALAM, "kind": "GENUINE_WEATHER"}
 HERO_SPIKE = {"target": "station", "station_id": PALAM, "kind": "SPIKE", "channel": "temp_c"}
 
 st.set_page_config(page_title="SkyGuard AI", page_icon="◈", layout="wide")
@@ -79,7 +79,7 @@ def header(online: bool) -> None:
         st.markdown('<div class="sg-kicker">SIH PS 26073</div>', unsafe_allow_html=True)
         st.title("SkyGuard AI")
         st.markdown(
-            '<p class="sg-sub">Live QC for Indian AWS · T / P / H only · cluster buddy check separates a storm from a broken sensor.</p>',
+            '<p class="sg-sub">Live QC for Indian AWS · T / P / H only · buddy-graph check separates a storm from a broken sensor.</p>',
             unsafe_allow_html=True,
         )
     with right:
@@ -95,10 +95,10 @@ def hero() -> None:
     storm, spike, reset = st.columns([1.2, 1.3, 0.8])
     with storm:
         st.button(
-            "Storm on NORTH",
+            "Storm around Palam",
             type="primary",
             width="stretch",
-            help="Arm GENUINE_WEATHER on Palam + Safdarjung. Mumbai must stay clean.",
+            help="Arm GENUINE_WEATHER on Palam plus 1-hop buddies. Mumbai must stay clean.",
             on_click=fire_inject,
             args=(HERO_STORM,),
         )
@@ -187,7 +187,7 @@ def verdict_banner(station: dict[str, Any] | None, alerts: list[dict[str, Any]])
         kicker = f"{pipeline_label(status)} · {name} · {station['station_id']}"
     elif status:
         text = {
-            "CLEAN": f"{name} is tracking with its cluster. No hardware alert this hour.",
+            "CLEAN": f"{name} is tracking with its neighbors. No hardware alert this hour.",
             "UNKNOWN": (
                 "Not enough same-hour neighbors yet. The first station in a storm hour "
                 "stays UNKNOWN until its buddy arrives."
@@ -258,9 +258,11 @@ def advanced_panel(stations: list[dict[str, Any]]) -> None:
         kinds = ["SPIKE", "FREEZE", "DRIFT", "COMM_ERROR", "GENUINE_WEATHER"]
         kind = st.selectbox("Kind", kinds, index=0)
         if kind == "GENUINE_WEATHER":
-            cluster = st.selectbox("Cluster", ["NORTH", "WEST"])
+            options = {f"{short_name(row['name'])} ({row['station_id']})": row["station_id"] for row in stations}
+            picked = st.selectbox("Neighborhood of", list(options) or [PALAM])
             if st.button("Arm storm", key="adv_storm"):
-                fire_inject({"target": "cluster", "cluster_id": cluster, "kind": "GENUINE_WEATHER"})
+                station_id = options.get(picked, PALAM)
+                fire_inject({"target": "neighborhood", "station_id": station_id, "kind": "GENUINE_WEATHER"})
         else:
             options = {f"{short_name(row['name'])} ({row['station_id']})": row["station_id"] for row in stations}
             picked = st.selectbox("Station", list(options))
@@ -276,7 +278,7 @@ def advanced_panel(stations: list[dict[str, Any]]) -> None:
                 if channel:
                     body["channel"] = channel
                 fire_inject(body)
-        st.caption("Storm must target a cluster. Hardware must target one station. Same rules as POST /demo/inject.")
+        st.caption("Storm must target a neighborhood. Hardware must target one station. Same rules as POST /demo/inject.")
 
 
 def offline_help(error: str) -> None:

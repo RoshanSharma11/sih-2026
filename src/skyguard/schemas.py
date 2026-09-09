@@ -145,7 +145,7 @@ class IngestResult(BaseModel):
 
 
 class DemoInjectRequest(BaseModel):
-    target: Literal["station", "cluster"]
+    target: Literal["station", "neighborhood", "cluster"]
     station_id: str | None = None
     cluster_id: ClusterId | None = None
     kind: DemoKind
@@ -154,16 +154,16 @@ class DemoInjectRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_demo_rules(self) -> DemoInjectRequest:
-        if self.kind == DemoKind.GENUINE_WEATHER and self.target != "cluster":
-            raise ValueError("GENUINE_WEATHER inject must target a cluster")
+        if self.target == "cluster":
+            return self
+        if self.kind == DemoKind.GENUINE_WEATHER and self.target != "neighborhood":
+            raise ValueError("GENUINE_WEATHER inject must target a neighborhood")
         if self.kind != DemoKind.GENUINE_WEATHER and self.target != "station":
             raise ValueError("hardware inject must target a station")
         if self.kind in CHANNEL_FAULTS and self.channel is None:
             raise ValueError(f"{self.kind.value} requires channel")
-        if self.target == "station" and not self.station_id:
-            raise ValueError("station target requires station_id")
-        if self.target == "cluster" and self.cluster_id is None:
-            raise ValueError("cluster target requires cluster_id")
+        if self.target in {"station", "neighborhood"} and not self.station_id:
+            raise ValueError("station_id is required")
         return self
 
 
@@ -227,3 +227,14 @@ class DemoOverlayStatus(BaseModel):
 
 class DemoStatus(BaseModel):
     overlays: list[DemoOverlayStatus]
+
+
+class StreamFilterRequest(BaseModel):
+    station_ids: list[str] = Field(default_factory=list)
+    include_buddies: bool = True
+
+
+class StreamFilterStatus(BaseModel):
+    view: list[str]
+    ingest: list[str]
+    include_buddies: bool

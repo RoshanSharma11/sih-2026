@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from skyguard.api.main import create_app
 from skyguard.data.inject import Observation
 from skyguard.engine.demo import DemoController
-from skyguard.schemas import Channel, ClusterId, DemoInjectRequest, DemoKind, FaultType
+from skyguard.schemas import Channel, DemoInjectRequest, DemoKind, FaultType
 
 
 def _write_catalog(path, west: bool = False) -> None:
@@ -18,6 +18,7 @@ def _write_catalog(path, west: bool = False) -> None:
             "longitude": 77.1167,
             "elevation_m": 220.0,
             "cluster_id": "NORTH",
+            "buddy_ids": ["42182"],
             "completeness": {"temp_c": 0.99, "pres_hpa": 0.99, "rhum_pct": 0.99},
         },
         {
@@ -27,6 +28,7 @@ def _write_catalog(path, west: bool = False) -> None:
             "longitude": 77.2,
             "elevation_m": 211.0,
             "cluster_id": "NORTH",
+            "buddy_ids": ["42181"],
             "completeness": {"temp_c": 0.95, "pres_hpa": 0.95, "rhum_pct": 0.95},
         },
     ]
@@ -39,6 +41,7 @@ def _write_catalog(path, west: bool = False) -> None:
                 "longitude": 72.85,
                 "elevation_m": 8.0,
                 "cluster_id": "WEST",
+                "buddy_ids": [],
                 "completeness": {"temp_c": 0.99, "pres_hpa": 0.99, "rhum_pct": 0.99},
             }
         )
@@ -88,10 +91,15 @@ def _ingest(client: TestClient, station_id: str, ts: datetime, temp_c: float = 3
     )
 
 
-def test_controller_cluster_storm_reuses_hour_deltas() -> None:
+def test_controller_neighborhood_storm_reuses_hour_deltas() -> None:
     demo = DemoController()
     demo.arm(
-        DemoInjectRequest(target="cluster", cluster_id=ClusterId.NORTH, kind=DemoKind.GENUINE_WEATHER, duration_hours=2),
+        DemoInjectRequest(
+            target="neighborhood",
+            station_id="42181",
+            kind=DemoKind.GENUINE_WEATHER,
+            duration_hours=2,
+        ),
         ["42181", "42182"],
     )
     palam, kind_a = demo.apply("42181", Observation(32.0, 1005.0, 60.0))
@@ -145,7 +153,7 @@ def test_demo_routes_and_status(tmp_path) -> None:
 
         storm = client.post(
             "/demo/inject",
-            json={"target": "cluster", "cluster_id": "NORTH", "kind": "GENUINE_WEATHER"},
+            json={"target": "neighborhood", "station_id": "42181", "kind": "GENUINE_WEATHER"},
         )
         assert storm.status_code == 200
         body = storm.json()["overlays"][0]
@@ -183,7 +191,7 @@ def test_demo_inject_errors(tmp_path) -> None:
             "/demo/inject",
             json={"target": "cluster", "cluster_id": "NORTH", "kind": "SPIKE", "channel": "temp_c"},
         )
-        assert spike_on_cluster.status_code == 422
+        assert spike_on_cluster.status_code == 400
 
         missing_channel = client.post(
             "/demo/inject",
@@ -197,11 +205,12 @@ def test_demo_inject_errors(tmp_path) -> None:
         )
         assert unknown.status_code == 404
 
-        missing_cluster = client.post(
+        legacy_cluster = client.post(
             "/demo/inject",
             json={"target": "cluster", "cluster_id": "WEST", "kind": "GENUINE_WEATHER"},
         )
-        assert missing_cluster.status_code == 404
+        assert legacy_cluster.status_code == 400
+        assert "neighborhood" in legacy_cluster.json()["detail"]
 
         bad_duration = client.post(
             "/demo/inject",
@@ -232,7 +241,7 @@ def test_storm_overlay_is_weather(tmp_path) -> None:
         _seed(client, "42182")
         armed = client.post(
             "/demo/inject",
-            json={"target": "cluster", "cluster_id": "NORTH", "kind": "GENUINE_WEATHER", "duration_hours": 1},
+            json={"target": "neighborhood", "station_id": "42181", "kind": "GENUINE_WEATHER", "duration_hours": 1},
         )
         assert armed.status_code == 200
         first = _ingest(client, "42182", hour)
@@ -270,7 +279,7 @@ def test_storm_and_spike_produce_different_status(tmp_path) -> None:
     with _client(tmp_path) as client:
         _seed(client, "42181")
         _seed(client, "42182")
-        client.post("/demo/inject", json={"target": "cluster", "cluster_id": "NORTH", "kind": "GENUINE_WEATHER", "duration_hours": 1})
+        client.post("/demo/inject", json={"target": "neighborhood", "station_id": "42181", "kind": "GENUINE_WEATHER", "duration_hours": 1})
         client.post(
             "/demo/inject",
             json={"target": "station", "station_id": "42181", "kind": "SPIKE", "channel": "temp_c", "duration_hours": 1},
@@ -302,7 +311,50 @@ def test_west_is_not_affected_by_north_storm(tmp_path) -> None:
     hour = datetime(2024, 7, 1, tzinfo=timezone.utc)
     with _client(tmp_path, west=True) as client:
         _seed(client, "43003")
-        client.post("/demo/inject", json={"target": "cluster", "cluster_id": "NORTH", "kind": "GENUINE_WEATHER"})
+        client.post("/demo/inject", json={"target": "neighborhood", "station_id": "42181", "kind": "GENUINE_WEATHER"})
         west = _ingest(client, "43003", hour)
         assert west.json()["demo_injected"] is None
         assert west.json()["observed"]["temp_c"] == 32.4
+
+
+def test_stream_filter_expands_buddies_and_rejects_unknown(tmp_path) -> None:
+    with _client(tmp_path, west=True) as client:
+        empty = client.get("/demo/stream-filter")
+        assert empty.status_code == 200
+        body = empty.json()
+        assert body["include_buddies"] is True
+        assert body["view"] == ["42181", "42182", "43003"]
+        assert body["ingest"] == ["42181", "42182", "43003"]
+
+        filtered = client.post(
+            "/demo/stream-filter",
+            json={"station_ids": ["42181"], "include_buddies": True},
+        )
+        assert filtered.status_code == 200
+        assert filtered.json() == {
+            "view": ["42181"],
+            "ingest": ["42181", "42182"],
+            "include_buddies": True,
+        }
+        assert client.get("/demo/stream-filter").json()["ingest"] == ["42181", "42182"]
+
+        lone = client.post(
+            "/demo/stream-filter",
+            json={"station_ids": ["42181"], "include_buddies": False},
+        )
+        assert lone.json()["ingest"] == ["42181"]
+
+        reset = client.post("/demo/stream-filter", json={"station_ids": [], "include_buddies": True})
+        assert reset.json()["view"] == ["42181", "42182", "43003"]
+
+        missing = client.post("/demo/stream-filter", json={"station_ids": ["99999"]})
+        assert missing.status_code == 404
+
+
+def test_hardware_cannot_target_neighborhood(tmp_path) -> None:
+    with _client(tmp_path) as client:
+        response = client.post(
+            "/demo/inject",
+            json={"target": "neighborhood", "station_id": "42181", "kind": "SPIKE", "channel": "temp_c"},
+        )
+        assert response.status_code == 422
