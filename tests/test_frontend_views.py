@@ -81,3 +81,15 @@ def test_telemetry_keeps_observed_when_anomaly() -> None:
     assert len(figs) == 3
     assert figs[0].data[0].y[0] == 48.1
     assert figs[0].data[1].y[0] == 32.0
+    assert figs[0].layout.paper_bgcolor in {"#FFFFFF", "white", "#ffffff"}
+
+
+def test_contribution_html_uses_alert_shares() -> None:
+    from charts import contribution_html
+
+    html = contribution_html(
+        {"contribution_temp": 94.1, "contribution_pres": 3.2, "contribution_rhum": 2.7}
+    )
+    assert "94.1%" in html
+    assert "Temperature" in html
+    assert contribution_html(None) == ""

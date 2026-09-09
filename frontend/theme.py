@@ -244,6 +244,37 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
   line-height: 1.45;
 }}
 
+.sg-bar-row {{
+  display: grid;
+  grid-template-columns: 7.5rem 1fr 3.5rem;
+  gap: 0.65rem;
+  align-items: center;
+  margin: 0.4rem 0;
+}}
+.sg-bar-label {{
+  font-size: 0.82rem;
+  color: {TEXT};
+  font-weight: 600;
+}}
+.sg-bar {{
+  height: 8px;
+  background: {CANVAS};
+  border: 1px solid {LINE};
+  border-radius: 999px;
+  overflow: hidden;
+}}
+.sg-bar i {{
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}}
+.sg-bar-pct {{
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+  color: {MUTED};
+  text-align: right;
+}}
+
 .sg-guide h3 {{ margin-top: 1.1rem; }}
 .sg-guide p, .sg-guide li {{ color: {MUTED}; line-height: 1.55; }}
 

@@ -99,7 +99,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 
 #### F9 — stream + prediction
 
-Selected stations only: observed + imputed/predicted T/P/H.
+**Code is in.** Station page: observed solid / predicted dashed T/P/H, verdict from `/alerts`, contribution bars, 7-day health, buddy chips.
 
 #### F10 — alerts, health, neighborhood inject
 

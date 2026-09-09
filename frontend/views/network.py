@@ -63,11 +63,11 @@ def render_network() -> None:
             unsafe_allow_html=True,
         )
 
-    live()
+    network_live()
 
 
 @st.fragment(run_every=1)
-def live() -> None:
+def network_live() -> None:
     client = get_client()
     health = client.health()
     if health is None:
