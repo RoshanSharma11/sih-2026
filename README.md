@@ -2,16 +2,11 @@
 
 Quality-control service for Indian Automatic Weather Stations. Input is hourly **T / P / H only**. The API tells a real storm from a broken sensor, keeps raw readings intact, and tracks 7-day sensor health.
 
-**Handoff (2026-09-09):** docs I0 is locked. Production QC is `ml/` (151 stations + LSTM + buddy graph). **Live `/ingest` still runs the old backend tiers until slice I2.** Do not treat this README’s 4-station NORTH/WEST curl examples as the target architecture. Status and next slices: [docs/progress.md](docs/progress.md). Target contracts: [docs/contracts.md](docs/contracts.md).
+**Handoff (2026-09-09):** I1–I5 are shipped. Live `/ingest` calls `ml/ml/engine.py` in-process (physical rules → LSTM → buddy graph). Catalog is **151 stations**. Next is **F7** (multi-page UI). Status: [docs/progress.md](docs/progress.md). Contracts: [docs/contracts.md](docs/contracts.md).
 
-This repo is the **data engine + FastAPI product shell + ML QC package + Streamlit console**. Frozen payloads: [docs/contracts.md](docs/contracts.md).
+This repo is the **data engine + FastAPI product shell + ML QC package + Streamlit console**. Do not point the dashboard at the ML eval server on port 8001.
 
-Until I1 imports ML’s catalog, the running demo catalog is still **four** stations. Buddy check on the live path is still NORTH/WEST. After I2, buddy check is the ML graph and Delhi still does not validate Mumbai.
-
-| Cluster | IDs |
-|---|---|
-| NORTH | `42181` Palam, `42182` Safdarjung |
-| WEST | `43003` Santacruz, `43057` Colaba |
+Demo neighborhood (storm hero): Palam `42181` + Safdarjung `42182` + Meerut `42139`. Buddy check uses that graph, not NORTH/WEST. Delhi does not validate Mumbai.
 
 ## Setup
 
@@ -21,49 +16,46 @@ Python 3.10+. From the repo root:
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev,ui]"
+pip install -r ml/ml/requirements.txt
 ```
 
-Until I2, the running API still uses the identity stub. Do not set `MODEL_PATH`. After I2, weights load from `ml/ml/artifacts/` automatically.
+Torch is required for live LSTM. Weights load from `ml/ml/artifacts/` on API boot. Do not set `MODEL_PATH`. If artifacts fail to load, ingest still persists and returns `UNCONFIRMED_ANOMALY` — it does not fall back to legacy backend tiers.
 
-## Fetch ground truth
+## Import the ML catalog
 
-Writes `data/processed/stations.json` (committed) and one parquet per station (gitignored). Slow: 2018–2024 hourly from Meteostat.
+Do **not** recrawl Meteostat to pick stations. Copy ML `stations.csv`, `buddy_edges.csv`, and hourly `{station_id}.csv` into `ml/data/raw/` (gitignored), then:
 
 ```text
-python -m skyguard.data.fetch
+python -m skyguard.data.import_ml_catalog
 ```
 
-If parquet is already on disk, skip fetch. Rebuild the labeled eval set (also gitignored) with:
+Writes `data/processed/stations.json` (151) and `buddy_edges.json`. Hourly parquet is written for every catalog id that has a CSV. Wipe `data/skyguard.db` after a real re-import so SQLite matches the new graph.
 
-```text
-python -m skyguard.data.evalset
-```
+The processed catalog is already in tree. Re-run import only when ML raw files change.
 
-LSTM eval set — send `scripts/simulate_corruption_eval.py`. Clean CSV in; labeled eval CSV + graph out. **Do not train on that CSV.**
+## Run the API, a filtered stream, and the dashboard
 
-```text
-python scripts/simulate_corruption_eval.py --clean test_2024.csv --out ./eval_out
-```
-
-## Run the API and the clean stream
-
-`python -m skyguard.api.main` only imports the app and exits. Use the script:
+Three terminals. Prefer Palam’s neighborhood — streaming all 151 will overwhelm the current one-page console.
 
 ```text
 python scripts/run_api.py
 ```
 
-Wait for `Application startup complete`. Interactive docs: http://127.0.0.1:8000/docs
-
-In a second terminal, seed 24 clean hours then POST every station each weather-hour (default 200 ms):
+Wait for `Application startup complete`. Docs: http://127.0.0.1:8000/docs · `GET /healthz` should show `model_loaded: true`, `n_stations: 151`.
 
 ```text
 python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024-07-01T00:00:00Z --stations 42181 --with-buddies
 ```
 
-`--hours N` stops after N weather-hours. The streamer has **no** `--fault` flag. `409` duplicate hours are skipped, not a crash. `--stations` is a view set; `--with-buddies` (default) expands to the ingest set. CLI overrides `GET /demo/stream-filter`.
+Seeds 24 clean hours for the **ingest set** (view ∪ 1-hop buddies), then POSTs one weather-hour per 200 ms. `--hours N` stops after N hours. There is **no** `--fault` flag. `409` duplicates are skipped. CLI `--stations` overrides `GET /demo/stream-filter`. Seed before streaming: without a 24h window, LSTM cannot run and the hour is `UNCONFIRMED_ANOMALY`.
 
-Tests: `pytest -q`.
+```text
+python scripts/run_dashboard.py
+```
+
+http://127.0.0.1:8501 · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`. This is the shipped F0–F6 one-page console. F7 is the rewrite.
+
+Tests: `pytest -q`. Engine integration skips when artifacts are missing; adapter unit tests still run.
 
 ## Demo inject (storm ≠ broken sensor)
 
@@ -80,62 +72,53 @@ curl -X POST http://127.0.0.1:8000/demo/inject \
 ```
 
 - Storm must target a **neighborhood** (station + 1-hop buddies). Hardware (spike / freeze / drift / comm) must target **one station**.
-- Legacy `target: cluster` is rejected with 400.
+- Legacy `target: cluster` is **400**.
 - `GET /demo/status` lists armed overlays. `POST /demo/reset` clears them.
 - `demo_injected` on `POST /ingest` is the overlay kind. It is not ground truth for judges.
 
-Poll `/stations` and `/alerts` at ~1 s. Expect two different `pipeline_status` values: neighborhood storm → `GENUINE_WEATHER`, lone spike → `HARDWARE`. The first station in a storm hour may be `UNKNOWN` until a same-hour neighbor exists.
+Expect different `label`s: neighborhood storm → `GENUINE_WEATHER_EVENT` (mapped `pipeline_status=GENUINE_WEATHER`), lone Palam spike → `HARDWARE_ANOMALY` or `PHYSICAL_FAULT` (`HARDWARE`). The first station in a storm hour may be `UNCONFIRMED_ANOMALY` until two same-hour neighbors exist.
 
-## Dashboard
+## 30-second judge script
 
-Install UI extras, then open the ops console (API + streamer should already be running):
-
-```text
-pip install -e ".[ui]"
-python scripts/run_dashboard.py
-```
-
-Default: http://127.0.0.1:8501 · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`.
-
-**30-second judge script**
-
-1. Four teal markers (clean stream).
-2. **Storm around Palam** → Palam and its buddies go amber; Mumbai stays teal. Neighbors agree, not a fault. Health does not crash.
+1. Stream Palam’s neighborhood. Map markers for that view set stay teal while clean.
+2. **Storm around Palam** → Palam and its buddies go amber; a Mumbai station you did not ingest stays idle. Neighbors agree. Health does not drop.
 3. **Reset**, then **Break Palam temperature** → only Palam goes red; Safdarjung stays teal.
 4. Point at the map: Delhi does not validate Mumbai.
 
-The first station in a storm hour may show `UNKNOWN` until the neighbor lands (~1 s). Weather is amber, never red.
+The first station in a storm hour may show `UNKNOWN` / `UNCONFIRMED_ANOMALY` until the neighbor lands (~1 s). Weather is amber, never red.
 
-Poll shapes (frozen in [docs/contracts.md](docs/contracts.md)). No SSE. The dashboard does not invent fields.
+Poll shapes are frozen in [docs/contracts.md](docs/contracts.md). No SSE. Do not invent fields.
 
 | Method | Path | Use |
 |---|---|---|
-| `GET` | `/healthz` | `{ "ok": true }` |
-| `GET` | `/stations` | map markers: id, name, lat/lon, `cluster_id`, `health_score`, `status` |
-| `GET` | `/stations/{id}` | summary + `latest` ingest result (`pipeline_status` for marker color) |
-| `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | observed + imputed series. `is_anomaly` is true only for `HARDWARE` |
-| `GET` | `/alerts?station_id=&limit=` | newest first — verdict sentence |
+| `GET` | `/healthz` | `ok`, `model_loaded`, `threshold`, `n_stations`, `n_isolates` |
+| `GET` | `/stations?ids=` | view-set summaries with `latest`, `buddy_ids`, `isolate` (no N+1) |
+| `GET` | `/stations/{id}` | summary + `latest` |
+| `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | observed + imputed. `is_anomaly` follows D18 (true for weather) |
+| `GET` | `/alerts?station_id=&limit=` | newest first — verdict sentence + `label` |
+| `GET` | `/buddy-map` | ML graph for the dashboard |
 | `GET` | `/demo/status` | armed overlays |
+| `GET`/`POST` | `/demo/stream-filter` | view vs ingest sets |
 
-`GENUINE_WEATHER` is an alert but it is not `is_anomaly` and it does not lower health. Raw `temp_observed` / `pres_observed` / `rhum_observed` are immutable; imputed columns are overlays.
+`GENUINE_WEATHER_EVENT` is an anomaly alert and **does not** lower health. Raw `temp_observed` / `pres_observed` / `rhum_observed` are immutable; imputed columns are ML `predicted` overlays.
 
 ## ML
 
-Train only on complete windows from `data/processed/{station_id}.clean.parquet` (or drop-null rows from `{station_id}.parquet`). **Do not train on** `data/eval/labeled.parquet` — that file is labeled evaluation (10k rows, 15% injected).
+Production QC is `ml/ml/engine.py`, called in-process from the backend adapter. Do not train unless asked. Do not HTTP-proxy to `ml.ml.main:app` in the judge demo.
 
-To build a labeled **eval** CSV (injected faults + graph), send ML **one file**: `scripts/simulate_corruption_eval.py`. **Do not train on that CSV** — train on `*.clean.parquet`.
+Optional standalone eval (different field names — not for the dashboard):
+
+```text
+uvicorn ml.ml.main:app --port 8001
+```
+
+Offline labeled eval (do **not** train on it):
 
 ```text
 python scripts/simulate_corruption_eval.py --clean test_2024.csv --out ./eval_out
 ```
 
-Implement `Detector` against [docs/contracts.md](docs/contracts.md) § Detector (`src/skyguard/ml/protocol.py`):
-
-- `window` shape `(N, 3)`, oldest → newest, original units, order `[temp_c, pres_hpa, rhum_pct]`, no NaNs
-- MinMax scaling belongs **inside** the real detector, not in the route
-- Return `Reconstruction` (`reconstructed` shape `(3,)` in original units, `mse`, `mse_vector`, `contribution_pct` summing to 100, `skipped`)
-
-Until a `.pt` / ONNX file exists, the API uses `IdentityDetector` (copy last step, MSE 0). When weights land: put the file on disk, implement `load_detector` in `src/skyguard/ml/loader.py`, set `MODEL_PATH`, and set a real `SKYGUARD_RECON_THRESHOLD`. Ingest already calls `Detector.reconstruct` on a full 24-hour window.
+`src/skyguard/ml/` (`IdentityDetector`) and `src/skyguard/engine/tier*.py` are **legacy**. Live ingest does not call them.
 
 ## Docs
 

@@ -83,8 +83,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 
 #### I6 — handoff README
 
-1. Root README: import catalog, run API, stream filtered, inject neighborhood, open old dashboard
-2. Progress: I1–I5 done; next is F7
+**Code is in.** Root README: import ML catalog, run API, stream Palam∪buddies, inject neighborhood vs spike, open the F0–F6 dashboard. Progress: I1–I6 done; next is F7.
 
 ---
 
