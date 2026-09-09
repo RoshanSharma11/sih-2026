@@ -1,6 +1,6 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-09 (F7: multi-page lock. Next is F8).
+Last updated: 2026-09-09 (F8: Network shell. Next is F9).
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -16,7 +16,7 @@ Nothing else needs a product decision. Language and D14–D18 are locked.
 
 **Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**. Live ingest uses **`ml.engine`**. Processed catalog is **151 stations**. Palam `42181` buddies: Safdarjung `42182` + `42139`. Storm inject is Palam’s neighborhood, not NORTH.
 
-Next: **F8** Network page (view-set picker + light map). Page list is locked in `frontend.md`.
+Next: **F9** Station page (observed vs predicted overlay).
 
 | Slice | Commit | Why |
 |---|---|---|
@@ -29,7 +29,8 @@ Next: **F8** Network page (view-set picker + light map). Page list is locked in 
 | I4 | `41d936e` | `ids=` + `latest` + `/buddy-map` + telemetry/alert `label` |
 | I5 | `62df838` | D18 + two-buddy T3 + isolate unconfirmed + health; quarantine IdentityDetector live path |
 | I6 | (this change) | Root README: import catalog, filtered stream, neighborhood inject, old dashboard |
-| F7 | (this change) | Lock five-page light console; no app code |
+| F7 | `1dc9dcd` | Lock five-page light console; no app code |
+| F8 | (this change) | st.navigation, light theme, view-set map |
 
 ## What works today (post-I6)
 
@@ -39,7 +40,7 @@ Next: **F8** Network page (view-set picker + light map). Page list is locked in 
 - Missing artifacts → persist anyway, `UNCONFIRMED_ANOMALY`. No 24h window → same.
 - Streamer: `--stations 42181 --with-buddies` (default true) seeds/POSTs the ingest set. CLI overrides `GET /demo/stream-filter`. Empty filter = full catalog.
 - Demo inject: `target=neighborhood` expands via the buddy graph. `target=cluster` is 400.
-- Dashboard: F0–F6 one-page console still runs until F8 rewrites `frontend/`. **F7 locked** five pages (Network, Station, Alerts, Control, Guide), light tokens, default view Palam∪buddies + Santacruz.
+- Dashboard: five-page light console. **F8** Network: view-set picker, KPI strip, India map from `latest.label`. Station/Alerts/Control/Guide pages are stubs until F9–F11.
 - ML standalone: `ml/ml/main.py` remains eval-only. Do not point the dashboard at 8001.
 - Tests: D18 mapping is unit-tested; live ingest covers two-buddy T3, isolate/one-buddy → `UNCONFIRMED_ANOMALY`, weather does not lower health. IdentityDetector / NORTH live-path tests are skipped. Engine integration skips when artifacts are missing.
 
@@ -51,7 +52,7 @@ Next: **F8** Network page (view-set picker + light map). Page list is locked in 
 | `src/skyguard/ml/`             | IdentityDetector stub   | **legacy**                   |
 | `ml/ml/engine.py`              | **production QC**       | unchanged                     |
 | `ml/ml/main.py`                | standalone eval only    | unchanged                     |
-| `frontend/`                    | F0–F6 until F8          | five-page light console     |
+| `frontend/`                    | Network live; other pages stubs | F9–F11 fill Station/Alerts/Control/Guide |
 
 ## Locks that bite implementers
 
@@ -89,10 +90,9 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Next
 
-1. **F8** — `st.navigation` shell, light theme, view-set picker, KPI strip, light India map.
-2. **F9** — Station: observed vs predicted T/P/H, verdict, contribution, health.
-3. **F10** — Alerts feed + Control (Palam storm / spike / reset).
-4. **F11** — Guide, empty/offline, 151 copy, polish.
+1. **F9** — Station: observed vs predicted T/P/H, verdict, contribution, health.
+2. **F10** — Alerts feed + Control (Palam storm / spike / reset).
+3. **F11** — Guide, empty/offline, 151 copy, polish.
 
 ## Open issues
 

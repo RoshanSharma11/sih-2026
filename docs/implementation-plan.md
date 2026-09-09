@@ -95,7 +95,7 @@ See [decisions.md](decisions.md). Highest impact: D14 catalog = ML 151, D15 stat
 
 #### F8 — station filter + map
 
-View-set picker, `POST /demo/stream-filter`, map from `GET /stations?ids=`, marker color from `latest.label` or `pipeline_status`.
+**Code is in.** `st.navigation` shell, light theme, `GET /stations?ids=` map, view-set picker POSTs stream-filter, markers from `latest.label`.
 
 #### F9 — stream + prediction
 

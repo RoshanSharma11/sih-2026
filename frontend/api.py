@@ -26,6 +26,9 @@ class Snapshot:
     alerts: list[dict[str, Any]] = field(default_factory=list)
     overlays: list[dict[str, Any]] = field(default_factory=list)
     selected_id: str | None = None
+    health: dict[str, Any] = field(default_factory=dict)
+    ingest: list[str] = field(default_factory=list)
+    view: list[str] = field(default_factory=list)
 
 
 def merge_station(summary: dict[str, Any], detail: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -35,6 +38,7 @@ def merge_station(summary: dict[str, Any], detail: dict[str, Any] | None = None)
     merged = dict(summary)
     merged["latest"] = latest
     merged["pipeline_status"] = None if not latest else latest.get("pipeline_status")
+    merged["label"] = None if not latest else latest.get("label")
     return merged
 
 
@@ -51,17 +55,24 @@ class SkyGuardClient:
     def close(self) -> None:
         self._client.close()
 
-    def healthz(self) -> bool:
+    def health(self) -> dict[str, Any] | None:
         try:
             response = self._client.get("/healthz")
             response.raise_for_status()
         except httpx.HTTPError:
-            return False
+            return None
         body = response.json()
-        return body.get("ok") is True
+        return body if isinstance(body, dict) else None
 
-    def stations(self) -> list[dict[str, Any]]:
-        return self._get_json("/stations")
+    def healthz(self) -> bool:
+        body = self.health()
+        return bool(body and body.get("ok") is True)
+
+    def stations(self, ids: list[str] | None = None) -> list[dict[str, Any]]:
+        params: dict[str, Any] | None = None
+        if ids:
+            params = {"ids": ",".join(ids)}
+        return self._get_json("/stations", params=params)
 
     def station(self, station_id: str) -> dict[str, Any]:
         return self._get_json(f"/stations/{station_id}")
@@ -75,8 +86,20 @@ class SkyGuardClient:
             params["station_id"] = station_id
         return self._get_json("/alerts", params=params)
 
+    def buddy_map(self) -> dict[str, Any]:
+        return self._get_json("/buddy-map")
+
     def demo_status(self) -> dict[str, Any]:
         return self._get_json("/demo/status")
+
+    def stream_filter(self) -> dict[str, Any]:
+        return self._get_json("/demo/stream-filter")
+
+    def set_stream_filter(self, station_ids: list[str], include_buddies: bool = True) -> dict[str, Any]:
+        return self._post_json(
+            "/demo/stream-filter",
+            {"station_ids": station_ids, "include_buddies": include_buddies},
+        )
 
     def inject(self, body: dict[str, Any]) -> dict[str, Any]:
         return self._post_json("/demo/inject", body)
@@ -84,20 +107,25 @@ class SkyGuardClient:
     def reset(self) -> dict[str, Any]:
         return self._post_json("/demo/reset", {})
 
-    def snapshot(self, selected_id: str | None) -> Snapshot:
-        if not self.healthz():
+    def snapshot(self, selected_id: str | None, view_ids: list[str] | None = None) -> Snapshot:
+        health = self.health()
+        if health is None:
             return Snapshot(
                 ok=False,
                 error=f"API is not reachable at {self.base_url}. Start it with python scripts/run_api.py.",
             )
         try:
-            summaries = self.stations()
+            summaries = self.stations(ids=view_ids)
             stations = [merge_station(row) for row in summaries]
         except SkyGuardApiError as exc:
-            return Snapshot(ok=False, error=str(exc))
+            return Snapshot(ok=False, error=str(exc), health=health)
 
         if not stations:
-            return Snapshot(ok=True, error="Catalog is empty. Load stations.json and restart the API.")
+            return Snapshot(
+                ok=True,
+                error="Catalog is empty. Load stations.json and restart the API.",
+                health=health,
+            )
 
         ids = {row["station_id"] for row in stations}
         chosen = selected_id if selected_id in ids else stations[0]["station_id"]
@@ -105,8 +133,18 @@ class SkyGuardClient:
             telemetry = self.telemetry(chosen)
             alerts = self.alerts(chosen)
             overlays = self.demo_status().get("overlays", [])
+            try:
+                filt = self.stream_filter()
+            except SkyGuardApiError:
+                filt = {}
         except SkyGuardApiError as exc:
-            return Snapshot(ok=False, error=str(exc), stations=stations, selected_id=chosen)
+            return Snapshot(
+                ok=False,
+                error=str(exc),
+                stations=stations,
+                selected_id=chosen,
+                health=health,
+            )
         return Snapshot(
             ok=True,
             stations=stations,
@@ -114,6 +152,9 @@ class SkyGuardClient:
             alerts=alerts,
             overlays=overlays,
             selected_id=chosen,
+            health=health,
+            ingest=list(filt.get("ingest") or []),
+            view=list(filt.get("view") or []),
         )
 
     def _get_json(self, path: str, params: dict[str, Any] | None = None) -> Any:
