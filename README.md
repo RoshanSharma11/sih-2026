@@ -41,7 +41,7 @@ Three terminals. Prefer Palam’s neighborhood — streaming all 151 will overwh
 python scripts/run_api.py
 ```
 
-Wait for `Application startup complete`. Docs: http://127.0.0.1:8000/docs · `GET /healthz` should show `model_loaded: true`, `n_stations: 151`.
+Wait for `Application startup complete`. Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) · `GET /healthz` should show `model_loaded: true`, `n_stations: 151`.
 
 ```text
 python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024-07-01T00:00:00Z --stations 42181 --with-buddies
@@ -53,7 +53,7 @@ Seeds 24 clean hours for the **ingest set** (view ∪ 1-hop buddies), then POSTs
 python scripts/run_dashboard.py
 ```
 
-http://127.0.0.1:8501 · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`. Pages: Network, Station, Alerts, Control, How QC works. Light theme. Polls the product API only.
+[http://127.0.0.1:8501](http://127.0.0.1:8501) · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`. Pages: Network, Station, Alerts, Control, How QC works. Light theme. Polls the product API only.
 
 Tests: `pytest -q`. Engine integration skips when artifacts are missing; adapter unit tests still run.
 
@@ -89,16 +89,18 @@ The first station in a storm hour may show `UNKNOWN` / `UNCONFIRMED_ANOMALY` unt
 
 Poll shapes are frozen in [docs/contracts.md](docs/contracts.md). No SSE. Do not invent fields.
 
-| Method | Path | Use |
-|---|---|---|
-| `GET` | `/healthz` | `ok`, `model_loaded`, `threshold`, `n_stations`, `n_isolates` |
-| `GET` | `/stations?ids=` | view-set summaries with `latest`, `buddy_ids`, `isolate` (no N+1) |
-| `GET` | `/stations/{id}` | summary + `latest` |
-| `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | observed + imputed. `is_anomaly` follows D18 (true for weather) |
-| `GET` | `/alerts?station_id=&limit=` | newest first — verdict sentence + `label` |
-| `GET` | `/buddy-map` | ML graph for the dashboard |
-| `GET` | `/demo/status` | armed overlays |
-| `GET`/`POST` | `/demo/stream-filter` | view vs ingest sets |
+
+| Method       | Path                                        | Use                                                               |
+| ------------ | ------------------------------------------- | ----------------------------------------------------------------- |
+| `GET`        | `/healthz`                                  | `ok`, `model_loaded`, `threshold`, `n_stations`, `n_isolates`     |
+| `GET`        | `/stations?ids=`                            | view-set summaries with `latest`, `buddy_ids`, `isolate` (no N+1) |
+| `GET`        | `/stations/{id}`                            | summary + `latest`                                                |
+| `GET`        | `/stations/{id}/telemetry?from=&to=&limit=` | observed + imputed. `is_anomaly` follows D18 (true for weather)   |
+| `GET`        | `/alerts?station_id=&limit=`                | newest first — verdict sentence + `label`                         |
+| `GET`        | `/buddy-map`                                | ML graph for the dashboard                                        |
+| `GET`        | `/demo/status`                              | armed overlays                                                    |
+| `GET`/`POST` | `/demo/stream-filter`                       | view vs ingest sets                                               |
+
 
 `GENUINE_WEATHER_EVENT` is an anomaly alert and **does not** lower health. Raw `temp_observed` / `pres_observed` / `rhum_observed` are immutable; imputed columns are ML `predicted` overlays.
 
