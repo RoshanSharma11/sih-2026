@@ -1,10 +1,6 @@
 # Demo video
 
-A demo video is optional but recommended.
-
-Add a YouTube or Google Drive link below (viewer access, not a private file).
-
-**Demo link:** _(add here)_
+[Think Tank SIH Demo Video](Think%20Tank%20SIH%20Demo%20Video.mp4)
 
 Suggested 30-second script (Palam neighborhood already in the repo):
 

@@ -94,8 +94,8 @@ sih-2026/
 ├── submission/
 │   ├── PRESENTATION.md
 │   ├── DEMO.md
-│   ├── sih-judge-pitch.html
-│   └── sih-judge-pitch.pdf
+│   ├── Think Tank SIH PPT.pdf
+│   └── Think Tank SIH Demo Video.mp4
 └── assets/
     └── screenshots/
 ```
@@ -113,15 +113,13 @@ sih-2026/
 
 Keep the final SIH presentation in the repository whenever the file size allows it.
 
-See [submission/PRESENTATION.md](submission/PRESENTATION.md). The current pitch is [submission/sih-judge-pitch.html](submission/sih-judge-pitch.html).
-
-If a PPT is too large for GitHub, use Google Drive/OneDrive and put the viewer link in `submission/PRESENTATION.md`.
+See [submission/PRESENTATION.md](submission/PRESENTATION.md) and the deck: [Think Tank SIH PPT](submission/Think%20Tank%20SIH%20PPT.pdf).
 
 ## 9. Demo Video
 
 A demo video is **optional**, but recommended.
 
-Add the YouTube/Google Drive link in [submission/DEMO.md](submission/DEMO.md).
+See [submission/DEMO.md](submission/DEMO.md) and the video: [Think Tank SIH Demo Video](submission/Think%20Tank%20SIH%20Demo%20Video.mp4).
 
 ## 10. Screenshots / Prototype Photos
 
