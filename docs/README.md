@@ -4,6 +4,8 @@ Read these before writing code. They are the source of truth. If code and docs d
 
 To **fetch, run the API, stream, inject, or open the dashboard**, use the [root README](../README.md). This folder is the design record.
 
+**PPT / pitch brief:** [prd.md](prd.md) — self-contained technical PRD for the presentation team (architecture diagrams, QC story, judge script, slide outline).
+
 ## Read order
 
 1. [progress.md](progress.md) — what is built, what is next (handoff). **Start here.**
