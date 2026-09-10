@@ -10,9 +10,9 @@ build/
 .ruff_cache/
 .env
 .DS_Store
-.streamlit/secrets.toml
-
+.cursor/
 .mplconfig/
+.streamlit/secrets.toml
 
 data/raw/
 ml/data/raw/

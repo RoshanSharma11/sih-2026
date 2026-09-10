@@ -1,12 +1,10 @@
-# SkyGuard AI (SIH PS 26073)
+# SkyGuard AI
 
-Quality-control service for Indian Automatic Weather Stations. Input is hourly **T / P / H only**. The API tells a real storm from a broken sensor, keeps raw readings intact, and tracks 7-day sensor health.
+Quality-control service for Indian Automatic Weather Stations (SIH PS 26073). Hourly **temperature, pressure, and humidity** are scored in-process so a real storm is not treated as a broken sensor. Raw readings are never overwritten; imputed values are overlay columns.
 
-**Handoff (2026-09-09):** I1–I6 and **F7–F11** are shipped. Live `/ingest` calls `ml/ml/engine.py` in-process. Catalog is **151 stations**. Dashboard is the five-page light Streamlit console. Status: [docs/progress.md](docs/progress.md). Contracts: [docs/contracts.md](docs/contracts.md).
+Production QC is `ml/ml/engine.py` (LSTM autoencoder + buddy-station graph). The FastAPI shell persists observations and serves the Streamlit console.
 
-This repo is the **data engine + FastAPI product shell + ML QC package + Streamlit console**. Do not point the dashboard at the ML eval server on port 8001.
-
-Demo neighborhood (storm hero): Palam `42181` + Safdarjung `42182` + Meerut `42139`. Buddy check uses that graph, not NORTH/WEST. Delhi does not validate Mumbai.
+Demo neighborhood: Palam `42181`, Safdarjung `42182`, Meerut `42139`.
 
 ## Setup
 
@@ -15,49 +13,35 @@ Python 3.10+. From the repo root:
 ```text
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev,ui]"
+pip install -e ".[ui]"
 pip install -r ml/ml/requirements.txt
 ```
 
-Torch is required for live LSTM. Weights load from `ml/ml/artifacts/` on API boot. Do not set `MODEL_PATH`. If artifacts fail to load, ingest still persists and returns `UNCONFIRMED_ANOMALY` — it does not fall back to legacy backend tiers.
+Trained weights load from `ml/ml/artifacts/` when the API starts.
 
-## Import the ML catalog
+## Run
 
-Do **not** recrawl Meteostat to pick stations. Copy ML `stations.csv`, `buddy_edges.csv`, and hourly `{station_id}.csv` into `ml/data/raw/` (gitignored), then:
-
-```text
-python -m skyguard.data.import_ml_catalog
-```
-
-Writes `data/processed/stations.json` (151) and `buddy_edges.json`. Hourly parquet is written for every catalog id that has a CSV. Wipe `data/skyguard.db` after a real re-import so SQLite matches the new graph.
-
-The processed catalog is already in tree. Re-run import only when ML raw files change.
-
-## Run the API, a filtered stream, and the dashboard
-
-Three terminals. Prefer Palam’s neighborhood — streaming all 151 will overwhelm the live map. Default dashboard view is Palam ∪ buddies + Santacruz.
+Three terminals:
 
 ```text
-python scripts/run_api.py
+python -m uvicorn skyguard.api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Wait for `Application startup complete`. Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) · `GET /healthz` should show `model_loaded: true`, `n_stations: 151`.
+Wait for startup. API docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ```text
 python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024-07-01T00:00:00Z --stations 42181 --with-buddies
 ```
 
-Seeds 24 clean hours for the **ingest set** (view ∪ 1-hop buddies), then POSTs one weather-hour per 200 ms. `--hours N` stops after N hours. There is **no** `--fault` flag. `409` duplicates are skipped. CLI `--stations` overrides `GET /demo/stream-filter`. Seed before streaming: without a 24h window, LSTM cannot run and the hour is `UNCONFIRMED_ANOMALY`.
+Seeds 24 clean hours for Palam and its buddies, then streams one weather-hour every 200 ms. Hourly parquet must already be present under `data/processed/`.
 
 ```text
-python scripts/run_dashboard.py
+python -m streamlit run frontend/app.py
 ```
 
-[http://127.0.0.1:8501](http://127.0.0.1:8501) · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`. Pages: Network, Station, Alerts, Control, How QC works. Light theme. Polls the product API only.
+Console: [http://127.0.0.1:8501](http://127.0.0.1:8501)
 
-Tests: `pytest -q`. Engine integration skips when artifacts are missing; adapter unit tests still run.
-
-## Demo inject (storm ≠ broken sensor)
+## Demo inject
 
 While the stream is running:
 
@@ -71,57 +55,28 @@ curl -X POST http://127.0.0.1:8000/demo/inject \
   -d '{"target":"station","station_id":"42181","kind":"SPIKE","channel":"temp_c"}'
 ```
 
-- Storm must target a **neighborhood** (station + 1-hop buddies). Hardware (spike / freeze / drift / comm) must target **one station**.
-- Legacy `target: cluster` is **400**.
-- `GET /demo/status` lists armed overlays. `POST /demo/reset` clears them.
-- `demo_injected` on `POST /ingest` is the overlay kind. It is not ground truth for judges.
+Storms target a neighborhood (station + 1-hop buddies). Hardware faults target one station. `POST /demo/reset` clears armed overlays.
 
-Expect different `label`s: neighborhood storm → `GENUINE_WEATHER_EVENT` (mapped `pipeline_status=GENUINE_WEATHER`), lone Palam spike → `HARDWARE_ANOMALY` or `PHYSICAL_FAULT` (`HARDWARE`). The first station in a storm hour may be `UNCONFIRMED_ANOMALY` until two same-hour neighbors exist.
+## License
 
-## 30-second judge script
+MIT License
 
-1. Stream Palam’s neighborhood. Map markers for that view set stay teal while clean.
-2. **Storm around Palam** → Palam and its buddies go amber; a Mumbai station you did not ingest stays idle. Neighbors agree. Health does not drop.
-3. **Reset**, then **Break Palam temperature** → only Palam goes red; Safdarjung stays teal.
-4. Point at the map: Delhi does not validate Mumbai.
+Copyright (c) 2026 NSUT-SIH-26
 
-The first station in a storm hour may show `UNKNOWN` / `UNCONFIRMED_ANOMALY` until the neighbor lands (~1 s). Weather is amber, never red.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Poll shapes are frozen in [docs/contracts.md](docs/contracts.md). No SSE. Do not invent fields.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-
-| Method       | Path                                        | Use                                                               |
-| ------------ | ------------------------------------------- | ----------------------------------------------------------------- |
-| `GET`        | `/healthz`                                  | `ok`, `model_loaded`, `threshold`, `n_stations`, `n_isolates`     |
-| `GET`        | `/stations?ids=`                            | view-set summaries with `latest`, `buddy_ids`, `isolate` (no N+1) |
-| `GET`        | `/stations/{id}`                            | summary + `latest`                                                |
-| `GET`        | `/stations/{id}/telemetry?from=&to=&limit=` | observed + imputed. `is_anomaly` follows D18 (true for weather)   |
-| `GET`        | `/alerts?station_id=&limit=`                | newest first — verdict sentence + `label`                         |
-| `GET`        | `/buddy-map`                                | ML graph for the dashboard                                        |
-| `GET`        | `/demo/status`                              | armed overlays                                                    |
-| `GET`/`POST` | `/demo/stream-filter`                       | view vs ingest sets                                               |
-
-
-`GENUINE_WEATHER_EVENT` is an anomaly alert and **does not** lower health. Raw `temp_observed` / `pres_observed` / `rhum_observed` are immutable; imputed columns are ML `predicted` overlays.
-
-## ML
-
-Production QC is `ml/ml/engine.py`, called in-process from the backend adapter. Do not train unless asked. Do not HTTP-proxy to `ml.ml.main:app` in the judge demo.
-
-Optional standalone eval (different field names — not for the dashboard):
-
-```text
-uvicorn ml.ml.main:app --port 8001
-```
-
-Offline labeled eval (do **not** train on it):
-
-```text
-python scripts/simulate_corruption_eval.py --clean test_2024.csv --out ./eval_out
-```
-
-`src/skyguard/ml/` (`IdentityDetector`) and `src/skyguard/engine/tier*.py` are **legacy**. Live ingest does not call them.
-
-## Docs
-
-Read [docs/README.md](docs/README.md) before changing behavior. If code and contracts disagree, update `docs/contracts.md` in the same change.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
