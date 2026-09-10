@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SkyGuard AI — SIH Judge Pitch · Team Think Tank</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 16mm 18mm 16mm;
+      @bottom-left {
+        content: "Team Think Tank  ·  SIH PS 26073  ·  Disaster Management";
+        font: 8pt "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: #64748B;
+      }
+      @bottom-right {
+        content: "SkyGuard AI  ·  " counter(page) " / " counter(pages);
+        font: 8pt "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: #64748B;
+      }
+    }
+
+    :root {
+      --canvas: #F8FAFC;
+      --ink: #0F172A;
+      --muted: #475569;
+      --slate: #64748B;
+      --teal: #0D9488;
+      --amber: #D97706;
+      --rose: #E11D48;
+      --line: #E2E8F0;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: var(--ink);
+      font: 10.2pt/1.42 "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    h1, h2, h3 { margin: 0; font-weight: 700; }
+    p { margin: 0 0 0.55rem 0; }
+    strong { font-weight: 700; }
+
+    .cover {
+      display: flex;
+      gap: 1.2rem;
+      align-items: flex-start;
+      padding-bottom: 0.7rem;
+      border-bottom: 3px solid var(--teal);
+      margin-bottom: 0.8rem;
+    }
+    .mark {
+      width: 0.55rem;
+      min-height: 4.4rem;
+      background: var(--teal);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .kicker {
+      font-size: 8.5pt;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--teal);
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    h1 { font-size: 20pt; letter-spacing: -0.02em; line-height: 1.15; }
+    .sub { color: var(--muted); font-size: 10.5pt; margin-top: 0.3rem; }
+    .meta {
+      margin-top: 0.55rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .chip {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.12rem 0.55rem;
+      font-size: 8pt;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .chip.teal { border-color: var(--teal); color: var(--teal); }
+    .chip.amber { border-color: var(--amber); color: var(--amber); }
+    .chip.rose { border-color: var(--rose); color: var(--rose); }
+    .chip.slate { border-color: var(--slate); color: var(--slate); }
+
+    .prep {
+      background: var(--canvas);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.55rem 0.8rem;
+      margin-bottom: 0.75rem;
+      font-size: 9.3pt;
+      color: var(--muted);
+    }
+    .prep strong { color: var(--ink); }
+
+    .legend {
+      display: flex;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+      margin: 0.2rem 0 0.7rem 0;
+      font-size: 8.5pt;
+      font-weight: 600;
+    }
+    .dot {
+      display: inline-block;
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 50%;
+      margin-right: 0.28rem;
+      vertical-align: -0.05rem;
+    }
+
+    .block { margin-bottom: 0.7rem; }
+    .head {
+      display: flex;
+      align-items: baseline;
+      gap: 0.7rem;
+      margin-bottom: 0.35rem;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 0.2rem;
+    }
+    .time {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: var(--teal);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      min-width: 5.4rem;
+    }
+    h2 { font-size: 12pt; }
+    .where { font-size: 8.5pt; color: var(--slate); font-weight: 600; margin-left: auto; }
+
+    .say {
+      font-size: 10.3pt;
+      line-height: 1.44;
+    }
+    .say p:last-child { margin-bottom: 0; }
+
+    .click {
+      margin: 0.4rem 0;
+      padding: 0.35rem 0.6rem 0.35rem 0.65rem;
+      border-left: 3px solid var(--teal);
+      background: #F0FDFA;
+      color: #0F766E;
+      font-size: 9.2pt;
+      font-weight: 600;
+      font-style: italic;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 9.5pt;
+      font-style: italic;
+    }
+
+    h3 {
+      font-size: 10pt;
+      color: var(--teal);
+      margin: 0.85rem 0 0.4rem 0;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.2pt;
+      margin: 0.3rem 0 0.8rem 0;
+    }
+    th {
+      text-align: left;
+      font-size: 8pt;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--slate);
+      border-bottom: 1.5px solid var(--ink);
+      padding: 0.28rem 0.4rem;
+    }
+    td {
+      padding: 0.3rem 0.4rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: var(--canvas); }
+    td.t { font-weight: 700; color: var(--teal); white-space: nowrap; width: 14%; }
+    td.p { font-weight: 700; width: 18%; }
+    table { page-break-inside: avoid; }
+
+    ul { margin: 0.2rem 0 0.6rem 1.1rem; padding: 0; }
+    li { margin-bottom: 0.28rem; }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+    .stage {
+      page-break-inside: auto;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.5rem 0.65rem;
+      font-size: 9.2pt;
+    }
+    .card h4 {
+      margin: 0 0 0.3rem 0;
+      font-size: 9.5pt;
+    }
+
+    .close {
+      border-top: 3px solid var(--teal);
+      margin-top: 0.4rem;
+      padding-top: 0.7rem;
+      page-break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="cover">
+    <div class="mark"></div>
+    <div>
+      <div class="kicker">SIH 2026 · Live demo script · 4–5 minutes</div>
+      <h1>SkyGuard AI — Judge pitch</h1>
+      <p class="sub">Team Think Tank &nbsp;·&nbsp; Problem Statement SIH26073<br>
+      AI/ML-Based Intelligent Anomaly Detection for Automatic Weather Stations</p>
+      <div class="meta">
+        <span class="chip teal">Clean · teal</span>
+        <span class="chip amber">Genuine weather · amber</span>
+        <span class="chip rose">Hardware · rose</span>
+        <span class="chip slate">Unconfirmed · slate</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="prep">
+    <strong>Before you walk in.</strong>
+    API on <code>:8000</code>, streamer on Palam + buddies, dashboard on <code>:8501</code>.
+    Land on <strong>Network</strong>. Confirm header chips
+    <strong>ok · model_loaded · n_stations = 151</strong>.
+    Roster shows Palam (42181), Safdarjung (42182), Meerut (42139), Santacruz (43003) — all teal.
+    “Include 1-hop buddies in ingest” stays on. Do not open Advanced inject unless a judge asks.
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:#0D9488"></span>Spoken lines — say these</span>
+    <span><span class="dot" style="background:#0D9488"></span>Green bars — click / point</span>
+  </div>
+
+  <!-- INTRO -->
+  <section class="block">
+    <div class="head">
+      <span class="time">0:00 – 0:25</span>
+      <h2>Team intro</h2>
+      <span class="where">Network already open · do not click</span>
+    </div>
+    <div class="say">
+      <p><strong>Good morning, respected judges. We are Team Think Tank — and we're here for Problem Statement SIH26073: AI/ML-Based Intelligent Anomaly Detection for Automatic Weather Stations, under the Disaster Management theme.</strong></p>
+      <p>Every IMD forecast, flood model, and heat advisory in this country starts with an Automatic Weather Station. If that hour is wrong, the model is wrong — and nobody on the ground knows until the damage is already done.</p>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="block">
+    <div class="head">
+      <span class="time">0:25 – 1:05</span>
+      <h2>The problem</h2>
+      <span class="where">Stay on Network · gesture at the map</span>
+    </div>
+    <div class="click">Point at the India map and the KPI strip: Clean / Weather / Hardware / Unconfirmed / Waiting. Do not click yet.</div>
+    <div class="say">
+      <p>This is <strong>SkyGuard AI</strong> — live quality control for Indian AWS. We are allowed <strong>only three channels</strong>: temperature, pressure, humidity. No radar. No satellite. No wind.</p>
+      <p>A min/max gate cannot do this job. A frozen sensor at 28.4 °C looks like “stable weather.” A real monsoon cell looks like a broken instrument. The official SIH example is Palam at 55 °C while the rest of NCR is normal — that is hardware, not a heatwave. The product has to tell those two stories apart <strong>in the same hour</strong>.</p>
+      <p>What you’re looking at is not four toy stations. The LSTM was trained on <strong>151 Indian stations</strong>. The live view is a handful so the map stays readable. Palam, Safdarjung, and Meerut sit together in Delhi-NCR. Santacruz is Mumbai — and <strong>Delhi does not validate Mumbai</strong>.</p>
+      <p>Header chips: the model is loaded. Color is <strong>this hour’s QC label</strong>, not health. Teal means we trust it.</p>
+    </div>
+  </section>
+
+  <!-- HOW IT THINKS -->
+  <section class="block">
+    <div class="head">
+      <span class="time">1:05 – 1:40</span>
+      <h2>How it thinks</h2>
+      <span class="where">Stay on Network · point at the color legend</span>
+    </div>
+    <div class="say">
+      <p>Three tiers. One engine. The dashboard never computes — it only polls.</p>
+      <p><strong>One.</strong> Physical rules: impossible range, a 10 °C one-hour jump, a missing packet. Hard fail. We don’t need neighbors for that.</p>
+      <p><strong>Two.</strong> An LSTM autoencoder on the last <strong>24 hours</strong>, with a <strong>per-station</strong> scaler. Palam’s “normal day” is not Mumbai’s. Unusual reconstruction error means <em>candidate</em> — including real weather.</p>
+      <p><strong>Three.</strong> A buddy check on the trained graph. Inverse-distance weights. <strong>At least two</strong> usable neighbors at the same hour. If they agree → <strong>genuine weather, amber, health unchanged</strong>. If they disagree → <strong>hardware, rose</strong>. If we don’t have two neighbors, we say <strong>unconfirmed</strong>. We refuse to guess.</p>
+      <p>The streamer only tells the truth. Live faults are armed here, before the model sees the hour. Raw T, P, H are <strong>never overwritten</strong>.</p>
+    </div>
+  </section>
+
+  <!-- STORM -->
+  <section class="block">
+    <div class="head">
+      <span class="time">1:40 – 2:35</span>
+      <h2>Story 1 — a real storm</h2>
+      <span class="where">Control → Network</span>
+    </div>
+    <div class="click">Sidebar → Demo → Control. Caption: “The streamer stays clean.” Click <strong>Storm around Palam</strong>. Wait 1–2 seconds.</div>
+    <div class="say">
+      <p>This page is <strong>Control</strong>. These three buttons are the judge controls.</p>
+      <p>If Palam sits grey for a second, ignore it. Palam just arrived this hour — the buddy check waits until Safdarjung and Meerut are in too, then it should go amber.</p>
+    </div>
+    <div class="click">Sidebar → Network. Point: Palam + Safdarjung + Meerut amber. Santacruz still teal. KPI Weather has moved. Roster health has not crashed.</div>
+    <div class="say">
+      <p>Palam, Safdarjung, and Meerut all dropped together — temperature down, pressure down, humidity up. Neighbors agree. That is a <strong>genuine weather event</strong>. Amber — <strong>never red</strong>. A cyclone must not send Palam to the workshop.</p>
+      <p>Santacruz is still teal. We did not paint all of India. The storm is Palam’s <strong>neighborhood</strong>, not a metro cluster named NORTH.</p>
+    </div>
+  </section>
+
+  <!-- SPIKE -->
+  <section class="block">
+    <div class="head">
+      <span class="time">2:35 – 3:20</span>
+      <h2>Story 2 — a broken sensor</h2>
+      <span class="where">Control → Network</span>
+    </div>
+    <div class="click">Control → <strong>Reset overlays</strong>. Wait until markers would be teal. Then <strong>Break Palam temperature</strong>. Back to Network.</div>
+    <div class="say">
+      <p>Same network. One station. One channel — temperature. Neighbors did <strong>not</strong> move. That is a <strong>hardware anomaly</strong>. Only Palam goes rose.</p>
+      <p>That is the whole product, in two clicks: <strong>a storm around Palam is not a broken sensor.</strong></p>
+    </div>
+  </section>
+
+  <!-- STATION / ALERTS -->
+  <section class="block">
+    <div class="head">
+      <span class="time">3:20 – 4:10</span>
+      <h2>Proof we didn’t cheat</h2>
+      <span class="where">Station → Alerts</span>
+    </div>
+    <div class="click">Click Palam on the roster (or the Palam marker). Station opens.</div>
+    <div class="say">
+      <p>This is <strong>Station</strong>. Solid line is <strong>observed</strong> — the spike is still there. We do not “correct” the forensic record. Dashed line is the LSTM reconstruction for <em>this</em> hour, not a forecast of tomorrow.</p>
+      <p>The verdict sentence is the reason the engine wrote — temperature observed versus predicted, neighbors disagree, treated as hardware. Contribution bars name <strong>temp_c</strong>. Health here is a <strong>7-day maintenance index</strong>. Weather does not lower it. A spike does.</p>
+    </div>
+    <div class="click">Sidebar → Alerts. Newest first. Optional: click Open on a rose row to pin that hour on Station.</div>
+    <div class="say">
+      <p>Newest first. Amber weather versus rose hardware. Same sentence you just saw. <strong>Open</strong> pins that hour on Station so an operator can inspect it later — even after the live hour has gone clean.</p>
+      <p>We also catch freeze, drift, and comms drop from Advanced inject. Same engine. We are not showing those because the judge question is weather versus hardware.</p>
+    </div>
+  </section>
+
+  <!-- CLOSE -->
+  <section class="block close">
+    <div class="head">
+      <span class="time">4:10 – 5:00</span>
+      <h2>Impact and close</h2>
+      <span class="where">Stay on Alerts or Network</span>
+    </div>
+    <p class="note">Open <strong>How QC works</strong> only if a judge looks lost. Do not wander into Advanced.</p>
+    <div class="say">
+      <p>Why this matters under Disaster Management: IMD and state agencies cannot wait for a human to notice a silent AWS. A false cyclone alert wastes response. A missed sensor fault poisons the next flood model. SkyGuard sits in front of the network and answers, every hour: <strong>trust this, or don’t — and why.</strong></p>
+      <p>We built the full loop: 151-station catalog, clean historical replay, a FastAPI shell that never overwrites raw, production QC in-process — rules, LSTM, buddy graph — and this operator console. Isolates stay unconfirmed on purpose. We would rather say “not enough evidence” than invent a spatial call.</p>
+      <p>SkyGuard is not a weather forecast. It is a <strong>self-aware, self-healing weather network</strong>: detect, overlay, keep the raw, track health, keep the trusted stations in the operational mesh.</p>
+      <p><strong>Thank you. We’re happy to take questions — or inject a freeze or a comms drop live if you’d like to see the other faults.</strong></p>
+    </div>
+  </section>
+
+  <div class="stage">
+  <h3>Click sheet — tape this to the laptop</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Page</th>
+        <th>Do this</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="t">Start</td>
+        <td class="p">Network</td>
+        <td>Nothing. Confirm teal roster + header chips.</td>
+      </tr>
+      <tr>
+        <td class="t">~1:40</td>
+        <td class="p">Control</td>
+        <td>Click <strong>Storm around Palam</strong>.</td>
+      </tr>
+      <tr>
+        <td class="t">~1:50</td>
+        <td class="p">Network</td>
+        <td>Point amber NCR cluster; Santacruz stays teal.</td>
+      </tr>
+      <tr>
+        <td class="t">~2:40</td>
+        <td class="p">Control</td>
+        <td><strong>Reset overlays</strong> → wait teal → <strong>Break Palam temperature</strong>.</td>
+      </tr>
+      <tr>
+        <td class="t">~2:55</td>
+        <td class="p">Network</td>
+        <td>Only Palam is rose. Safdarjung stays teal.</td>
+      </tr>
+      <tr>
+        <td class="t">~3:20</td>
+        <td class="p">Station</td>
+        <td>Open Palam from the roster. Solid observed / dashed overlay / verdict / contribution.</td>
+      </tr>
+      <tr>
+        <td class="t">~3:50</td>
+        <td class="p">Alerts</td>
+        <td>Amber vs rose. Optional <strong>Open</strong>.</td>
+      </tr>
+      <tr>
+        <td class="t">Close</td>
+        <td class="p">Stay put</td>
+        <td>Do not open Advanced inject unless asked.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>If something glitches</h3>
+  <div class="two">
+    <div class="card">
+      <h4>Slate on the first storm hour</h4>
+      <p>Say: “Palam just arrived this hour. We wait for Safdarjung and Meerut, then it should go amber.” Skip the line if all three go amber immediately.</p>
+    </div>
+    <div class="card">
+      <h4>Everything unconfirmed</h4>
+      <p>Seed or 24h window missing. Don’t debug on stage. Open <strong>How QC works</strong> and walk the three tiers.</p>
+    </div>
+    <div class="card">
+      <h4>Santacruz never painted</h4>
+      <p>That’s the win. Say it: Delhi does not validate Mumbai.</p>
+    </div>
+    <div class="card">
+      <h4>Words we do not say</h4>
+      <p>NORTH / WEST. “We overwrite the reading.” “The dashboard detects anomalies.” Weather is never red.</p>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:0.6rem">
+    Spoken length is about 4:20 if you don’t rush, ~5:00 with the Station pause.
+    Rehearse once with the 200&nbsp;ms stream so you know how long amber and rose take to land.
+  </p>
+  </div>
+
+</body>
+</html>

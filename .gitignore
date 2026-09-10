@@ -16,7 +16,7 @@ build/
 
 data/raw/
 ml/data/raw/
-data/processed/*.parquet
+data/processed/*.clean.parquet
 data/eval/*.parquet
 data/eval/*.png
 data/eval/*.json

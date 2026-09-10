@@ -87,40 +87,56 @@ sih-2026/
 ├── .gitignore
 ├── .streamlit/
 │   └── config.toml
-├── src/skyguard/          # FastAPI app, streamer, demo inject
-├── frontend/              # Streamlit console
-├── ml/ml/                 # production QC engine + trained artifacts
-├── data/processed/        # station catalog + buddy graph
-└── assets/                # add screenshots here before submission
+├── src/skyguard/              # FastAPI app, streamer, demo inject
+├── frontend/                  # Streamlit console
+├── ml/ml/                     # production QC engine + trained artifacts
+├── data/processed/            # 151-station catalog, buddy graph, hourly parquet
+├── submission/
+│   ├── PRESENTATION.md
+│   ├── DEMO.md
+│   ├── sih-judge-pitch.html
+│   └── sih-judge-pitch.pdf
+└── assets/
+    └── screenshots/
 ```
 
 | Item | Location |
 |---|---|
-| API + streamer | `src/skyguard/` |
-| Dashboard | `frontend/` |
-| QC model + weights | `ml/ml/` and `ml/ml/artifacts/` |
-| Station catalog | `data/processed/stations.json` |
-| Buddy graph | `data/processed/buddy_edges.json` |
-| License | `LICENSE` (MIT) |
+| Source code | `src/skyguard/`, `frontend/`, `ml/ml/` |
+| Architecture / overview | this README |
+| Hourly station hours (151) | `data/processed/{station_id}.parquet` |
+| Screenshots | `assets/screenshots/` |
+| Final PPT / pitch | `submission/` |
+| Demo video link | `submission/DEMO.md` |
 
 ## 8. Final Presentation
 
-Add the SIH PPT under `submission/` when the file size allows it. If it is too large for GitHub, put a Google Drive / OneDrive viewer link in `submission/PRESENTATION.md`.
+Keep the final SIH presentation in the repository whenever the file size allows it.
+
+See [submission/PRESENTATION.md](submission/PRESENTATION.md). The current pitch is [submission/sih-judge-pitch.html](submission/sih-judge-pitch.html).
+
+If a PPT is too large for GitHub, use Google Drive/OneDrive and put the viewer link in `submission/PRESENTATION.md`.
 
 ## 9. Demo Video
 
-Optional but recommended. Put the YouTube or Drive link in `submission/DEMO.md`.
+A demo video is **optional**, but recommended.
+
+Add the YouTube/Google Drive link in [submission/DEMO.md](submission/DEMO.md).
 
 ## 10. Screenshots / Prototype Photos
 
-Add console screenshots to `assets/screenshots/`.
+Add important screenshots to:
+
+`assets/screenshots/`
+
+See [assets/screenshots/README.md](assets/screenshots/README.md) for naming.
 
 ## 11. Installation
 
 Python 3.10+. From the repo root:
 
 ```bash
-git clone <YOUR_REPOSITORY_URL>
+git clone https://github.com/RoshanSharma11/sih-2026
 cd sih-2026
 python -m venv .venv
 source .venv/bin/activate
@@ -131,7 +147,7 @@ On Windows: `.venv\Scripts\activate`.
 
 Torch is required so the LSTM can load. Weights come from `ml/ml/artifacts/` on API startup. If artifacts fail to load, ingest still persists and returns `UNCONFIRMED_ANOMALY`.
 
-Hourly parquet for the stations you stream must already be present under `data/processed/` (gitignored; keep a local copy for the demo).
+Hourly series for all **151 stations** are in `data/processed/*.parquet`. After a clone, the Palam stream command below should run with no extra download. `ml/data/raw/` CSVs are still gitignored (large); you do not need them to demo.
 
 ## 12. Run
 
