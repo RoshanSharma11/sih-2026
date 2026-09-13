@@ -1,3 +1,15 @@
+---
+title: SkyGuard AI
+emoji: ⛅
+colorFrom: teal
+colorTo: slate
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+short_description: Live QC for Indian Automatic Weather Stations (SIH PS 26073)
+---
+
 # SkyGuard AI
 
 Quality-control service for Indian Automatic Weather Stations. Hourly temperature, pressure, and humidity are scored in real time so a real storm is not treated as a broken sensor.
@@ -82,11 +94,14 @@ Production QC is `ml/ml/engine.py`. Demo faults are applied in the API **before*
 sih-2026/
 ├── README.md
 ├── LICENSE
+├── Dockerfile                 # Hugging Face Space (API + streamer + console)
+├── .dockerignore
 ├── requirements.txt
 ├── pyproject.toml
 ├── .gitignore
 ├── .streamlit/
 │   └── config.toml
+├── scripts/start_space.sh     # Space entrypoint
 ├── src/skyguard/              # FastAPI app, streamer, demo inject
 ├── frontend/                  # Streamlit console
 ├── ml/ml/                     # production QC engine + trained artifacts
@@ -189,7 +204,32 @@ curl -X POST http://127.0.0.1:8000/demo/inject \
 
 Neighborhood storm → amber (weather). Lone Palam spike → rose (hardware). `POST /demo/reset` clears overlays.
 
-## 13. Future Scope
+## 13. Deploy (Hugging Face Spaces)
+
+Free public URL. One Docker container runs FastAPI on `127.0.0.1:8000`, the Palam neighborhood streamer, and the Streamlit console on port **7860**.
+
+1. Create a Space at [huggingface.co/new-space](https://huggingface.co/new-space): SDK **Docker**, hardware **CPU basic**, visibility **Public**.
+2. Push this repo to the Space (replace `YOUR_USER` and the Space name):
+
+```bash
+git remote add space https://huggingface.co/spaces/YOUR_USER/skyguard-ai
+git push space main
+```
+
+Or in the Space **Settings → Connected GitHub repository**, attach `RoshanSharma11/sih-2026`.
+
+3. Wait for the build (CPU PyTorch, several minutes). The console is the Space URL. Control page injects still work; the API stays internal.
+
+Local image check (optional):
+
+```bash
+docker build -t skyguard .
+docker run --rm -p 7860:7860 skyguard
+```
+
+Then open [http://127.0.0.1:7860](http://127.0.0.1:7860).
+
+## 14. Future Scope
 
 - Freeze a production LSTM threshold from a labeled sweep instead of the current validation percentile.
 - Publish the same `/ingest` payload from field hardware (ESP32) alongside the historical streamer.
