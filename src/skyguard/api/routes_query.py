@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from skyguard.api.deps import get_db
 from skyguard.db.models import AnomalyAlert, Station, StationBuddy, TelemetryLog
-from skyguard.engine.pipeline import as_utc, latest_snapshot_from_row
+from skyguard.engine.pipeline import as_utc, latest_snapshot_from_row, telemetry_row_from_log
 from skyguard.schemas import (
     AlertRow,
     BuddyMap,
@@ -194,23 +194,39 @@ def list_telemetry(
         stmt = stmt.where(TelemetryLog.timestamp <= as_utc(to))
     rows = session.scalars(stmt.order_by(TelemetryLog.timestamp.desc()).limit(limit)).all()
     rows = list(reversed(rows))
-    return [
-        TelemetryRow(
-            station_id=row.station_id,
-            timestamp=as_utc(row.timestamp),
-            temp_observed=row.temp_observed,
-            pres_observed=row.pres_observed,
-            rhum_observed=row.rhum_observed,
-            temp_imputed=row.temp_imputed,
-            pres_imputed=row.pres_imputed,
-            rhum_imputed=row.rhum_imputed,
-            is_anomaly=row.is_anomaly,
-            label=_label(row.label),
-            pipeline_status=PipelineStatus(row.pipeline_status),
-            mse=row.mse,
+    return [telemetry_row_from_log(row) for row in rows]
+
+
+@router.get("/stations/{station_id}/hour", response_model=TelemetryRow)
+def get_hour(
+    station_id: str,
+    at: datetime = Query(..., description="Hour timestamp (UTC)"),
+    session: Session = Depends(get_db),
+) -> TelemetryRow:
+    _require_station(session, station_id)
+    stamp = as_utc(at)
+    row = session.scalar(
+        select(TelemetryLog).where(
+            TelemetryLog.station_id == station_id,
+            TelemetryLog.timestamp == stamp,
         )
-        for row in rows
-    ]
+    )
+    if row is None:
+        candidates = session.scalars(
+            select(TelemetryLog)
+            .where(TelemetryLog.station_id == station_id)
+            .order_by(TelemetryLog.timestamp.desc())
+            .limit(2000)
+        ).all()
+        want = stamp.strftime("%Y-%m-%dT%H:%M:%S")
+        for candidate in candidates:
+            got = as_utc(candidate.timestamp).strftime("%Y-%m-%dT%H:%M:%S")
+            if got == want:
+                row = candidate
+                break
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"No hour {stamp.isoformat()} for {station_id}")
+    return telemetry_row_from_log(row)
 
 
 @router.get("/alerts", response_model=list[AlertRow])

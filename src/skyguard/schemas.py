@@ -93,6 +93,8 @@ class Tier3View(BaseModel):
     usable_count: int = 0
     neighbors_agree: bool | None = None
     reason_skip: str | None = None
+    idw_estimate: dict[str, float | None] = Field(default_factory=dict)
+    residual: dict[str, float | None] = Field(default_factory=dict)
 
 
 class IngestPayload(BaseModel):
@@ -173,6 +175,13 @@ class LatestSnapshot(BaseModel):
     pipeline_status: PipelineStatus
     observed: ChannelValues
     imputed: ChannelValues
+    is_anomaly: bool = False
+    fault_type: FaultType | None = None
+    confidence: float | None = None
+    severity: Severity | None = None
+    explainability_text: str | None = None
+    demo_injected: FaultType | None = None
+    contribution_pct: ChannelValues = Field(default_factory=ChannelValues)
 
 
 class StationSummary(BaseModel):
@@ -206,6 +215,18 @@ class TelemetryRow(BaseModel):
     label: Label | None = None
     pipeline_status: PipelineStatus
     mse: float | None = None
+    fault_type: FaultType | None = None
+    confidence: float | None = None
+    severity: Severity | None = None
+    explainability_text: str | None = None
+    contribution_temp: float | None = None
+    contribution_pres: float | None = None
+    contribution_rhum: float | None = None
+    demo_injected: FaultType | None = None
+    affected_variables: list[str] = Field(default_factory=list)
+    tier1: Tier1View | None = None
+    tier2: Tier2View | None = None
+    tier3: Tier3View | None = None
 
 
 class AlertRow(BaseModel):

@@ -16,12 +16,13 @@ from chrome import (
     fire_reset,
     get_client,
     offline_help,
+    overlay_banner,
     page_header,
     show_flash,
     station_options,
     view_picker,
 )
-from status import overlay_caption
+from status import fault_label, pipeline_label
 
 
 def render_control() -> None:
@@ -39,14 +40,13 @@ def render_control() -> None:
 
     try:
         catalog = catalog_stations()
-        status = client.demo_status()
         filt = client.stream_filter()
     except SkyGuardApiError as exc:
         offline_help(str(exc))
         return
 
     _hero()
-    _overlays(status.get("overlays") or [])
+    control_live()
     ingest = filt.get("ingest") or []
     view = filt.get("view") or []
     st.caption(f"View {len(view) or '—'} · ingest {len(ingest) or '—'} (buddies included when the checkbox is on).")
@@ -83,12 +83,25 @@ def _hero() -> None:
         st.button("Reset overlays", width="stretch", on_click=fire_reset)
 
 
-def _overlays(overlays: list[dict[str, Any]]) -> None:
+@st.fragment(run_every=1)
+def control_live() -> None:
+    try:
+        status = get_client().demo_status()
+        alerts = get_client().alerts(limit=8)
+    except SkyGuardApiError as exc:
+        offline_help(str(exc))
+        return
+    overlays = status.get("overlays") or []
+    overlay_banner(overlays)
     if not overlays:
         st.caption("No demo overlay armed. Streamer is sending clean hours.")
-        return
-    chips = " ".join(f'<span class="sg-overlay">{overlay_caption(item)}</span>' for item in overlays)
-    st.markdown(chips, unsafe_allow_html=True)
+    if alerts:
+        latest = alerts[0]
+        stamp = str(latest.get("timestamp", "")).replace("T", " ").replace("Z", " UTC")
+        st.caption(
+            f"Latest detection: {fault_label(latest.get('fault_type'))} · "
+            f"{pipeline_label(latest.get('label'))} · {latest.get('station_id')} · {stamp}"
+        )
 
 
 def _advanced(catalog: list[dict[str, Any]]) -> None:
@@ -113,11 +126,9 @@ def _advanced(catalog: list[dict[str, Any]]) -> None:
     if kind == "GENUINE_WEATHER":
         if st.button("Arm storm", key="adv_storm", width="stretch"):
             fire_inject({"target": "neighborhood", "station_id": picked, "kind": "GENUINE_WEATHER"})
-            st.rerun()
     elif st.button("Arm hardware fault", key="adv_hw", width="stretch"):
         body: dict[str, Any] = {"target": "station", "station_id": picked, "kind": kind}
         if channel:
             body["channel"] = channel
         fire_inject(body)
-        st.rerun()
     st.caption("Storm must target a neighborhood. Hardware must target one station.")

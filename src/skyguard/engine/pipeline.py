@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -32,6 +33,10 @@ from skyguard.schemas import (
     SeedObservation,
     Severity,
     StationStatus,
+    TelemetryRow,
+    Tier1View,
+    Tier2View,
+    Tier3View,
 )
 
 _STATION_LOCKS: dict[str, threading.Lock] = defaultdict(threading.Lock)
@@ -108,7 +113,7 @@ def ingest_observation(
                 raise StationNotFound(payload.station_id) from exc
             raise
         mapped = map_ml_result(ml_out)
-        _apply_overlay(row, station, mapped)
+        _apply_overlay(row, station, mapped, demo_injected=demo_injected)
         if mapped["is_anomaly"]:
             contrib = mapped["contribution_pct"]
             session.add(
@@ -253,17 +258,45 @@ def result_from_row(
     )
 
 
+def telemetry_row_from_log(row: TelemetryLog) -> TelemetryRow:
+    return TelemetryRow(
+        station_id=row.station_id,
+        timestamp=as_utc(row.timestamp),
+        temp_observed=row.temp_observed,
+        pres_observed=row.pres_observed,
+        rhum_observed=row.rhum_observed,
+        temp_imputed=row.temp_imputed,
+        pres_imputed=row.pres_imputed,
+        rhum_imputed=row.rhum_imputed,
+        is_anomaly=bool(row.is_anomaly),
+        label=_label(row.label),
+        pipeline_status=_pipeline(row.pipeline_status),
+        mse=row.mse,
+        fault_type=_fault(row.fault_type),
+        confidence=row.confidence,
+        severity=_severity(row.severity),
+        explainability_text=row.explainability_text,
+        contribution_temp=row.contribution_temp,
+        contribution_pres=row.contribution_pres,
+        contribution_rhum=row.contribution_rhum,
+        demo_injected=_fault(row.demo_injected),
+        affected_variables=_string_list(row.affected_variables),
+        tier1=_tier1(row.tier1_json),
+        tier2=_tier2(row.tier2_json),
+        tier3=_tier3(row.tier3_json),
+    )
+
+
 def latest_snapshot_from_row(row: TelemetryLog) -> LatestSnapshot:
-    label = None
-    if row.label:
-        try:
-            label = Label(row.label)
-        except ValueError:
-            label = None
+    contrib = ChannelValues(
+        temp_c=row.contribution_temp,
+        pres_hpa=row.contribution_pres,
+        rhum_pct=row.contribution_rhum,
+    )
     return LatestSnapshot(
         timestamp=as_utc(row.timestamp),
-        label=label,
-        pipeline_status=PipelineStatus(row.pipeline_status),
+        label=_label(row.label),
+        pipeline_status=_pipeline(row.pipeline_status),
         observed=ChannelValues(
             temp_c=row.temp_observed,
             pres_hpa=row.pres_observed,
@@ -274,6 +307,13 @@ def latest_snapshot_from_row(row: TelemetryLog) -> LatestSnapshot:
             pres_hpa=row.pres_imputed,
             rhum_pct=row.rhum_imputed,
         ),
+        is_anomaly=bool(row.is_anomaly),
+        fault_type=_fault(row.fault_type),
+        confidence=row.confidence,
+        severity=_severity(row.severity),
+        explainability_text=row.explainability_text,
+        demo_injected=_fault(row.demo_injected),
+        contribution_pct=contrib,
     )
 
 
@@ -289,7 +329,13 @@ def _run_qc(qc_engine, payload: dict) -> dict:
         return dict(UNCONFIRMED_FALLBACK)
 
 
-def _apply_overlay(row: TelemetryLog, station: Station, mapped: dict) -> None:
+def _apply_overlay(
+    row: TelemetryLog,
+    station: Station,
+    mapped: dict,
+    demo_injected: FaultType | None = None,
+) -> None:
+    contrib = mapped["contribution_pct"]
     row.temp_imputed = mapped["imputed"].temp_c
     row.pres_imputed = mapped["imputed"].pres_hpa
     row.rhum_imputed = mapped["imputed"].rhum_pct
@@ -297,8 +343,113 @@ def _apply_overlay(row: TelemetryLog, station: Station, mapped: dict) -> None:
     row.pipeline_status = mapped["pipeline_status"].value
     row.label = mapped["label"].value
     row.mse = mapped["mse"]
+    row.fault_type = mapped["fault_type"].value if mapped["fault_type"] else None
+    row.confidence = mapped["confidence"]
+    row.severity = mapped["severity"].value if mapped["severity"] else None
+    row.explainability_text = mapped["explainability_text"]
+    row.contribution_temp = contrib.temp_c
+    row.contribution_pres = contrib.pres_hpa
+    row.contribution_rhum = contrib.rhum_pct
+    row.demo_injected = demo_injected.value if demo_injected else None
+    row.affected_variables = list(mapped["affected_variables"] or [])
+    row.tier1_json = _dump_view(mapped.get("tier1"))
+    row.tier2_json = _dump_view(mapped.get("tier2"))
+    row.tier3_json = _dump_view(mapped.get("tier3"))
     station.health_score = mapped["health_score"]
     station.status = mapped["station_status"].value
+
+
+def _dump_view(view) -> dict | None:
+    if view is None:
+        return None
+    if hasattr(view, "model_dump"):
+        return view.model_dump(mode="json")
+    if isinstance(view, dict):
+        return view
+    return None
+
+
+def _pipeline(value: str | None) -> PipelineStatus:
+    try:
+        return PipelineStatus(value) if value else PipelineStatus.UNKNOWN
+    except ValueError:
+        return PipelineStatus.UNKNOWN
+
+
+def _fault(value: str | None) -> FaultType | None:
+    if not value:
+        return None
+    try:
+        return FaultType(value)
+    except ValueError:
+        return None
+
+
+def _severity(value: str | None) -> Severity | None:
+    if not value:
+        return None
+    try:
+        return Severity(value)
+    except ValueError:
+        return None
+
+
+def _label(value: str | None) -> Label | None:
+    if not value:
+        return None
+    try:
+        return Label(value)
+    except ValueError:
+        return None
+
+
+def _string_list(value) -> list[str]:
+    if not value:
+        return []
+    if isinstance(value, str):
+        try:
+            loaded = json.loads(value)
+        except ValueError:
+            return [value]
+        value = loaded
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return []
+
+
+def _as_dict(value) -> dict | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            loaded = json.loads(value)
+        except ValueError:
+            return None
+        return loaded if isinstance(loaded, dict) else None
+    return None
+
+
+def _tier1(raw) -> Tier1View | None:
+    data = _as_dict(raw)
+    if not data:
+        return None
+    return Tier1View.model_validate(data)
+
+
+def _tier2(raw) -> Tier2View | None:
+    data = _as_dict(raw)
+    if not data:
+        return None
+    return Tier2View.model_validate(data)
+
+
+def _tier3(raw) -> Tier3View | None:
+    data = _as_dict(raw)
+    if not data:
+        return None
+    return Tier3View.model_validate(data)
 
 
 def _reject_duplicate(session: Session, station_id: str, timestamp: datetime) -> None:

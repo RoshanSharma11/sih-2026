@@ -23,7 +23,13 @@ SANTACRUZ = "43003"
 DEFAULT_VIEW = [PALAM, SAFDARJUNG, PALAM_BUDDY, SANTACRUZ]
 
 HERO_STORM = {"target": "neighborhood", "station_id": PALAM, "kind": "GENUINE_WEATHER"}
-HERO_SPIKE = {"target": "station", "station_id": PALAM, "kind": "SPIKE", "channel": "temp_c"}
+HERO_SPIKE = {
+    "target": "station",
+    "station_id": PALAM,
+    "kind": "SPIKE",
+    "channel": "temp_c",
+    "duration_hours": 3,
+}
 
 
 def inject_theme() -> None:
@@ -72,10 +78,16 @@ def go_page(name: str) -> None:
     st.switch_page(page)
 
 
-def focus_station(station_id: str, alert_id: Any | None = None) -> None:
+def focus_station(station_id: str, alert_id: Any | None = None, timestamp: Any | None = None) -> None:
+    from status import stamp_key
+
     st.session_state.station_id = str(station_id)
     st.session_state.alert_id = alert_id
-    st.session_state._keep_alert_pin = alert_id is not None
+    st.session_state._keep_alert_pin = alert_id is not None or timestamp is not None
+    if timestamp is not None:
+        st.session_state.inspect_key = stamp_key(timestamp)
+        st.session_state.inspect_mode = "inspect"
+        st.session_state.event_latched = True
 
 
 def init_session() -> None:
@@ -94,6 +106,16 @@ def init_session() -> None:
         st.session_state.alerts_station_only = False
     if "alert_id" not in st.session_state:
         st.session_state.alert_id = None
+    if "inspect_mode" not in st.session_state:
+        st.session_state.inspect_mode = "live"
+    if "inspect_key" not in st.session_state:
+        st.session_state.inspect_key = None
+    if "event_latched" not in st.session_state:
+        st.session_state.event_latched = False
+    if "pending_kind" not in st.session_state:
+        st.session_state.pending_kind = None
+    if "pending_stations" not in st.session_state:
+        st.session_state.pending_stations = []
 
 
 @st.cache_resource
@@ -117,8 +139,20 @@ def flash(message: str, kind: str = "ok") -> None:
 
 def fire_inject(body: dict[str, Any]) -> None:
     try:
-        get_client().inject(body)
-        flash(f"Armed {body['kind']}. Watch the next streamed hour.")
+        status = get_client().inject(body)
+        overlays = status.get("overlays") or []
+        last = overlays[-1] if overlays else {}
+        station_id = str(body.get("station_id") or PALAM)
+        focus_station(station_id)
+        st.session_state.inspect_mode = "event"
+        st.session_state.event_latched = False
+        st.session_state.inspect_key = None
+        st.session_state.alert_id = None
+        st.session_state.pending_kind = last.get("kind") or body.get("kind")
+        st.session_state.pending_stations = list(last.get("station_ids") or [station_id])
+        st.session_state._keep_alert_pin = True
+        flash(f"Armed {body['kind']}. Waiting for the next streamed hour.")
+        go_page("station")
     except SkyGuardApiError as exc:
         flash(str(exc), kind="bad")
 
@@ -126,7 +160,11 @@ def fire_inject(body: dict[str, Any]) -> None:
 def fire_reset() -> None:
     try:
         get_client().reset()
-        flash("Overlays cleared.")
+        st.session_state.inspect_mode = "live"
+        st.session_state.event_latched = False
+        st.session_state.pending_kind = None
+        st.session_state.pending_stations = []
+        flash("Overlays cleared. Station follows the live hour again.")
     except SkyGuardApiError as exc:
         flash(str(exc), kind="bad")
 
@@ -245,6 +283,20 @@ def view_picker(catalog: list[dict[str, Any]]) -> None:
         '<p class="sg-caption">Map and charts show this handful of stations. '
         "Neighbors still stream in the background so buddy QC can run. "
         "A CLI <code>--stations</code> streamer overrides this filter.</p>",
+        unsafe_allow_html=True,
+    )
+
+
+def overlay_banner(overlays: list[dict[str, Any]]) -> None:
+    from status import overlay_caption
+
+    if not overlays:
+        return
+    chips = " ".join(f'<span class="sg-overlay">{overlay_caption(item)}</span>' for item in overlays)
+    st.markdown(
+        f'<div class="sg-banner"><strong>Demo overlay armed.</strong> '
+        f"QC runs on the next streamed hour — the dashboard will latch that detection. "
+        f"{chips}</div>",
         unsafe_allow_html=True,
     )
 

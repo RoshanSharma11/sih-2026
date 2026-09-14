@@ -17,13 +17,14 @@ from chrome import (
     kpi_strip,
     legend,
     offline_help,
+    overlay_banner,
     page_header,
     show_flash,
     sync_stream_filter,
     view_picker,
 )
 from map_view import india_map, offscreen_stations
-from status import kpi_counts, marker_color, short_name, status_label
+from status import fault_label, kpi_counts, latest_payload, marker_color, short_name, status_label
 
 
 def render_network() -> None:
@@ -87,6 +88,11 @@ def network_live() -> None:
         return
 
     kpi_strip(kpi_counts(stations))
+    try:
+        overlays = client.demo_status().get("overlays") or []
+    except SkyGuardApiError:
+        overlays = []
+    overlay_banner(overlays)
     if not stations:
         st.info("Nothing in the view set. Pick Palam and a neighbor on the left — do not load all 151 onto the map.")
         return
@@ -145,10 +151,18 @@ def _station_roster(stations: list[dict[str, Any]]) -> None:
                 type="primary" if sid == selected else "secondary",
                 help=f"{sid} · health {health}",
             )
-            st.caption(f"{sid} · health {health}")
+            st.caption(f"{sid} · health {health}{_roster_fault(row)}")
         if clicked:
             focus_station(sid)
             go_page("station")
+
+
+def _roster_fault(row: dict[str, Any]) -> str:
+    latest = latest_payload(row)
+    fault = latest.get("fault_type") if latest else None
+    if not fault:
+        return ""
+    return f" · {fault_label(fault)}"
 
 
 def _view_buddies(view_ids: list[str], graph: dict[str, Any]) -> dict[str, list[str]]:

@@ -49,6 +49,41 @@ HARDWARE_LABELS = {"PHYSICAL_FAULT", "HARDWARE_ANOMALY"}
 WEATHER_PIPELINE = {"GENUINE_WEATHER"}
 HARDWARE_PIPELINE = {"HARDWARE"}
 HARDWARE_FAULTS = {"SPIKE", "FREEZE", "DRIFT", "COMM_ERROR", "PHYSICS_BREACH"}
+FAULT_TEXT = {
+    "SPIKE": "Spike",
+    "FREEZE": "Frozen sensor",
+    "DRIFT": "Calibration drift",
+    "COMM_ERROR": "Communication gap",
+    "PHYSICS_BREACH": "Physics breach",
+    "GENUINE_WEATHER": "Weather event",
+    "UNKNOWN": "Unknown",
+}
+
+CHANNEL_TEXT = {
+    "temp_c": "Temperature",
+    "pres_hpa": "Pressure",
+    "rhum_pct": "Humidity",
+    "temp": "Temperature",
+    "pres": "Pressure",
+    "rhum": "Humidity",
+}
+
+CHANNEL_UNIT = {
+    "temp_c": "°C",
+    "pres_hpa": " hPa",
+    "rhum_pct": "%",
+    "temp": "°C",
+    "pres": " hPa",
+    "rhum": "%",
+}
+
+SKIP_TEXT = {
+    "isolate_station": "Fewer than two neighbors on the buddy graph",
+    "fewer_than_2_usable_buddies": "Fewer than two neighbors reported the same hour",
+    "tier1_failed": "Physical-range check already failed",
+    "lstm_not_run": "24-hour reconstruction window not ready",
+    "not_required": "Reconstruction looked normal",
+}
 
 
 def short_name(name: str) -> str:
@@ -170,6 +205,104 @@ def stamp_key(value: Any) -> str:
     if text.endswith("Z"):
         text = text[:-1]
     return text[:19]
+
+
+def stamp_label(value: Any) -> str:
+    key = stamp_key(value)
+    if len(key) >= 16:
+        return f"{key.replace('T', ' ')} UTC"
+    return key or "—"
+
+
+def fault_label(fault: str | None) -> str:
+    if not fault:
+        return "—"
+    return FAULT_TEXT.get(fault, fault.replace("_", " ").title())
+
+
+def confidence_text(row: dict[str, Any] | None) -> str:
+    if not row:
+        return "—"
+    if not row.get("is_anomaly"):
+        return "n/a"
+    raw = row.get("confidence")
+    if raw is None:
+        raw = row.get("confidence_score")
+    if raw is None:
+        return "Unknown"
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return "Unknown"
+    if value <= 1.0:
+        return f"{value * 100:.0f}%"
+    return f"{value:.0f}%"
+
+
+def severity_text(row: dict[str, Any] | None) -> str:
+    if not row:
+        return "—"
+    if not row.get("is_anomaly"):
+        return "n/a"
+    raw = row.get("severity")
+    if raw:
+        return str(raw).replace("_", " ").title()
+    key = row.get("label") or row.get("pipeline_status")
+    if is_hardware(key, row.get("fault_type")):
+        return "High"
+    if is_weather(key, row.get("fault_type")):
+        return "Low"
+    return "Medium"
+
+
+def channel_label(channel: str | None) -> str:
+    if not channel:
+        return "—"
+    return CHANNEL_TEXT.get(channel, channel)
+
+
+def channel_unit(channel: str | None) -> str:
+    if not channel:
+        return ""
+    return CHANNEL_UNIT.get(channel, "")
+
+
+def primary_channel(row: dict[str, Any] | None) -> str | None:
+    if not row:
+        return None
+    affected = row.get("affected_variables") or []
+    if affected:
+        return str(affected[0])
+    contrib = [
+        ("temp_c", row.get("contribution_temp")),
+        ("pres_hpa", row.get("contribution_pres")),
+        ("rhum_pct", row.get("contribution_rhum")),
+    ]
+    numeric = [(key, float(val)) for key, val in contrib if isinstance(val, (int, float))]
+    if not numeric:
+        return None
+    return max(numeric, key=lambda item: item[1])[0]
+
+
+def row_kind(row: dict[str, Any] | None) -> str:
+    if not row:
+        return "idle"
+    return verdict_kind_from_key(row.get("label") or row.get("pipeline_status"), row.get("fault_type"))
+
+
+def row_matches_pending(row: dict[str, Any] | None, kind: str | None) -> bool:
+    if not row or not kind:
+        return bool(row and (row.get("is_anomaly") or row.get("demo_injected")))
+    injected = row.get("demo_injected")
+    if injected == kind:
+        return True
+    if kind == "GENUINE_WEATHER":
+        return is_weather(row.get("label"), row.get("fault_type"))
+    if kind in HARDWARE_FAULTS:
+        return row.get("fault_type") == kind or (
+            bool(row.get("is_anomaly")) and is_hardware(row.get("label"), row.get("fault_type"))
+        )
+    return bool(row.get("is_anomaly"))
 
 
 def pick_alert(alerts: list[dict[str, Any]], alert_id: Any) -> dict[str, Any] | None:

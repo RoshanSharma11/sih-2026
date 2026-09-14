@@ -77,8 +77,11 @@ class SkyGuardClient:
     def station(self, station_id: str) -> dict[str, Any]:
         return self._get_json(f"/stations/{station_id}")
 
-    def telemetry(self, station_id: str, limit: int = 240) -> list[dict[str, Any]]:
+    def telemetry(self, station_id: str, limit: int = 500) -> list[dict[str, Any]]:
         return self._get_json(f"/stations/{station_id}/telemetry", params={"limit": limit})
+
+    def hour(self, station_id: str, at: str) -> dict[str, Any]:
+        return self._get_json(f"/stations/{station_id}/hour", params={"at": at})
 
     def alerts(self, station_id: str | None = None, limit: int = 40) -> list[dict[str, Any]]:
         params: dict[str, Any] = {"limit": limit}

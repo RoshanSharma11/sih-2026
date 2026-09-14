@@ -16,6 +16,18 @@ _EXTRA_COLUMNS = (
     ("telemetry_logs", "label", "VARCHAR(40) NOT NULL DEFAULT 'CLEAN'"),
     ("anomaly_alerts", "label", "VARCHAR(40) NOT NULL DEFAULT 'CLEAN'"),
     ("stations", "isolate", "BOOLEAN NOT NULL DEFAULT 0"),
+    ("telemetry_logs", "fault_type", "VARCHAR(50)"),
+    ("telemetry_logs", "confidence", "FLOAT"),
+    ("telemetry_logs", "severity", "VARCHAR(20)"),
+    ("telemetry_logs", "explainability_text", "TEXT"),
+    ("telemetry_logs", "contribution_temp", "FLOAT"),
+    ("telemetry_logs", "contribution_pres", "FLOAT"),
+    ("telemetry_logs", "contribution_rhum", "FLOAT"),
+    ("telemetry_logs", "demo_injected", "VARCHAR(50)"),
+    ("telemetry_logs", "affected_variables", "TEXT"),
+    ("telemetry_logs", "tier1_json", "TEXT"),
+    ("telemetry_logs", "tier2_json", "TEXT"),
+    ("telemetry_logs", "tier3_json", "TEXT"),
 )
 
 

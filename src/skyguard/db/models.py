@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -68,6 +68,18 @@ class TelemetryLog(Base):
     label: Mapped[str] = mapped_column(String(40), default="CLEAN")
     pipeline_status: Mapped[str] = mapped_column(String(20), default="CLEAN")
     mse: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fault_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    severity: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    explainability_text: Mapped[str | None] = mapped_column(String, nullable=True)
+    contribution_temp: Mapped[float | None] = mapped_column(Float, nullable=True)
+    contribution_pres: Mapped[float | None] = mapped_column(Float, nullable=True)
+    contribution_rhum: Mapped[float | None] = mapped_column(Float, nullable=True)
+    demo_injected: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    affected_variables: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    tier1_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    tier2_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    tier3_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     station: Mapped[Station] = relationship(back_populates="telemetry")
 

@@ -16,7 +16,7 @@ from chrome import (
     page_header,
     show_flash,
 )
-from status import is_hardware, is_weather, pipeline_color, short_name
+from status import fault_label, is_hardware, is_weather, pipeline_color, pipeline_label, short_name, stamp_label
 from theme import HARDWARE, SLATE, WEATHER
 
 
@@ -63,9 +63,11 @@ def _alert_row(row: dict[str, Any], names: dict[str, str]) -> None:
         color = HARDWARE
     else:
         color = pipeline_color(label) if label else SLATE
-    stamp = str(row.get("timestamp", "")).replace("T", " ").replace("Z", " UTC")
+    stamp = stamp_label(row.get("timestamp"))
     text = row.get("explainability_text") or ""
-    meta = f"{fault} · {name} · {sid} · {stamp}"
+    verdict = pipeline_label(row.get("label"))
+    fault = fault_label(row.get("fault_type"))
+    meta = f"{verdict} · {fault} · {name} · {sid} · {stamp}"
     left, right = st.columns([5.2, 1], gap="small")
     with left:
         st.markdown(
@@ -81,5 +83,5 @@ def _alert_row(row: dict[str, Any], names: dict[str, str]) -> None:
             width="stretch",
             help="Show this hour on Station, even if the live hour is already clean.",
         ):
-            focus_station(sid, alert_id=row.get("alert_id"))
+            focus_station(sid, alert_id=row.get("alert_id"), timestamp=row.get("timestamp"))
             go_page("station")

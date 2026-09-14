@@ -245,12 +245,20 @@ def _tier2(raw: dict[str, Any]) -> Tier2View:
 
 
 def _tier3(raw: dict[str, Any]) -> Tier3View:
+    estimate = raw.get("idw_estimate") or {}
+    residual = raw.get("residual") or {}
     return Tier3View(
         performed=bool(raw.get("performed", False)),
         buddy_ids=[str(item) for item in raw.get("buddy_ids") or []],
         usable_count=int(raw.get("usable_count") or 0),
         neighbors_agree=raw.get("neighbors_agree"),
         reason_skip=raw.get("reason_skip"),
+        idw_estimate={
+            _public_name(key): _float_or_none(value) for key, value in estimate.items()
+        },
+        residual={
+            _public_name(key): _float_or_none(value) for key, value in residual.items()
+        },
     )
 
 

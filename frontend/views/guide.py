@@ -30,12 +30,16 @@ Raw temperature, pressure, and humidity stay on the chart. The dashed line is a 
 <p>The map and charts show the <strong>view set</strong> you pick on Network. The streamer POSTs the <strong>ingest set</strong>: those stations plus each one’s 1-hop buddies, so Palam can still be checked against Safdarjung even if you only wanted Palam on screen.</p>
 <p>If you started the streamer with <code>--stations</code>, that CLI list wins over the dashboard picker.</p>
 
+<h3>Live hour vs inspected hour</h3>
+<p>The map always shows <strong>this hour’s</strong> QC label. Station can freeze on a detection: after you arm a fault, SkyGuard jumps to Station and <strong>latches the scored hour</strong> so the next clean hour does not hide it. Use <em>Inspect hour</em>, click a chart point, or open an alert to time-travel. <em>Follow live</em> returns to the stream. Overlay inject <strong>arms the next streamed hours</strong>; it does not rewrite history.</p>
+<p>Chart markers are colored by label (teal clean, amber weather, rose hardware, slate unconfirmed). The dashed line is the reconstruction overlay. Click a point to open that hour’s verdict, predicted values, reason, and tier evidence.</p>
+
 <h3>Judge script</h3>
 <ol>
 <li><strong>Network</strong> — calm teal on Palam, Safdarjung, 42139, and Santacruz.</li>
-<li><strong>Control → Storm around Palam</strong> — Palam and its buddies go amber; Santacruz stays teal.</li>
-<li><strong>Reset</strong>, then <strong>Break Palam temperature</strong> — only Palam goes rose; Safdarjung stays teal.</li>
-<li><strong>Station</strong> on Palam — solid observed series still there; dashed overlay; verdict text; contribution names the channel.</li>
+<li><strong>Control → Storm around Palam</strong> — Station latches the amber weather hour. Palam and buddies go amber on the map; Santacruz stays teal.</li>
+<li><strong>Reset</strong>, then <strong>Break Palam temperature</strong> — Station latches the rose spike. Only Palam goes rose; Safdarjung stays teal.</li>
+<li>On Station — solid observed series still there; dashed overlay; labeled markers; case file names the channel and why.</li>
 </ol>
 
 <h3>Colors</h3>

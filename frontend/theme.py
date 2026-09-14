@@ -235,6 +235,45 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
   font-family: "IBM Plex Mono", ui-monospace, monospace;
 }}
 
+.sg-banner {{
+  border: 1px solid #FDE68A;
+  background: #FFFBEB;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin: 0 0 0.85rem 0;
+  color: {TEXT};
+  font-size: 0.9rem;
+  line-height: 1.45;
+}}
+.sg-banner strong {{ color: {WEATHER}; }}
+.sg-facts {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0.15rem 0 0.95rem 0;
+}}
+.sg-fact {{
+  background: {CARD};
+  border: 1px solid {LINE};
+  border-radius: 12px;
+  box-shadow: {SHADOW};
+  padding: 0.7rem 0.85rem;
+}}
+.sg-fact-label {{
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: {MUTED};
+}}
+.sg-fact-value {{
+  margin-top: 0.2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: {TEXT};
+  line-height: 1.35;
+}}
+
 .sg-overlay {{
   display: inline-block;
   margin: 0.15rem 0.35rem 0.15rem 0;
@@ -387,6 +426,7 @@ div[data-testid="stPlotlyChart"] {{
 
 @media (max-width: 900px) {{
   .sg-kpis {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+  .sg-facts {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
 }}
 </style>
 """
