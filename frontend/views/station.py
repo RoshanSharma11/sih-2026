@@ -69,11 +69,13 @@ def render_station() -> None:
         st.session_state.station_id = current
 
     _sync_station_change(current)
+    st.session_state._station_pick = current
     st.selectbox(
         "Station",
         options=list(options.keys()),
         format_func=lambda sid: options.get(sid, sid),
-        key="station_id",
+        key="_station_pick",
+        on_change=_on_station_pick,
     )
     try:
         telemetry = client.telemetry(current)
@@ -165,6 +167,14 @@ def _add_station_option(
         return options
     name = short_name(row.get("name", station_id))
     return {station_id: f"{name}  ·  {station_id}", **options}
+
+
+def _on_station_pick() -> None:
+    picked = st.session_state.get("_station_pick")
+    if not picked:
+        return
+    st.session_state.station_id = picked
+    _sync_station_change(picked)
 
 
 def _sync_station_change(current: str) -> None:

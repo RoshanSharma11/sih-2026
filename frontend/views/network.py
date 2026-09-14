@@ -14,6 +14,7 @@ from chrome import (
     fmt_value,
     get_client,
     go_page,
+    init_session,
     kpi_strip,
     legend,
     offline_help,
@@ -72,6 +73,7 @@ def render_network() -> None:
 
 @st.fragment(run_every=1)
 def network_live() -> None:
+    init_session()
     client = get_client()
     health = client.health()
     if health is None:
@@ -104,11 +106,12 @@ def network_live() -> None:
     legend()
 
     buddies = _view_buddies(view_ids, graph)
-    far = offscreen_stations(stations, st.session_state.station_id)
+    selected_id = st.session_state.get("station_id")
+    far = offscreen_stations(stations, selected_id)
     map_col, list_col = st.columns([2.35, 1], gap="large")
     with map_col:
         event = st.plotly_chart(
-            india_map(stations, st.session_state.station_id, buddies=buddies),
+            india_map(stations, selected_id, buddies=buddies),
             theme=None,
             width="stretch",
             on_select="rerun",
