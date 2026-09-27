@@ -50,7 +50,7 @@ def test_kpi_counts_split_weather_and_idle() -> None:
             {"latest": None},
         ]
     )
-    assert counts == {"clean": 1, "weather": 1, "hardware": 1, "unconfirmed": 1, "idle": 1}
+    assert counts == {"clean": 1, "weather": 1, "hardware": 1, "unconfirmed": 1, "warming": 0, "idle": 1}
 
 
 def test_pick_alert_and_hour_match() -> None:
@@ -77,6 +77,9 @@ def test_pick_alert_and_hour_match() -> None:
     assert hour_alert(alerts, "2024-07-01T14:00:00")["alert_id"] == 12
     assert alert_kind(alerts[0]) == "unknown"
     assert alert_kind(alerts[1]) == "hardware"
+    assert alert_kind({"label": "GENUINE_WEATHER_EVENT", "fault_type": "STORM"}) == "weather"
+    assert alert_kind({"label": "PHYSICAL_FAULT", "fault_type": "THERMO"}) == "hardware"
+    assert alert_kind({"label": "PHYSICAL_FAULT", "fault_type": "COMMUNICATION"}) == "hardware"
 
 
 def test_merge_station_reads_latest_pipeline_status() -> None:

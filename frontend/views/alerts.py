@@ -45,7 +45,7 @@ def alerts_live() -> None:
 
     names = {row["station_id"]: short_name(row["name"]) for row in catalog}
     if not rows:
-        st.caption("No alerts yet. Arm a fault on Control or wait for the streamer.")
+        st.caption("No alerts yet. Play a replay on Control, or wait for a live hour that fails QC.")
         return
 
     for row in rows:

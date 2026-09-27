@@ -107,6 +107,15 @@ class SkyGuardClient:
     def reset(self) -> dict[str, Any]:
         return self._post_json("/demo/reset", {})
 
+    def replay(self, story: str) -> dict[str, Any]:
+        return self._post_json("/demo/replay", {"story": story}, timeout=120.0)
+
+    def timing(self, station_id: str, ts: str, wait_s: float = 0.0) -> dict[str, Any]:
+        return self._get_json(
+            f"/stations/{station_id}/timing",
+            params={"ts": ts, "wait_s": wait_s},
+        )
+
     def snapshot(self, selected_id: str | None, view_ids: list[str] | None = None) -> Snapshot:
         health = self.health()
         if health is None:
@@ -164,9 +173,9 @@ class SkyGuardClient:
             raise SkyGuardApiError(f"Request failed: {exc}") from exc
         return self._parse(response)
 
-    def _post_json(self, path: str, body: dict[str, Any]) -> Any:
+    def _post_json(self, path: str, body: dict[str, Any], timeout: float | None = None) -> Any:
         try:
-            response = self._client.post(path, json=body)
+            response = self._client.post(path, json=body, timeout=timeout)
         except httpx.HTTPError as exc:
             raise SkyGuardApiError(f"Request failed: {exc}") from exc
         return self._parse(response)

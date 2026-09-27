@@ -1,4 +1,4 @@
-"""Network page: view-set picker, KPI strip, India map."""
+"""Network page: 48 markers, KPI strip, India map."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import streamlit as st
 
 from api import SkyGuardApiError, merge_station
 from chrome import (
+    DEMO_FOCUS,
     cached_buddy_map,
-    catalog_stations,
     focus_station,
     fmt_value,
     get_client,
@@ -19,53 +19,30 @@ from chrome import (
     offline_help,
     page_header,
     show_flash,
-    sync_stream_filter,
-    view_picker,
 )
-from map_view import india_map, offscreen_stations
+from map_view import india_map
 from status import kpi_counts, marker_color, short_name, status_label
 
 
 def render_network() -> None:
     show_flash()
-    try:
-        catalog = catalog_stations()
-    except SkyGuardApiError as exc:
-        page_header("Network", "Live view of the filtered AWS set.")
-        offline_help(str(exc))
-        return
-
-    if not catalog:
-        page_header("Network", "Live view of the filtered AWS set.")
-        offline_help("Catalog is empty. Load stations.json and restart the API.")
-        return
-
-    if not st.session_state.get("filter_synced"):
-        sync_stream_filter()
-        st.session_state.filter_synced = True
-
     page_header(
         "Network",
-        "Neighbors that agree stay amber. A sensor that disagrees goes rose.",
+        "48 live stations. Neighbors that agree stay amber. A sensor that disagrees goes rose.",
         get_client().health(),
     )
-
-    picker, copy = st.columns([1.55, 1], gap="large")
-    with picker:
-        view_picker(catalog)
-    with copy:
-        st.markdown(
-            """<div class="sg-card">
-            <div class="sg-kicker">How to read this map</div>
-            <p class="sg-caption" style="margin:0.4rem 0 0 0">
-            Color is this hour’s QC label — not health. Teal lines are 1-hop buddies.
-            Palam, Safdarjung, and Meerut sit together; Santacruz is Mumbai, so a Delhi
-            storm must not paint it. Click a marker or a row to open Station.
-            </p>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-
+    st.markdown(
+        """<div class="sg-card">
+        <div class="sg-kicker">How to read this map</div>
+        <p class="sg-caption" style="margin:0.4rem 0 0 0">
+        The camera starts on Mumbai and Safdarjung. Color is this hour’s label.
+        Warming up means fewer than 24 hours — not a fault. Safdarjung has no buddies
+        in this set, so weather versus hardware cannot be called there.
+        Click a marker or a row to open Station.
+        </p>
+        </div>""",
+        unsafe_allow_html=True,
+    )
     network_live()
 
 
@@ -77,10 +54,8 @@ def network_live() -> None:
         offline_help(f"API is not reachable at {client.base_url}. Start it with python scripts/run_api.py.")
         return
 
-    view_ids = list(st.session_state.get("view_ids") or [])
     try:
-        stations = [merge_station(row) for row in client.stations(ids=view_ids)]
-        filt = client.stream_filter()
+        stations = [merge_station(row) for row in client.stations()]
         graph = cached_buddy_map()
     except SkyGuardApiError as exc:
         offline_help(str(exc))
@@ -88,21 +63,22 @@ def network_live() -> None:
 
     kpi_strip(kpi_counts(stations))
     if not stations:
-        st.info("Nothing in the view set. Pick Palam and a neighbor on the left — do not load all 151 onto the map.")
+        st.info("Catalog is empty. Import the 48-station catalog and restart the API.")
         return
-    ingest = filt.get("ingest") or []
-    st.caption(
-        f"View {len(view_ids)} · ingest {len(ingest)} "
-        f"(includes 1-hop buddies so QC can still run)."
-    )
+    st.caption(f"{len(stations)} live stations. Scroll the map for sites outside Mumbai and Delhi.")
     legend()
 
-    buddies = _view_buddies(view_ids, graph)
-    far = offscreen_stations(stations, st.session_state.station_id)
+    buddies = _view_buddies(DEMO_FOCUS, graph)
+    roster = _roster_order(stations)
     map_col, list_col = st.columns([2.35, 1], gap="large")
     with map_col:
         event = st.plotly_chart(
-            india_map(stations, st.session_state.station_id, buddies=buddies),
+            india_map(
+                stations,
+                st.session_state.station_id,
+                buddies=buddies,
+                focus_ids=DEMO_FOCUS,
+            ),
             theme=None,
             width="stretch",
             on_select="rerun",
@@ -110,19 +86,20 @@ def network_live() -> None:
             key="india_map",
             config={"scrollZoom": True, "displayModeBar": False, "doubleClick": "reset"},
         )
-        if far:
-            names = ", ".join(short_name(row["name"]) for row in far)
-            st.caption(f"Also in this view set, outside this zoom: {names}. Open from the list, or zoom out.")
-        else:
-            st.caption("Scroll-zoom to separate nearby NCR sites. Double-click the map to reset.")
+        st.caption("Camera starts on Mumbai and Safdarjung. Double-click the map to reset.")
     with list_col:
-        _station_roster(stations)
+        _station_roster(roster)
     if _apply_map_selection(event):
         go_page("station")
 
 
+def _roster_order(stations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rank = {station_id: index for index, station_id in enumerate(DEMO_FOCUS)}
+    return sorted(stations, key=lambda row: (rank.get(row["station_id"], 99), row.get("name") or ""))
+
+
 def _station_roster(stations: list[dict[str, Any]]) -> None:
-    st.markdown("##### Stations in view")
+    st.markdown("##### Stations")
     st.caption("Names live here so nearby markers do not stack.")
     selected = st.session_state.get("station_id")
     for row in stations:

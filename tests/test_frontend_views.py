@@ -85,6 +85,27 @@ def test_india_map_uses_readable_basemap_and_labels_only_selected() -> None:
     assert texts[2] == ""
 
 
+def test_default_camera_frames_mumbai_and_safdarjung() -> None:
+    from chrome import DEMO_FOCUS
+
+    stations = [_palam(), _safdarjung(), _santacruz()]
+    camera = map_camera(stations, "43003", focus_ids=DEMO_FOCUS)
+    assert 19 < camera["lat"] < 28
+    assert camera["zoom"] < 6.5
+    fig = india_map(stations, "42182", focus_ids=DEMO_FOCUS)
+    hover = " ".join(fig.data[-1].hovertext)
+    assert "Weather versus hardware cannot be called here." in hover
+
+
+def test_warming_is_its_own_idle_state() -> None:
+    from status import WARMING_COLOR, marker_color, status_label
+
+    warming = _santacruz(latest={"warming_up": True, "label": None, "pipeline_status": None})
+    assert marker_color(warming) == WARMING_COLOR
+    assert status_label(warming) == "Warming up"
+    assert status_label(warming) != "Waiting for stream"
+
+
 def test_map_camera_zooms_to_selected_cluster_not_all_india() -> None:
     stations = [_palam(), _safdarjung(), _santacruz()]
     camera = map_camera(stations, "42181")
@@ -94,7 +115,24 @@ def test_map_camera_zooms_to_selected_cluster_not_all_india() -> None:
     assert [row["station_id"] for row in far] == ["43003"]
 
 
-def test_telemetry_keeps_observed_when_anomaly() -> None:
+def test_telemetry_keeps_observed_and_hides_the_band_until_distrusted() -> None:
+    trusted = telemetry_figures(
+        [
+            {
+                "timestamp": "2024-07-01T14:00:00Z",
+                "temp_observed": 26.0,
+                "temp_imputed": 26.0,
+                "pres_observed": 1013.0,
+                "pres_imputed": 1013.0,
+                "rhum_observed": 65.0,
+                "rhum_imputed": 65.0,
+                "imputed_interval": None,
+            }
+        ]
+    )
+    assert len(trusted[0].data) == 1
+    assert trusted[0].data[0].y[0] == 26.0
+
     figs = telemetry_figures(
         [
             {
@@ -105,13 +143,22 @@ def test_telemetry_keeps_observed_when_anomaly() -> None:
                 "pres_imputed": 1008.0,
                 "rhum_observed": 78.0,
                 "rhum_imputed": 78.0,
+                "imputed_interval": {
+                    "temp_c": [30.0, 34.0],
+                    "pres_hpa": [1006.0, 1010.0],
+                    "rhum_pct": [70.0, 86.0],
+                },
                 "is_anomaly": True,
             }
         ]
     )
     assert len(figs) == 3
     assert figs[0].data[0].y[0] == 48.1
-    assert figs[0].data[1].y[0] == 32.0
+    names = [trace.name for trace in figs[0].data]
+    assert "Predicted" in names
+    assert "90% band" in names
+    predicted = next(trace for trace in figs[0].data if trace.name == "Predicted")
+    assert predicted.y[0] == 32.0
     assert figs[0].layout.paper_bgcolor in {"#FFFFFF", "white", "#ffffff"}
     marked = telemetry_figures(
         [

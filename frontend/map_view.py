@@ -7,7 +7,7 @@ from typing import Any
 
 import plotly.graph_objects as go
 
-from status import marker_color, short_name, status_label
+from status import hover_note, marker_color, short_name, status_label
 from theme import CARD, EDGE, MUTED, TEXT
 
 MAP_HEIGHT = 640
@@ -19,6 +19,7 @@ def india_map(
     stations: list[dict[str, Any]],
     selected_id: str | None,
     buddies: dict[str, list[str]] | None = None,
+    focus_ids: list[str] | None = None,
 ) -> go.Figure:
     fig = go.Figure()
     if buddies:
@@ -55,10 +56,12 @@ def india_map(
         ids.append(row["station_id"])
         health = row.get("health_score")
         health_txt = f"{health:.0f}" if isinstance(health, (int, float)) else "—"
+        note = hover_note(row)
+        extra = f"<br>{note}" if note else ""
         hovers.append(
             f"<b>{label}</b> ({row['station_id']})<br>"
             f"{status_label(row)}<br>"
-            f"Health {health_txt}<br>"
+            f"Health {health_txt}{extra}<br>"
             "Click to open Station"
         )
 
@@ -77,7 +80,7 @@ def india_map(
         )
     )
 
-    camera = map_camera(stations, selected_id)
+    camera = map_camera(stations, selected_id, focus_ids=focus_ids)
     fig.update_layout(
         map=dict(
             style="carto-positron",
@@ -96,9 +99,16 @@ def india_map(
     return fig
 
 
-def map_camera(stations: list[dict[str, Any]], selected_id: str | None) -> dict[str, float]:
-    focus = focused_subset(stations, selected_id)
-    rows = focus or stations
+def map_camera(
+    stations: list[dict[str, Any]],
+    selected_id: str | None,
+    focus_ids: list[str] | None = None,
+) -> dict[str, float]:
+    framed = _by_ids(stations, focus_ids)
+    if len(framed) >= 2:
+        rows = framed
+    else:
+        rows = focused_subset(stations, selected_id) or stations
     lats = [float(row["latitude"]) for row in rows]
     lons = [float(row["longitude"]) for row in rows]
     if not lats:
@@ -127,6 +137,13 @@ def offscreen_stations(
 ) -> list[dict[str, Any]]:
     nearby_ids = {row["station_id"] for row in focused_subset(stations, selected_id)}
     return [row for row in stations if row["station_id"] not in nearby_ids]
+
+
+def _by_ids(stations: list[dict[str, Any]], focus_ids: list[str] | None) -> list[dict[str, Any]]:
+    if not focus_ids:
+        return []
+    wanted = set(focus_ids)
+    return [row for row in stations if row["station_id"] in wanted]
 
 
 def _selected(stations: list[dict[str, Any]], selected_id: str | None) -> dict[str, Any] | None:

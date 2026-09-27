@@ -1,6 +1,6 @@
 # Frontend
 
-Owner: this pair. Polls the product REST APIs and drives `/demo/inject`. It does not own detection, inject math, or training.
+Owner: this pair. Polls the product REST APIs and plays `/demo/replay`. It does not own detection, inject math, or training.
 
 ## Goal
 
@@ -21,55 +21,51 @@ Do not invent routes or API fields. Shared session: `view_ids`, `station_id`, `i
 
 ```
 Operations
-  Network     map + KPIs + view-set picker
-  Station     T/P/H overlay + verdict + contribution
+  Network     48 markers + KPIs
+  Station     raw line, band only when distrusted, root cause
   Alerts      newest-first feed, weather ≠ hardware
 Demo
-  Control     Palam storm / Palam spike / reset / advanced inject
+  Control     live poll status + Mumbai replay stories
 Guide
-  How QC works  static 3-tier + view vs ingest (no extra APIs)
+  How QC works  48 stations, 24-hour warm-up, Palam not on the map
 ```
 
-Default **view set**: Palam `42181` + Safdarjung `42182` + `42139` + Santacruz `43003`. Do not render all 151 on the live map. `include_buddies=true` so ingest is `view ∪ 1-hop`. CLI `--stations` on the streamer still overrides this filter — caption that on Control.
+The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43058` plus Safdarjung `42182`. Palam `42181` is not in the live catalog. Default station is Santa Cruz `43003`.
 
 ### Network
 
 - Header chips from `GET /healthz`: `ok`, `model_loaded`, `n_stations`.
-- KPI strip counted from `latest.label` on the **view set** only: clean / genuine weather / hardware (`PHYSICAL_FAULT` + `HARDWARE_ANOMALY`) / unconfirmed / idle (`latest` null).
-- View-set multiselect + `include_buddies`. Changing it `POST /demo/stream-filter`. Caption: ingest still includes buddies so Tier 3 can run.
-- India map of `GET /stations?ids=` (view set) on a light Carto basemap. Camera fits the selected station’s cluster (so Palam / Safdarjung / Meerut are readable); distant view-set stations stay on the roster. Marker color from `latest.label` (fallback `pipeline_status`). Click marker or roster row sets `station_id` and switches to Station. Only the selected marker is labeled on the map.
-- Optional 1-hop buddy edges for stations currently in view (`GET /buddy-map` subset). Do not draw the full 388-edge graph.
-- Roster names sit beside the map because NCR markers overlap at country scale.
-- Scalability copy: 151 trained stations; live view is a handful.
+- KPI strip counted from `latest.label` on all 48: clean / genuine weather / hardware (`PHYSICAL_FAULT` + `HARDWARE_ANOMALY`) / unconfirmed / warming up (`warming_up`) / waiting (`latest` null).
+- India map of `GET /stations` (no `ids`) on a light Carto basemap. Camera fits Mumbai plus Safdarjung. Marker color from `latest.label` (fallback `pipeline_status`). Warming up is its own slate, not “waiting”. Safdarjung’s hover says weather versus hardware cannot be called there. Click marker or roster row sets `station_id` and switches to Station. Only the selected marker is labeled on the map.
+- Buddy edges only among the five-station camera set (`GET /buddy-map` subset). Do not draw the full graph.
+- Roster lists the camera set first, then the rest by name.
 
 ### Station
 
-- Selected `station_id` from session (default Palam). A station opened from Alerts is kept even if it is outside the Network view set.
+- Selected `station_id` from session (default Santa Cruz). The selector is the full catalog. A station opened from Alerts stays selected.
 - Identity, health 0–100 + `status`, isolate / buddy chips from `buddy_ids`.
 - Live verdict is **this hour** from `latest.label`. Matching `GET /alerts?station_id=` row (same timestamp) supplies `explainability_text` / contribution. Do not reuse an older alert as the live verdict after the hour has gone clean.
 - Open on Alerts pins `alert_id`. Station then shows that alert’s label, explainability, contribution, and a dotted marker on the chart, with a **Show live hour** control. Health stays the 7-day index.
-- Charts: observed solid, imputed/predicted dashed. Raw series never replaced.
+- Charts: observed solid always. Dashed correction and the 90% band only when that row’s `imputed_interval` is a pair. Raw series never replaced.
+- Root cause, in order: `explainability_text`, dew point and Td−T from `thermo`, channel bars from the matching alert, neighbor table from `tier3_corr` / `tier3_mix` / `tier3_method`, then `GET /stations/{id}/timing?ts=&wait_s=0` polled until `ready`.
+- Health caption: 7-day sensor flag rate. Genuine weather does not count.
 - Telemetry: `GET /stations/{id}/telemetry?limit=` for the selected station only.
 
 ### Alerts
 
 - `GET /alerts?limit=` (optional `station_id` to match session).
-- Newest first. Amber weather vs rose hardware vs slate unconfirmed.
+- Newest first. Amber weather (`GENUINE_WEATHER` and `STORM`) vs rose hardware (`PHYSICAL_FAULT`, `HARDWARE_ANOMALY`, `THERMO`, `COMMUNICATION`, `COMM_ERROR`) vs slate unconfirmed.
 - Click **Open** pins that `alert_id` and focuses Station on that hour (not the live CLEAN hour).
 
 ### Control
 
-Hero (same bodies as the old console):
-
-- **Storm around Palam** — `{target: neighborhood, station_id: 42181, kind: GENUINE_WEATHER}`
-- **Break Palam temperature** — `{target: station, station_id: 42181, kind: SPIKE, channel: temp_c}`
-- **Reset overlays** — `POST /demo/reset`
-
-Advanced: SPIKE / FREEZE / DRIFT / COMM_ERROR on one station; GENUINE_WEATHER on a neighborhood. Storm targeting a single station is 400. Armed overlays from `GET /demo/status`. View-set picker may live here or on Network; one session, one POST.
+- Live poll from `GET /healthz` `imd`: `matched`, `last_success`, `last_error`.
+- Replay via `POST /demo/replay`: `clean`, `hardware`, `weather`, `freeze`, `comms`. After a story, Station focuses Santa Cruz.
+- **Reset overlays** — `POST /demo/reset`. Replay itself clears its arm.
 
 ### Guide
 
-Static: three tiers (physical rules → LSTM → IDW buddies), view set vs ingest set, neighborhood storm vs lone spike, why isolates land `UNCONFIRMED_ANOMALY`. Offline commands from the root README. No extra APIs.
+Static: 48 live stations, 24-hour warm-up, Palam not on the map, three tiers, replay stories, weather does not lower health. The dashboard polls the product API only. No extra APIs.
 
 ## Light tokens
 
@@ -82,7 +78,8 @@ Static: three tiers (physical rules → LSTM → IDW buddies), view set vs inges
 | Clean | `#0D9488` |
 | Genuine weather | `#D97706` |
 | Hardware | `#E11D48` |
-| Unconfirmed / idle | `#64748B` |
+| Unconfirmed / waiting | `#64748B` |
+| Warming up | `#94A3B8` |
 | Font | IBM Plex Sans / IBM Plex Mono |
 | Plotly | white paper, light grid, observed solid, predicted dashed |
 
@@ -98,20 +95,21 @@ Prefer five-way `label`. Fall back to `pipeline_status` (D18) if `label` is miss
 | `GENUINE_WEATHER_EVENT` | `GENUINE_WEATHER` | amber | Extreme, neighbors agree — **not red** |
 | `PHYSICAL_FAULT` / `HARDWARE_ANOMALY` | `HARDWARE` | rose | Sensor / comms / physical fault |
 | `UNCONFIRMED_ANOMALY` | `UNKNOWN` | slate | Unconfirmed (D11) |
-| (no `latest`) | — | slate | Waiting for stream |
+| `warming_up` | — | `#94A3B8` | Fewer than 24 hours. Not a verdict. |
+| (no `latest`) | — | slate | Waiting for a live hour or a replay |
 
 ## How we poll
 
-Never N+1 151 stations. Map and KPIs use list `latest` only.
+Never N+1 the catalog. Map and KPIs use list `latest` only. Do not call port 8001.
 
 1. `GET /healthz`
-2. `GET /stations?ids=` for the **view set**
-3. Selected station: `GET /stations/{id}/telemetry?limit=` and `GET /alerts?station_id=`
+2. `GET /stations` for all 48
+3. Selected station: `GET /stations/{id}/telemetry?limit=`, `GET /alerts?station_id=`, and `GET /stations/{id}/timing?ts=&wait_s=0`
 4. Alerts page: `GET /alerts?limit=`
-5. Control / Network: `GET /demo/status` and `GET /demo/stream-filter`
-6. `GET /buddy-map` only to draw 1-hop edges for the view set
+5. Control: `GET /healthz` for the poll line, `POST /demo/replay`, `POST /demo/reset`
+6. `GET /buddy-map` only to draw edges among the camera set
 
-If `latest` is null, the station is waiting for the streamer.
+If `latest` is null, the station is waiting. If `warming_up` is true, it is warming up.
 
 ## Out of scope
 
@@ -124,12 +122,9 @@ If `latest` is null, the station is waiting for the streamer.
 
 ## Judge script
 
-API + streamer must already be running. Prefer Palam neighborhood ingest (`--stations 42181 --with-buddies`) unless the UI stream-filter is the only filter (no CLI override).
+API must already be running. The dashboard does not start a Palam streamer and does not call port 8001.
 
-Default view includes Palam, its two buddies, and Santacruz so Mumbai can stay teal.
-
-1. Open **Network**. Calm teal markers on the view set. API / model chips live.
-2. **Control → Storm around Palam** → Palam and its buddies go amber; Santacruz stays teal.
-3. **Reset**, then **Break Palam temperature** → only Palam goes rose; Safdarjung stays teal.
-4. Open **Station** on Palam: observed series still on the chart; dashed overlay is reconstruction; verdict text is `explainability_text`; contribution bars name the channel.
-5. **Guide**: buddy graph, not NORTH vs WEST, is what separates weather from hardware.
+1. Open **Network**. 48 markers. Camera frames Mumbai and Safdarjung. Warming-up stations are their own color. Safdarjung’s tooltip says weather versus hardware cannot be called there.
+2. **Control → 55 °C at Santa Cruz**. Station opens on Santa Cruz with a solid raw line, a dashed correction, and a band. The root-cause block ends with the TIMING sentence once it is ready.
+3. **+8 °C across Mumbai**. Amber weather. No band. Health unchanged.
+4. **Guide**: 48 live stations, 24-hour warm-up, Palam is not on the map.

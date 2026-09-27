@@ -9,9 +9,9 @@ import plotly.graph_objects as go
 from theme import CARD, GRID, IMPUTED, MUTED, OBSERVED, TEXT
 
 CHANNELS = (
-    ("temp_observed", "temp_imputed", "Temperature °C", "°C"),
-    ("pres_observed", "pres_imputed", "Pressure hPa", "hPa"),
-    ("rhum_observed", "rhum_imputed", "Humidity %", "%"),
+    ("temp_observed", "temp_imputed", "temp_c", "Temperature °C", "°C"),
+    ("pres_observed", "pres_imputed", "pres_hpa", "Pressure hPa", "hPa"),
+    ("rhum_observed", "rhum_imputed", "rhum_pct", "Humidity %", "%"),
 )
 
 CONTRIBUTION = (
@@ -21,16 +21,43 @@ CONTRIBUTION = (
 )
 
 
+def _band(row: dict[str, Any], channel: str) -> tuple[float, float] | None:
+    interval = row.get("imputed_interval")
+    if not isinstance(interval, dict):
+        return None
+    pair = interval.get(channel)
+    if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+        return None
+    try:
+        return float(pair[0]), float(pair[1])
+    except (TypeError, ValueError):
+        return None
+
+
 def channel_figure(
     telemetry: list[dict[str, Any]],
     observed_key: str,
     imputed_key: str,
+    interval_key: str,
     title: str,
     mark_at: Any | None = None,
 ) -> go.Figure:
     stamps = [row.get("timestamp") for row in telemetry]
     observed = [row.get(observed_key) for row in telemetry]
-    imputed = [row.get(imputed_key) for row in telemetry]
+    imputed: list[float | None] = []
+    lows: list[float | None] = []
+    highs: list[float | None] = []
+    for row in telemetry:
+        band = _band(row, interval_key)
+        if band is None:
+            imputed.append(None)
+            lows.append(None)
+            highs.append(None)
+            continue
+        lows.append(band[0])
+        highs.append(band[1])
+        value = row.get(imputed_key)
+        imputed.append(float(value) if isinstance(value, (int, float)) else None)
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
@@ -43,6 +70,32 @@ def channel_figure(
             connectgaps=False,
         )
     )
+    if any(value is not None for value in highs):
+        fig.add_trace(
+            go.Scatter(
+                x=stamps,
+                y=highs,
+                mode="lines",
+                name="Band high",
+                line=dict(width=0),
+                hoverinfo="skip",
+                showlegend=False,
+                connectgaps=False,
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=stamps,
+                y=lows,
+                mode="lines",
+                name="90% band",
+                line=dict(width=0),
+                fill="tonexty",
+                fillcolor="rgba(217, 119, 6, 0.18)",
+                hoverinfo="skip",
+                connectgaps=False,
+            )
+        )
     if any(value is not None for value in imputed):
         fig.add_trace(
             go.Scatter(
@@ -81,8 +134,8 @@ def channel_figure(
 
 def telemetry_figures(telemetry: list[dict[str, Any]], mark_at: Any | None = None) -> list[go.Figure]:
     return [
-        channel_figure(telemetry, observed, imputed, title, mark_at=mark_at)
-        for observed, imputed, title, _unit in CHANNELS
+        channel_figure(telemetry, observed, imputed, interval, title, mark_at=mark_at)
+        for observed, imputed, interval, title, _unit in CHANNELS
     ]
 
 

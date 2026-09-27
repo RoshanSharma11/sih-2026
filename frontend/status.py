@@ -36,7 +36,11 @@ PIPELINE_LABEL = {
 }
 
 IDLE_COLOR = "#64748B"
+WARMING_COLOR = "#94A3B8"
 IDLE_LABEL = "Waiting for stream"
+WARMING_LABEL = "Warming up"
+SAFDARJUNG = "42182"
+SAFDARJUNG_NOTE = "Weather versus hardware cannot be called here."
 
 HEALTH_COLOR = {
     "HEALTHY": "#0D9488",
@@ -48,7 +52,16 @@ WEATHER_LABELS = {"GENUINE_WEATHER_EVENT"}
 HARDWARE_LABELS = {"PHYSICAL_FAULT", "HARDWARE_ANOMALY"}
 WEATHER_PIPELINE = {"GENUINE_WEATHER"}
 HARDWARE_PIPELINE = {"HARDWARE"}
-HARDWARE_FAULTS = {"SPIKE", "FREEZE", "DRIFT", "COMM_ERROR", "PHYSICS_BREACH"}
+HARDWARE_FAULTS = {
+    "SPIKE",
+    "FREEZE",
+    "DRIFT",
+    "COMM_ERROR",
+    "COMMUNICATION",
+    "THERMO",
+    "PHYSICS_BREACH",
+}
+WEATHER_FAULTS = {"GENUINE_WEATHER", "STORM"}
 
 
 def short_name(name: str) -> str:
@@ -97,7 +110,13 @@ def pipeline_color(status: str | None) -> str:
     return PIPELINE_COLOR.get(status, IDLE_COLOR)
 
 
+def is_warming(station: dict[str, Any] | None) -> bool:
+    return bool(latest_payload(station).get("warming_up"))
+
+
 def marker_color(station: dict[str, Any] | None) -> str:
+    if is_warming(station):
+        return WARMING_COLOR
     return pipeline_color(marker_key(station))
 
 
@@ -110,12 +129,20 @@ def pipeline_label(status: str | None) -> str:
 
 
 def status_label(station: dict[str, Any] | None) -> str:
+    if is_warming(station):
+        return WARMING_LABEL
     if station and latest_payload(station) == {} and not station.get("pipeline_status"):
         return IDLE_LABEL
     key = marker_key(station)
     if key is None and station and not latest_payload(station):
         return IDLE_LABEL
     return pipeline_label(key)
+
+
+def hover_note(station: dict[str, Any]) -> str:
+    if str(station.get("station_id")) == SAFDARJUNG:
+        return SAFDARJUNG_NOTE
+    return ""
 
 
 def health_color(status: str | None) -> str:
@@ -128,7 +155,7 @@ def is_weather(status: str | None, fault_type: str | None = None) -> bool:
     return (
         status in WEATHER_LABELS
         or status in WEATHER_PIPELINE
-        or fault_type == "GENUINE_WEATHER"
+        or fault_type in WEATHER_FAULTS
     )
 
 
@@ -153,6 +180,8 @@ def verdict_kind_from_key(key: str | None, fault_type: str | None = None) -> str
 
 
 def verdict_kind(station: dict[str, Any] | None, fault_type: str | None = None) -> str:
+    if is_warming(station):
+        return "warming"
     key = marker_key(station)
     if not latest_payload(station) and not pipeline_status(station) and key is None:
         return "idle"
@@ -232,8 +261,11 @@ def overlay_caption(overlay: dict[str, Any]) -> str:
 
 
 def kpi_counts(stations: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {"clean": 0, "weather": 0, "hardware": 0, "unconfirmed": 0, "idle": 0}
+    counts = {"clean": 0, "weather": 0, "hardware": 0, "unconfirmed": 0, "warming": 0, "idle": 0}
     for row in stations:
+        if is_warming(row):
+            counts["warming"] += 1
+            continue
         latest = latest_payload(row)
         if not latest and not row.get("pipeline_status"):
             counts["idle"] += 1

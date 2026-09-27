@@ -12,6 +12,7 @@ CLEAN = "#0D9488"
 WEATHER = "#D97706"
 HARDWARE = "#E11D48"
 SLATE = "#64748B"
+WARMING = "#94A3B8"
 OBSERVED = "#0F766E"
 IMPUTED = "#D97706"
 MAP_LAND = "#EEF2F7"
@@ -214,6 +215,7 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
 .sg-verdict-unknown {{ border-left-color: {SLATE}; }}
 .sg-verdict-clean {{ border-left-color: {CLEAN}; }}
 .sg-verdict-idle {{ border-left-color: {LINE}; }}
+.sg-verdict-warming {{ border-left-color: {WARMING}; }}
 .sg-verdict-kicker {{
   font-size: 0.72rem;
   font-weight: 700;

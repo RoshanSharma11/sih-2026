@@ -9,21 +9,20 @@ import streamlit as st
 
 from api import SkyGuardApiError, SkyGuardClient
 from status import short_name
-from theme import CLEAN, HARDWARE, SLATE, WEATHER, CSS
+from theme import CLEAN, HARDWARE, SLATE, WARMING, WEATHER, CSS
 
 _PAGES: dict[str, Any] = {}
 _ASSETS = Path(__file__).resolve().parent / "assets"
 _WORDMARK = _ASSETS / "skyguard-wordmark.svg"
 _MARK = _ASSETS / "skyguard-mark.svg"
 
-PALAM = "42181"
 SAFDARJUNG = "42182"
-PALAM_BUDDY = "42139"
 SANTACRUZ = "43003"
-DEFAULT_VIEW = [PALAM, SAFDARJUNG, PALAM_BUDDY, SANTACRUZ]
-
-HERO_STORM = {"target": "neighborhood", "station_id": PALAM, "kind": "GENUINE_WEATHER"}
-HERO_SPIKE = {"target": "station", "station_id": PALAM, "kind": "SPIKE", "channel": "temp_c"}
+COLABA = "43057"
+JUHU = "43002"
+ALIBAG = "43058"
+DEMO_FOCUS = [SANTACRUZ, COLABA, JUHU, ALIBAG, SAFDARJUNG]
+DEFAULT_VIEW = list(DEMO_FOCUS)
 
 
 def inject_theme() -> None:
@@ -54,7 +53,7 @@ def render_sidebar(
         st.markdown(
             """<div class="sg-sidebar-foot">
             <strong>SIH PS 26073</strong><br>
-            151-station catalog · buddy graph QC
+            48 live stations · 24-hour warm-up
             </div>""",
             unsafe_allow_html=True,
         )
@@ -85,7 +84,7 @@ def init_session() -> None:
     if "view_ids" not in st.session_state:
         st.session_state.view_ids = list(DEFAULT_VIEW)
     if "station_id" not in st.session_state:
-        st.session_state.station_id = PALAM
+        st.session_state.station_id = SANTACRUZ
     if "include_buddies" not in st.session_state:
         st.session_state.include_buddies = True
     if "flash" not in st.session_state:
@@ -123,6 +122,21 @@ def fire_inject(body: dict[str, Any]) -> None:
         flash(str(exc), kind="bad")
 
 
+def fire_replay(story: str) -> None:
+    try:
+        body = get_client().replay(story)
+    except SkyGuardApiError as exc:
+        flash(str(exc), kind="bad")
+        return
+    focus_station(SANTACRUZ)
+    santa = next((row for row in body.get("results") or [] if row.get("station_id") == SANTACRUZ), None)
+    if santa and santa.get("warming_up"):
+        flash("Santa Cruz is warming up. The raw hour is on Station.")
+        return
+    label = None if santa is None else santa.get("label")
+    flash(f"Replay {story} · Santa Cruz {label or 'scored'}. Open Station.")
+
+
 def fire_reset() -> None:
     try:
         get_client().reset()
@@ -140,15 +154,6 @@ def show_flash() -> None:
     else:
         st.success(note["message"])
     st.session_state.flash = None
-
-
-def sync_stream_filter() -> None:
-    view_ids = list(st.session_state.get("view_ids") or DEFAULT_VIEW)
-    include = bool(st.session_state.get("include_buddies", True))
-    try:
-        get_client().set_stream_filter(view_ids, include)
-    except SkyGuardApiError as exc:
-        flash(str(exc), kind="bad")
 
 
 def page_header(title: str, subtitle: str, health: dict[str, Any] | None = None) -> None:
@@ -182,6 +187,7 @@ def kpi_strip(counts: dict[str, int]) -> None:
         ("Weather", counts.get("weather", 0), WEATHER),
         ("Hardware", counts.get("hardware", 0), HARDWARE),
         ("Unconfirmed", counts.get("unconfirmed", 0), SLATE),
+        ("Warming", counts.get("warming", 0), WARMING),
         ("Waiting", counts.get("idle", 0), SLATE),
     )
     cells = "".join(
@@ -200,6 +206,7 @@ def legend() -> None:
         <span><i class="sg-dot" style="background:{WEATHER}"></i> Genuine weather</span>
         <span><i class="sg-dot" style="background:{HARDWARE}"></i> Hardware</span>
         <span><i class="sg-dot" style="background:{SLATE}"></i> Unconfirmed</span>
+        <span><i class="sg-dot" style="background:{WARMING}"></i> Warming up</span>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -209,8 +216,6 @@ def offline_help(error: str) -> None:
     st.error(error)
     st.code(
         "python scripts/run_api.py\n"
-        "python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 "
-        "--start 2024-07-01T00:00:00Z --stations 42181 --with-buddies\n"
         "python scripts/run_dashboard.py",
         language="text",
     )
@@ -220,33 +225,6 @@ def station_options(catalog: list[dict[str, Any]]) -> dict[str, str]:
     return {
         row["station_id"]: f"{short_name(row['name'])}  ·  {row['station_id']}" for row in catalog
     }
-
-
-def view_picker(catalog: list[dict[str, Any]]) -> None:
-    options = station_options(catalog)
-    known = [sid for sid in st.session_state.view_ids if sid in options]
-    if known != st.session_state.view_ids:
-        st.session_state.view_ids = known or list(DEFAULT_VIEW)
-    st.multiselect(
-        "View set",
-        options=list(options.keys()),
-        format_func=lambda sid: options.get(sid, sid),
-        key="view_ids",
-        help="Charts and the map show only these stations. Ingest still adds 1-hop buddies when enabled.",
-        on_change=sync_stream_filter,
-    )
-    st.checkbox(
-        "Include 1-hop buddies in ingest",
-        key="include_buddies",
-        help="Leave on so Tier 3 can still run. Turning this off lands hours as UNCONFIRMED_ANOMALY.",
-        on_change=sync_stream_filter,
-    )
-    st.markdown(
-        '<p class="sg-caption">Map and charts show this handful of stations. '
-        "Neighbors still stream in the background so buddy QC can run. "
-        "A CLI <code>--stations</code> streamer overrides this filter.</p>",
-        unsafe_allow_html=True,
-    )
 
 
 def fmt_value(value: Any, digits: int = 1) -> str:

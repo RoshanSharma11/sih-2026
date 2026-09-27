@@ -7,9 +7,9 @@ alwaysApply: false
 # Frontend
 
 - Poll frozen REST only. Do not invent API fields. No SSE.
-- Prefer five-way `latest.label` on `GET /stations?ids=` for marker color (do not N+1 151 stations). Weather is amber, never rose.
-- Five-page light console: Network, Station, Alerts, Control, Guide.
-- Live faults go through `POST /demo/inject` (`neighborhood`, not `cluster`). Do not call `inject.py` from Streamlit.
-- Raw observed series stay visible; imputed/predicted is an overlay. Station filter is a view set; ingest still includes buddies.
+- Prefer five-way `latest.label` on `GET /stations` for marker color (do not N+1 the 48). Weather is amber, never rose. Warming up is its own idle color.
+- Five-page light console: Network (all 48, camera on Mumbai plus Safdarjung), Station, Alerts, Control (replay stories), Guide.
+- Demo faults on the console go through `POST /demo/replay`. Do not call `inject.py` from Streamlit. Do not call port 8001.
+- Raw observed series stay solid. Dashed correction and the 90% band appear only when `imputed_interval` is present.
 
 See `docs/frontend.md` and `docs/contracts.md`.

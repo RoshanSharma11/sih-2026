@@ -9,7 +9,7 @@ import streamlit as st
 from api import SkyGuardApiError, merge_station
 from charts import contribution_html, telemetry_figures
 from chrome import (
-    DEFAULT_VIEW,
+    catalog_stations,
     fmt_value,
     get_client,
     offline_help,
@@ -38,12 +38,11 @@ def render_station() -> None:
     health = client.health()
     page_header(
         "Station",
-        "Observed T / P / H stay on the chart. Predicted values are a dashed overlay.",
+        "The raw line is always solid. A dashed correction and band appear only when the sensor is distrusted.",
         health,
     )
-    view_ids = list(st.session_state.get("view_ids") or DEFAULT_VIEW)
     try:
-        view_rows = client.stations(ids=view_ids)
+        view_rows = catalog_stations()
     except SkyGuardApiError as exc:
         offline_help(str(exc))
         return
@@ -53,7 +52,7 @@ def render_station() -> None:
     if current and current not in options:
         options = _add_station_option(client, options, current)
     if not options:
-        st.info("Add stations to the Network view set to inspect a series.")
+        st.info("The catalog is empty. Import the 48 stations and restart the API.")
         return
 
     if current not in options:
@@ -95,7 +94,10 @@ def station_live() -> None:
     _verdict(station, alerts, telemetry, pinned)
     _health_and_buddies(station, pinned)
     _charts(telemetry, None if pinned is None else pinned.get("timestamp"))
-    _explain(pinned if pinned is not None else hour_alert(alerts, latest_payload(station).get("timestamp")))
+    hour = _focus_hour(station, telemetry, pinned)
+    alert = pinned if pinned is not None else hour_alert(alerts, (hour or latest_payload(station)).get("timestamp"))
+    timing = _timing_for(client, station_id, hour or latest_payload(station))
+    _root_cause(station, hour, alert, timing)
 
 
 def _add_station_option(
@@ -178,11 +180,12 @@ def _verdict(
         else:
             text = {
                 "clean": f"{name} is tracking with its neighbors. No hardware alert this hour.",
+                "warming": f"{name} is warming up. This raw hour is stored. A verdict waits for 24 hourly values.",
                 "unknown": (
-                    "Not enough same-hour neighbors for a buddy check, or the 24h window is still filling. "
+                    "Not enough same-hour neighbors for a buddy check. "
                     "Honesty over a fake spatial call."
                 ),
-                "idle": "Waiting for the clean streamer. Seed + hourly ingest will light this station.",
+                "idle": "No hour stored yet. The live poll or a replay will light this station.",
             }.get(kind, f"{name} · {live_label}")
             meta = f"health {fmt_value(station.get('health_score'), 0)} · {station.get('status', '')}"
         kicker = f"This hour · {live_label} · {name}"
@@ -194,7 +197,7 @@ def _verdict(
                 f" · H {fmt_value(observed.get('rhum_pct'))}%"
             )
     else:
-        text = "Waiting for the clean streamer. Seed + hourly ingest will light this station."
+        text = "No hour stored yet. The live poll or a replay will light this station."
         meta = "No telemetry yet"
         kicker = f"{name} · idle"
         kind = "idle"
@@ -226,12 +229,12 @@ def _health_and_buddies(station: dict[str, Any], pinned: dict[str, Any] | None) 
     m2.metric("Station status", status or "—")
     hour_label = alert_status_label(pinned) if pinned is not None else status_label(station)
     m3.metric("This hour" if pinned is None else "Pinned hour", hour_label)
-    st.caption("Health ignores genuine weather. Isolates and one-buddy hours stay unconfirmed.")
+    st.caption("7-day sensor flag rate. Genuine weather does not count.")
 
     buddies = station.get("buddy_ids") or []
     if station.get("isolate"):
         st.markdown('<span class="sg-chip sg-chip-idle">Isolate</span>', unsafe_allow_html=True)
-        st.caption("Fewer than two buddies on the ML graph. Tier 3 will not run.")
+        st.caption("No buddies inside the live 48. Weather versus hardware cannot be called here.")
         return
     chips = "".join(f'<span class="sg-buddy">{sid}</span>' for sid in buddies)
     st.markdown(
@@ -241,27 +244,114 @@ def _health_and_buddies(station: dict[str, Any], pinned: dict[str, Any] | None) 
 
 
 def _charts(telemetry: list[dict[str, Any]], mark_at: Any | None) -> None:
-    st.markdown("##### Observed vs predicted")
-    if mark_at is not None:
-        st.caption("Solid = raw (never overwritten). Dashed = reconstruction. Dotted line = the alert you opened.")
-    else:
-        st.caption("Solid = raw (never overwritten). Dashed = reconstruction overlay.")
+    st.markdown("##### Observed")
+    st.caption(
+        "Solid = raw, always. Dashed correction and the 90% band appear only when this hour has an imputed interval."
+    )
     if not telemetry:
-        st.info("No telemetry yet for this station. Start the clean streamer, then wait one poll.")
+        st.info("No telemetry yet for this station.")
         return
     for fig in telemetry_figures(telemetry, mark_at=mark_at):
         st.plotly_chart(fig, theme=None, width="stretch")
 
 
-def _explain(alert: dict[str, Any] | None) -> None:
-    html = contribution_html(alert)
-    if not html:
-        return
+def _focus_hour(
+    station: dict[str, Any],
+    telemetry: list[dict[str, Any]],
+    pinned: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if pinned is not None:
+        hour = hour_telemetry(telemetry, pinned.get("timestamp"))
+        if hour is not None:
+            return hour
+    latest = latest_payload(station)
+    hour = hour_telemetry(telemetry, latest.get("timestamp"))
+    return hour or (telemetry[-1] if telemetry else None)
+
+
+def _timing_for(client: Any, station_id: str, hour: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not hour or hour.get("warming_up") or not hour.get("timestamp"):
+        return None
+    try:
+        return client.timing(station_id, str(hour["timestamp"]), wait_s=0)
+    except SkyGuardApiError:
+        return None
+
+
+def _root_cause(
+    station: dict[str, Any],
+    hour: dict[str, Any] | None,
+    alert: dict[str, Any] | None,
+    timing: dict[str, Any] | None,
+) -> None:
     st.markdown("##### Why this hour")
-    if st.session_state.get("alert_id") and alert and str(alert.get("alert_id")) == str(st.session_state.get("alert_id")):
-        st.caption("Channel share of reconstruction error from the pinned alert. Not SHAP.")
-    else:
-        st.caption("Channel share of reconstruction error from this hour’s alert. Not SHAP.")
-    st.markdown(html, unsafe_allow_html=True)
-    if alert and is_weather(alert.get("label"), alert.get("fault_type")):
-        st.caption("Neighbors agreed. This alert does not lower sensor health.")
+    if hour and hour.get("warming_up"):
+        st.caption("Warming up. The raw hour is stored. There is no verdict until 24 hourly values exist.")
+        return
+    if not hour and not alert:
+        st.caption("No scored hour yet.")
+        return
+
+    reason = (hour or {}).get("explainability_text") or (alert or {}).get("explainability_text")
+    st.markdown(reason or "No reason stored for this hour.")
+
+    thermo = (hour or {}).get("thermo") if isinstance((hour or {}).get("thermo"), dict) else None
+    if thermo:
+        st.markdown(
+            f"Dew point **{fmt_value(thermo.get('dewpoint_c'))} °C** · "
+            f"Td−T **{fmt_value(thermo.get('td_minus_t'))} °C**"
+        )
+
+    bars = contribution_html(alert)
+    if bars:
+        st.caption("Channel share of this hour. Not SHAP.")
+        st.markdown(bars, unsafe_allow_html=True)
+        if alert and is_weather(alert.get("label"), alert.get("fault_type")):
+            st.caption("Neighbors agreed. This hour does not lower sensor health.")
+
+    _neighbor_table(hour)
+    _timing_line(timing)
+
+
+def _neighbor_table(hour: dict[str, Any] | None) -> None:
+    if not hour:
+        return
+    corr = hour.get("tier3_corr") if isinstance(hour.get("tier3_corr"), dict) else {}
+    mix = hour.get("tier3_mix") if isinstance(hour.get("tier3_mix"), dict) else {}
+    method = hour.get("tier3_method")
+    if not corr and not mix and not method:
+        return
+    blend = ""
+    if mix:
+        blend = (
+            f" · blend T {fmt_value(mix.get('temp_c'))} °C"
+            f" · P {fmt_value(mix.get('pres_hpa'))} hPa"
+            f" · H {fmt_value(mix.get('rhum_pct'))}%"
+        )
+    st.caption(f"Neighbors · {method or 'cw_idw'}{blend}")
+    if not corr:
+        return
+    rows = "".join(
+        f"<tr><td>{buddy_id}</td><td>{fmt_value(corr.get(buddy_id), 2)}</td></tr>"
+        for buddy_id in corr
+    )
+    st.markdown(
+        "<table><thead><tr><th>Buddy</th><th>Correlation</th></tr></thead>"
+        f"<tbody>{rows}</tbody></table>",
+        unsafe_allow_html=True,
+    )
+
+
+def _timing_line(timing: dict[str, Any] | None) -> None:
+    if not timing:
+        return
+    status = timing.get("status")
+    if status == "pending":
+        st.caption("TIMING is still running for this hour.")
+        return
+    if status != "ready":
+        return
+    body = timing.get("timing") if isinstance(timing.get("timing"), dict) else {}
+    reason = body.get("reason")
+    if reason:
+        st.markdown(reason)
