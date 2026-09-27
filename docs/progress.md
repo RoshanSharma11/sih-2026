@@ -1,6 +1,8 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-09 (Network map + sidebar polish).
+Last updated: 2026-09-27 (v2 live plan step 1: ingest calls v2).
+
+**Next session:** implement [`v2-live-plan.md`](v2-live-plan.md) from step 2 (switch the catalog to the 48). Do not extend the Palam / `ml/` path. Credentials are in `.env` only.
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -8,15 +10,15 @@ Update this file when a slice lands or a lock changes. It is the handoff note fo
 
 Nothing product-blocking. `ml/data/raw/` is on disk (gitignored). Do not commit those CSVs.
 
-Optional, not blocking: freeze a better LSTM threshold. Artifacts still use 2023 val window-MSE **p99 ≈ 0.00605**. `model_metadata.json` says `threshold_frozen: false`. LSTM-only 2024 F1 is weak on freeze/drift; that is why Tier 1 + buddy in `ml/engine.py` are the product.
+Optional, not blocking: the frozen v1 threshold note in `ml/` is not the live score. Product ingest uses the v2 threshold (`0.008487`).
 
 Nothing else needs a product decision. Language and D14–D18 are locked.
 
 ## Status
 
-**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**. Live ingest uses **`ml.engine`**. Processed catalog is **151 stations**. Palam `42181` buddies: Safdarjung `42182` + `42139`. Storm inject is Palam’s neighborhood, not NORTH.
+**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**, **V2-1** ingest on `v2.engine`. Processed catalog is still **151 stations** until step 2. Palam `42181` buddies: Safdarjung `42182` + `42139`. Storm inject is Palam’s neighborhood, not NORTH.
 
-Next: demo rehearsal (API + Palam stream + dashboard). No further frontend slices locked.
+Next: v2 live plan step 2. No further frontend slices in this step.
 
 | Slice | Commit | Why |
 |---|---|---|
@@ -34,13 +36,14 @@ Next: demo rehearsal (API + Palam stream + dashboard). No further frontend slice
 | F9 | `99c0729` | Station overlay charts + verdict + contribution |
 | F10 | `dc57291` | Alerts feed + Palam storm/spike Control |
 | F11 | (this change) | Guide, empty/offline, light polish |
+| V2-1 | (this change) | Ingest calls v2 (CW-IDW, TIMING queued); persist overlay fields; health from stored labels; no scaler is 400 |
 
 ## What works today (post-I6)
 
 - Catalog: `data/processed/stations.json` (151) + `buddy_edges.json` (388 edges, 24 isolates). Hourly parquet for all 151 ids. Re-run with `python -m skyguard.data.import_ml_catalog`.
 - API: `/healthz` reports `model_loaded`, `threshold`, `n_stations`, `n_isolates`. `GET /stations?ids=` includes `latest`, `buddy_ids`, `isolate`. `GET /buddy-map`. Telemetry and alerts store `label`. `/ingest`, seed, `/demo/*`.
-- Live QC: `engine/adapter.py` maps public fields ↔ ML; `pipeline.py` persists raw, calls `process_aws_data`, writes overlay/alert/health. Legacy `skyguard.engine.tier*` is not on this path.
-- Missing artifacts → persist anyway, `UNCONFIRMED_ANOMALY`. No 24h window → same.
+- Live QC: `engine/adapter.py` maps public fields ↔ v2; `pipeline.py` persists raw, calls `v2.engine.process_aws_data` (`use_stgnn=False`, `timing_async=True`), writes overlay (`predicted`, `imputed_interval`, `thermo`, `tier2.score`, `tier3.method` / `mix` / `corr`, `reason`) and recomputes 7-day health from stored labels. Weather does not count. `ml.engine` and legacy `skyguard.engine.tier*` are not on this path.
+- Missing artifacts → persist anyway, `UNCONFIRMED_ANOMALY`. No 24h window → same. Catalog station with no train scaler → 400. Station not in the catalog → 404.
 - Streamer: `--stations 42181 --with-buddies` (default true) seeds/POSTs the ingest set. CLI overrides `GET /demo/stream-filter`. Empty filter = full catalog.
 - Demo inject: `target=neighborhood` expands via the buddy graph. `target=cluster` is 400.
 - Dashboard: five-page light console (Network, Station, Alerts, Control, Guide). Default view Palam∪buddies + Santacruz. Hero on Control. Network map is a Carto tile view that zooms to the selected cluster; names sit in a roster. Alerts **Open** pins that hour on Station.
@@ -53,7 +56,8 @@ Next: demo rehearsal (API + Palam stream + dashboard). No further frontend slice
 | ------------------------------ | ----------------------- | ---------------------------- |
 | `src/skyguard/engine/tier*.py` | **legacy**, do not call | unused on live ingest        |
 | `src/skyguard/ml/`             | IdentityDetector stub   | **legacy**                   |
-| `ml/ml/engine.py`              | **production QC**       | unchanged                     |
+| `ml/ml/engine.py`              | frozen v1 QC            | not on live ingest            |
+| `v2-deliverable/v2/engine.py`  | **production QC**       | CW-IDW, TIMING queued         |
 | `ml/ml/main.py`                | standalone eval only    | unchanged                     |
 | `frontend/`                    | live demo               | five-page light console     |
 
@@ -62,11 +66,11 @@ Next: demo rehearsal (API + Palam stream + dashboard). No further frontend slice
 - Fault math only in `skyguard.data.inject`. Live faults in the API demo overlay, **before** ML.
 - Raw T/P/H immutable. Imputed = ML `predicted`.
 - Buddy check = ML graph, **≥2** usable neighbors. Isolates → `UNCONFIRMED_ANOMALY`.
-- Public fields `temp_c` / `pres_hpa` / `rhum_pct`. ML names stay inside `ml/`.
+- Public fields `temp_c` / `pres_hpa` / `rhum_pct`. v2 names (`temp`, `rhum`, `pres`) stay inside the adapter.
 - View set ≠ ingest set. Filter Palam in the UI still streams Palam’s buddies.
 - Storm inject = neighborhood, not `cluster_id: NORTH`. Palam neighborhood = `42181` + `42182` + `42139`.
-- Do not invent API fields. `contracts.md` is the integration contract (updated in I0).
-- Do not `git pull` ML into `src/`. `ml/` is a sibling of `frontend/`.
+- Do not invent API fields. `contracts.md` is the integration contract (v2 overlay fields added in V2-1).
+- Do not `git pull` ML into `src/`. `v2-deliverable/` and `ml/` stay siblings of `frontend/`.
 
 ## How to run (today)
 
@@ -93,7 +97,7 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Next
 
-Nothing product-blocking. Rehearse the judge script in [frontend.md](frontend.md).
+[`v2-live-plan.md`](v2-live-plan.md) step 2: switch the live catalog to the 48 in `stations_judge48.csv`, including `aws_id`, and report v2 weights on `/healthz`.
 
 ## Open issues
 

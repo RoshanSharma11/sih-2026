@@ -107,15 +107,16 @@ Named clusters (NORTH/WEST) may remain as optional UI region tags if the CSV has
 
 Never ingest a lone station and expect `GENUINE_WEATHER_EVENT`. If the user turns `include_buddies` off, Tier 3 will skip and those hours land as `UNCONFIRMED_ANOMALY`.
 
-## D16 — Production QC is the ML engine, in-process
+## D16 — Production QC is v2, in-process
 
-**Lock:**
+**Lock:** Supersedes the earlier `ml.engine` product path. See [`v2-live-plan.md`](v2-live-plan.md).
 
 - One product port: backend FastAPI (`scripts/run_api.py`).
-- On ingest: validate → demo overlay → persist raw → assemble window + buddies → `ml.engine.process_aws_data` **in-process** → persist overlay/alert/health → return mapped result.
-- Do not HTTP-proxy to `ml.main:app` in the judge demo (second process, two ports, CORS). `ml/ml/main.py` remains valid for standalone ML eval.
+- On ingest: validate → demo overlay → persist raw → assemble window + buddies → `v2.engine.process_aws_data` **in-process** (`get_engine(use_stgnn=False, timing_async=True)`) → persist overlay/alert and recompute health from stored labels → return mapped result.
+- Do not HTTP-proxy to `v2.main:app` or `ml.main:app`. Do not call `ml.engine` on live ingest.
 - Backend `tier1.py` / `tier2.py` / `tier3.py` / `classify.py` / `IdentityDetector` stay on disk as legacy. Live `/ingest` must not call them.
 - If artifacts fail to load: persist anyway, `label=UNCONFIRMED_ANOMALY`, do not run legacy tiers.
+- No train scaler → 400. Station not in the product catalog → 404.
 
 ## D17 — Frontend rewrite comes after integration
 

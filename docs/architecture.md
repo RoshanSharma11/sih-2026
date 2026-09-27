@@ -1,6 +1,6 @@
 # Architecture
 
-SkyGuard is a 3-tier quality-control service in front of an Indian AWS network. **Production QC lives in `ml/`**. Backend is the product shell (persist, demo, query). Simulator streams the same catalog ML trained on.
+SkyGuard is a 3-tier quality-control service in front of an Indian AWS network. **Production QC lives in `v2-deliverable/`**. Backend is the product shell (persist, demo, query). The processed catalog is still the imported 151 until the live plan switches it to the 48.
 
 ## System
 
@@ -24,7 +24,7 @@ ML catalog (151) + hourly series
 │  DemoController (optional)  │
 │  persist raw                │
 │  assemble window + buddies  │
-│  call ml.engine (in-process)│
+│  call v2.engine (in-process)│
 └─────────────┬───────────────┘
               │
               ▼
@@ -68,17 +68,18 @@ sih-2026/
     api/                    # product FastAPI
     engine/
       pipeline.py           # persist + demo + ML adapter (live path)
-      adapter.py            # SkyGuard payload ↔ ml.engine
+      adapter.py            # SkyGuard payload ↔ v2.engine
       demo.py
       windows.py
       tier1.py             # LEGACY — do not call from live ingest
       tier2.py
       tier3.py
       classify.py
-      health.py             # LEGACY health formula; live health from ML
+      health.py             # LEGACY health formula; live health from stored labels
     db/
     ml/                     # LEGACY Detector protocol / IdentityDetector
-  ml/                       # production QC (sibling of frontend/)
+  ml/                       # frozen v1 QC (not the live ingest path)
+  v2-deliverable/         # production QC (`v2.engine`, GAT off)
     ml/
       engine.py
       physical_rules.py
@@ -97,12 +98,12 @@ sih-2026/
 
 ## Request path (`POST /ingest`)
 
-1. Validate payload (Pydantic, public field names). Reject malformed JSON with 422. Unknown station → 404. Duplicate hour → 409.
+1. Validate payload (Pydantic, public field names). Reject malformed JSON with 422. Unknown station → 404. No train scaler → 400. Duplicate hour → 409.
 2. If a demo overlay is armed for this station or its neighborhood, apply `inject.py` **before** QC. Record `demo_injected` on the result, not as judge ground truth.
 3. Persist the **raw** observation immediately (nulls allowed).
 4. Build the 24h window for this station from `WindowStore` / SQLite. Build buddy payloads from the ML graph + last 24h of each neighbor.
-5. Call `ml.engine.process_aws_data` (in-process) with ML field names.
-6. Map `label` → `pipeline_status`, `predicted` → imputed columns, `reason` → `explainability_text`, `health` → `health_score` / `status`.
+5. Call `v2.engine.process_aws_data` (in-process, CW-IDW, TIMING queued) with v2 field names.
+6. Map `label` → `pipeline_status`, `predicted` → imputed columns, `reason` → `explainability_text`. Persist `imputed_interval`, `thermo`, `tier2.score`, `tier3.method` / `mix` / `corr`. Recompute `health_score` / `status` from stored labels (weather excluded).
 7. Write imputed overlay when ML returned predictions. Insert `anomaly_alerts` when `label != CLEAN`.
 8. Return the ingest result JSON.
 
@@ -141,7 +142,7 @@ ingest set = view ∪ 1-hop buddies   (streamer POSTs these)
 | `SKYGUARD_VIEW_IDS` | empty = all | Optional default view set |
 | `SKYGUARD_INCLUDE_BUDDIES` | `true` | Expand view → ingest set |
 
-LSTM threshold and scalers load from `ml/ml/artifacts/`, not from `SKYGUARD_RECON_THRESHOLD`. That env var is legacy.
+LSTM threshold and scalers load from `v2-deliverable/v2/artifacts/`, not from `SKYGUARD_RECON_THRESHOLD`. That env var is legacy. Product threshold is the v2 frozen score (`0.008487`).
 
 ## Non-goals in this architecture
 

@@ -1,7 +1,8 @@
-"""SkyGuard public fields ↔ ml.engine.process_aws_data (D12 / D16 / D18)."""
+"""SkyGuard public fields ↔ v2.engine.process_aws_data (D12 / D18)."""
 
 from __future__ import annotations
 
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -17,10 +18,12 @@ from skyguard.schemas import (
     Channel,
     ChannelValues,
     FaultType,
+    ImputedInterval,
     Label,
     PipelineStatus,
     Severity,
     StationStatus,
+    ThermoView,
     Tier1View,
     Tier2View,
     Tier3View,
@@ -60,47 +63,53 @@ UNCONFIRMED_FALLBACK = {
     "predicted": {"temp": None, "rhum": None, "pres": None},
     "affected_variables": [],
     "tier1": {"passed": True, "violations": []},
+    "imputed_interval": None,
+    "thermo": {"dewpoint_c": None, "td_minus_t": None, "passed": True},
     "tier2": {
         "ran": False,
+        "score": None,
         "window_mse": None,
         "threshold": None,
         "feature_contributions": {"temp": None, "rhum": None, "pres": None},
     },
     "tier3": {
         "performed": False,
+        "method": "cw_idw",
         "buddy_ids": [],
         "usable_count": 0,
         "neighbors_agree": None,
         "reason_skip": "lstm_not_run",
+        "mix": {"temp": None, "rhum": None, "pres": None},
+        "corr": {},
     },
     "health": {"index_7d": 1.0, "state": StationStatus.HEALTHY.value, "window_hours": 0},
 }
 
 
-def ensure_ml_on_path() -> Path:
-    """Inner package is `ml/ml/`; imports are `ml.engine` with this parent on sys.path."""
-    ml_root = REPO_ROOT / "ml"
-    path = str(ml_root)
+def ensure_v2_on_path() -> Path:
+    """`v2` imports from `v2-deliverable/` on sys.path. GAT stays off; TIMING is queued."""
+    root = REPO_ROOT / "v2-deliverable"
+    path = str(root)
     if path not in sys.path:
         sys.path.insert(0, path)
-    return ml_root
+    return root
 
 
 def load_qc_engine():
-    """Construct a per-app DetectionEngine. Never use the module-level singleton."""
+    """Product ingest uses v2 get_engine: CW-IDW, TIMING queued, graph model off."""
     try:
-        ensure_ml_on_path()
-        from ml.engine import DetectionEngine
+        ensure_v2_on_path()
+        from v2.engine import get_engine
 
-        return DetectionEngine()
+        return get_engine(use_stgnn=False, timing_async=True)
     except Exception:
         return None
 
 
 def unknown_station_error_type():
-    ensure_ml_on_path()
+    ensure_v2_on_path()
     try:
-        from ml.engine import UnknownStationError
+        from v2.engine import UnknownStationError
 
         return UnknownStationError
     except Exception:
@@ -183,6 +192,8 @@ def map_ml_result(ml_out: dict[str, Any]) -> dict[str, Any]:
             rhum_pct=_share_pct(contrib.get("rhum")),
         ),
         "mse": _float_or_none((ml_out.get("tier2") or {}).get("window_mse")),
+        "imputed_interval": _interval(ml_out.get("imputed_interval")),
+        "thermo": _thermo(ml_out.get("thermo")),
         "tier1": _tier1(ml_out.get("tier1") or {}),
         "tier2": _tier2(ml_out.get("tier2") or {}),
         "tier3": _tier3(ml_out.get("tier3") or {}),
@@ -236,6 +247,7 @@ def _tier2(raw: dict[str, Any]) -> Tier2View:
     contrib = raw.get("feature_contributions") or {}
     return Tier2View(
         ran=bool(raw.get("ran", False)),
+        score=_float_or_none(raw.get("score")),
         window_mse=_float_or_none(raw.get("window_mse")),
         threshold=_float_or_none(raw.get("threshold")),
         feature_contributions={
@@ -247,11 +259,93 @@ def _tier2(raw: dict[str, Any]) -> Tier2View:
 def _tier3(raw: dict[str, Any]) -> Tier3View:
     return Tier3View(
         performed=bool(raw.get("performed", False)),
+        method=raw.get("method"),
         buddy_ids=[str(item) for item in raw.get("buddy_ids") or []],
         usable_count=int(raw.get("usable_count") or 0),
         neighbors_agree=raw.get("neighbors_agree"),
         reason_skip=raw.get("reason_skip"),
+        mix=_mix(raw.get("mix")),
+        corr=_corr(raw.get("corr")),
     )
+
+
+def _interval(raw: Any) -> ImputedInterval | None:
+    if not isinstance(raw, dict):
+        return None
+    return ImputedInterval(
+        temp_c=_band(raw.get("temp")),
+        pres_hpa=_band(raw.get("pres")),
+        rhum_pct=_band(raw.get("rhum")),
+    )
+
+
+def _thermo(raw: Any) -> ThermoView | None:
+    if not isinstance(raw, dict):
+        return None
+    return ThermoView(
+        dewpoint_c=_float_or_none(raw.get("dewpoint_c")),
+        td_minus_t=_float_or_none(raw.get("td_minus_t")),
+        passed=bool(raw.get("passed", True)),
+    )
+
+
+def _mix(raw: Any) -> ChannelValues | None:
+    if not isinstance(raw, dict):
+        return None
+    return ChannelValues(
+        temp_c=_float_or_none(raw.get("temp")),
+        pres_hpa=_float_or_none(raw.get("pres")),
+        rhum_pct=_float_or_none(raw.get("rhum")),
+    )
+
+
+def _corr(raw: Any) -> dict[str, float]:
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, float] = {}
+    for key, value in raw.items():
+        number = _float_or_none(value)
+        if number is not None:
+            out[str(key)] = number
+    return out
+
+
+def _band(value: Any) -> list[float] | None:
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        return None
+    low = _float_or_none(value[0])
+    high = _float_or_none(value[1])
+    if low is None or high is None:
+        return None
+    return [low, high]
+
+
+def dump_json(value: Any) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(mode="json")
+    return json.dumps(value)
+
+
+def load_model(raw: str | None, model: type):
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return model.model_validate(data)
+
+
+def load_corr(raw: str | None) -> dict[str, float]:
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return _corr(data)
 
 
 def _health_score(health: dict[str, Any]) -> float:

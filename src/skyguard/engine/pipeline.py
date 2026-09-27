@@ -1,10 +1,10 @@
-"""Ingest orchestrator: persist raw, call ML, persist overlay/alert/health."""
+"""Ingest orchestrator: persist raw, call v2, persist overlay/alert/health."""
 
 from __future__ import annotations
 
 import threading
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,16 +14,20 @@ from skyguard.db.models import AnomalyAlert, Station, TelemetryLog
 from skyguard.engine.adapter import (
     UNCONFIRMED_FALLBACK,
     build_ml_payload,
+    dump_json,
+    load_corr,
+    load_model,
     map_ml_result,
     qc_has_scaler,
     unknown_station_error_type,
 )
 from skyguard.engine.demo import DemoController
 from skyguard.engine.windows import WindowPoint, WindowStore
-from skyguard.errors import CatalogNotLoaded, DuplicateObservation, StationNotFound
+from skyguard.errors import CatalogNotLoaded, DuplicateObservation, StationNotFound, UnknownScaler
 from skyguard.schemas import (
     ChannelValues,
     FaultType,
+    ImputedInterval,
     IngestPayload,
     IngestResult,
     Label,
@@ -32,8 +36,17 @@ from skyguard.schemas import (
     SeedObservation,
     Severity,
     StationStatus,
+    ThermoView,
 )
 
+_HEALTH_HOURS = 24 * 7
+_HEALTHY_MIN = 0.90
+_DEGRADED_MIN = 0.70
+_SENSOR_HEALTH_LABELS = {
+    Label.PHYSICAL_FAULT.value,
+    Label.HARDWARE_ANOMALY.value,
+    Label.UNCONFIRMED_ANOMALY.value,
+}
 _STATION_LOCKS: dict[str, threading.Lock] = defaultdict(threading.Lock)
 
 
@@ -63,7 +76,7 @@ def ingest_observation(
 
     scaler = qc_has_scaler(qc_engine, payload.station_id)
     if scaler is False:
-        raise StationNotFound(payload.station_id)
+        raise UnknownScaler(payload.station_id)
 
     timestamp = as_utc(payload.timestamp)
     with _STATION_LOCKS[payload.station_id]:
@@ -105,10 +118,16 @@ def ingest_observation(
         except Exception as exc:
             unknown = unknown_station_error_type()
             if unknown is not None and isinstance(exc, unknown):
-                raise StationNotFound(payload.station_id) from exc
+                raise UnknownScaler(payload.station_id) from exc
             raise
         mapped = map_ml_result(ml_out)
-        _apply_overlay(row, station, mapped)
+        _apply_overlay(row, mapped)
+        session.flush()
+        health_score, station_status = health_from_stored_labels(
+            session, payload.station_id, timestamp
+        )
+        station.health_score = health_score
+        station.status = station_status.value
         if mapped["is_anomaly"]:
             contrib = mapped["contribution_pct"]
             session.add(
@@ -142,6 +161,8 @@ def ingest_observation(
             tier1=mapped["tier1"],
             tier2=mapped["tier2"],
             tier3=mapped["tier3"],
+            imputed_interval=mapped["imputed_interval"],
+            thermo=mapped["thermo"],
         )
 
 
@@ -209,6 +230,8 @@ def result_from_row(
     tier1=None,
     tier2=None,
     tier3=None,
+    imputed_interval: ImputedInterval | None = None,
+    thermo: ThermoView | None = None,
 ) -> IngestResult:
     if classification is not None:
         fault_type = classification.fault_type
@@ -247,6 +270,8 @@ def result_from_row(
         health_score=station.health_score,
         station_status=StationStatus(station.status),
         demo_injected=demo_injected,
+        imputed_interval=imputed_interval,
+        thermo=thermo,
         tier1=tier1,
         tier2=tier2,
         tier3=tier3,
@@ -289,7 +314,46 @@ def _run_qc(qc_engine, payload: dict) -> dict:
         return dict(UNCONFIRMED_FALLBACK)
 
 
-def _apply_overlay(row: TelemetryLog, station: Station, mapped: dict) -> None:
+def health_from_stored_labels(
+    session: Session, station_id: str, as_of: datetime
+) -> tuple[float, StationStatus]:
+    """7-day flag rate from stored labels. Weather does not count. Not the engine tracker."""
+    cutoff = as_of - timedelta(hours=_HEALTH_HOURS)
+    labels = session.scalars(
+        select(TelemetryLog.label).where(
+            TelemetryLog.station_id == station_id,
+            TelemetryLog.timestamp >= cutoff,
+            TelemetryLog.timestamp <= as_of,
+        )
+    ).all()
+    count = len(labels)
+    if count == 0:
+        return 100.0, StationStatus.HEALTHY
+    flagged = sum(1 for label in labels if label in _SENSOR_HEALTH_LABELS)
+    index = 1.0 - (flagged / count)
+    if index >= _HEALTHY_MIN:
+        status = StationStatus.HEALTHY
+    elif index >= _DEGRADED_MIN:
+        status = StationStatus.DEGRADED
+    else:
+        status = StationStatus.CRITICAL
+    return round(index * 100.0, 2), status
+
+
+def telemetry_qc(row: TelemetryLog) -> dict:
+    return {
+        "explainability_text": row.explainability_text,
+        "imputed_interval": load_model(row.imputed_interval, ImputedInterval),
+        "thermo": load_model(row.thermo, ThermoView),
+        "tier2_score": row.tier2_score,
+        "tier3_method": row.tier3_method,
+        "tier3_mix": load_model(row.tier3_mix, ChannelValues),
+        "tier3_corr": load_corr(row.tier3_corr),
+    }
+
+
+def _apply_overlay(row: TelemetryLog, mapped: dict) -> None:
+    tier3 = mapped["tier3"]
     row.temp_imputed = mapped["imputed"].temp_c
     row.pres_imputed = mapped["imputed"].pres_hpa
     row.rhum_imputed = mapped["imputed"].rhum_pct
@@ -297,8 +361,13 @@ def _apply_overlay(row: TelemetryLog, station: Station, mapped: dict) -> None:
     row.pipeline_status = mapped["pipeline_status"].value
     row.label = mapped["label"].value
     row.mse = mapped["mse"]
-    station.health_score = mapped["health_score"]
-    station.status = mapped["station_status"].value
+    row.explainability_text = mapped["explainability_text"]
+    row.imputed_interval = dump_json(mapped["imputed_interval"])
+    row.thermo = dump_json(mapped["thermo"])
+    row.tier2_score = mapped["tier2"].score
+    row.tier3_method = tier3.method
+    row.tier3_mix = dump_json(tier3.mix)
+    row.tier3_corr = dump_json(tier3.corr)
 
 
 def _reject_duplicate(session: Session, station_id: str, timestamp: datetime) -> None:

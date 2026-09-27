@@ -52,8 +52,9 @@ def _hourly_frame(start: datetime, hours: int, temp: float = 31.0) -> pd.DataFra
         {
             "timestamp": timestamps,
             "temp_c": [temp + (i * 0.05) for i in range(hours)],
-            "pres_hpa": [1004.0] * hours,
-            "rhum_pct": [68.0] * hours,
+            # v2 freeze is one channel flat for 12 h (eps 0.15 hPa / 0.5 %RH).
+            "pres_hpa": [1004.0 + (i * 0.04) for i in range(hours)],
+            "rhum_pct": [60.0 + (i * 0.08) for i in range(hours)],
         }
     )
 

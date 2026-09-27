@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from skyguard.api.deps import get_db
 from skyguard.db.models import AnomalyAlert, Station, StationBuddy, TelemetryLog
-from skyguard.engine.pipeline import as_utc, latest_snapshot_from_row
+from skyguard.engine.pipeline import as_utc, latest_snapshot_from_row, telemetry_qc
 from skyguard.schemas import (
     AlertRow,
     BuddyMap,
@@ -208,6 +208,7 @@ def list_telemetry(
             label=_label(row.label),
             pipeline_status=PipelineStatus(row.pipeline_status),
             mse=row.mse,
+            **telemetry_qc(row),
         )
         for row in rows
     ]

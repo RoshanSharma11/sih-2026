@@ -68,6 +68,13 @@ class TelemetryLog(Base):
     label: Mapped[str] = mapped_column(String(40), default="CLEAN")
     pipeline_status: Mapped[str] = mapped_column(String(20), default="CLEAN")
     mse: Mapped[float | None] = mapped_column(Float, nullable=True)
+    explainability_text: Mapped[str | None] = mapped_column(String, nullable=True)
+    imputed_interval: Mapped[str | None] = mapped_column(String, nullable=True)
+    thermo: Mapped[str | None] = mapped_column(String, nullable=True)
+    tier2_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    tier3_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    tier3_mix: Mapped[str | None] = mapped_column(String, nullable=True)
+    tier3_corr: Mapped[str | None] = mapped_column(String, nullable=True)
 
     station: Mapped[Station] = relationship(back_populates="telemetry")
 

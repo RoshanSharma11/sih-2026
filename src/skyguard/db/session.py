@@ -16,6 +16,13 @@ _EXTRA_COLUMNS = (
     ("telemetry_logs", "label", "VARCHAR(40) NOT NULL DEFAULT 'CLEAN'"),
     ("anomaly_alerts", "label", "VARCHAR(40) NOT NULL DEFAULT 'CLEAN'"),
     ("stations", "isolate", "BOOLEAN NOT NULL DEFAULT 0"),
+    ("telemetry_logs", "explainability_text", "TEXT"),
+    ("telemetry_logs", "imputed_interval", "TEXT"),
+    ("telemetry_logs", "thermo", "TEXT"),
+    ("telemetry_logs", "tier2_score", "REAL"),
+    ("telemetry_logs", "tier3_method", "VARCHAR(20)"),
+    ("telemetry_logs", "tier3_mix", "TEXT"),
+    ("telemetry_logs", "tier3_corr", "TEXT"),
 )
 
 

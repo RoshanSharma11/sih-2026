@@ -204,3 +204,47 @@ def test_map_hardware_and_unconfirmed() -> None:
     assert unconfirmed["fault_type"] is FaultType.UNKNOWN
     assert unconfirmed["severity"] is Severity.LOW
     assert unconfirmed["tier3"].reason_skip == "isolate_station"
+
+
+def test_map_v2_overlay_fields() -> None:
+    mapped = map_ml_result(
+        _minimal_ml(
+            "HARDWARE_ANOMALY",
+            confidence=0.8,
+            fault_type="SPIKE",
+            imputed_interval={
+                "temp": [24.2, 26.3],
+                "rhum": [61.9, 76.2],
+                "pres": [1012.7, 1013.9],
+            },
+            thermo={"dewpoint_c": 18.9, "td_minus_t": -7.1, "passed": True},
+            tier2={
+                "ran": True,
+                "score": 0.1646,
+                "window_mse": 0.0327,
+                "threshold": 0.008487,
+                "feature_contributions": {"temp": 0.46, "rhum": 0.04, "pres": 0.50},
+            },
+            tier3={
+                "performed": True,
+                "method": "cw_idw",
+                "buddy_ids": ["43057"],
+                "usable_count": 3,
+                "neighbors_agree": False,
+                "reason_skip": None,
+                "mix": {"temp": 24.4, "rhum": 77.0, "pres": 1012.8},
+                "corr": {"43057": 0.2445},
+            },
+        )
+    )
+    assert mapped["explainability_text"] == "test"
+    assert mapped["imputed_interval"].temp_c == [24.2, 26.3]
+    assert mapped["imputed_interval"].rhum_pct == [61.9, 76.2]
+    assert mapped["imputed_interval"].pres_hpa == [1012.7, 1013.9]
+    assert mapped["thermo"].dewpoint_c == 18.9
+    assert mapped["thermo"].td_minus_t == -7.1
+    assert mapped["thermo"].passed is True
+    assert mapped["tier2"].score == 0.1646
+    assert mapped["tier3"].method == "cw_idw"
+    assert mapped["tier3"].mix.temp_c == 24.4
+    assert mapped["tier3"].corr == {"43057": 0.2445}

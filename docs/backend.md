@@ -1,6 +1,6 @@
 # Backend
 
-Owner: backend. FastAPI + SQLite **product shell**. Production QC is `ml/ml/engine.py` (D16). Depends on `inject.py` and the ML adapter, not on `IdentityDetector`.
+Owner: backend. FastAPI + SQLite **product shell**. Production QC is `v2-deliverable` `v2.engine.process_aws_data` (in-process, GAT off). Depends on `inject.py` and the adapter, not on `IdentityDetector` or `ml.engine`.
 
 ## Process
 
@@ -13,9 +13,9 @@ On startup:
 1. Create tables (including `station_buddies`, `telemetry_logs.label`)
 2. Upsert imported `data/processed/stations.json` + `buddy_edges.json` (if missing, `/healthz` is ok, `/ingest` 503s)
 3. Hydrate 24-hour windows from `telemetry_logs`
-4. Construct `ml.engine.DetectionEngine` once (loads artifacts, buddy graph, health tracker)
+4. Call `v2.engine.get_engine(use_stgnn=False, timing_async=True)` once (CW-IDW, TIMING queued)
 
-Do not start `uvicorn ml.main:app` as the product server.
+Do not start `uvicorn v2.main:app` or `uvicorn ml.main:app` as the product server.
 
 ## Pipeline (live)
 
@@ -26,19 +26,22 @@ Do not start `uvicorn ml.main:app` as the product server.
 3. Persist raw
 4. Adapter builds ML payload (window + buddies)
 5. `process_aws_data`
-6. Map result (D12 / D18) and persist overlay, alert, health from ML
+6. Map result (D12 / D18) and persist overlay, alert, and health from stored labels
 
 ### Adapter — `engine/adapter.py`
 
-| SkyGuard | ML |
+| SkyGuard | v2 |
 |---|---|
 | `temp_c` | `temp` |
 | `rhum_pct` | `rhum` |
 | `pres_hpa` | `pres` |
+| `explainability_text` | `reason` |
+| `imputed` | `predicted` |
+| `imputed_interval` | `imputed_interval` |
 | window deque | `window` list of hour rows |
 | `station_buddies` + neighbor deques | `buddies` |
 
-If the engine raises `UnknownStationError`, return 404.
+Persist `predicted` (imputed columns), `imputed_interval`, `thermo`, `tier2.score`, `tier3.method` / `mix` / `corr`, and `reason`. If the engine raises `UnknownStationError`, or the station has no train scaler, return 400. A station missing from the product catalog is still 404.
 
 ### Legacy modules (do not call from live ingest)
 
@@ -46,7 +49,7 @@ If the engine raises `UnknownStationError`, return 404.
 
 ### Health
 
-Live `health_score` / `status` come from ML `health.index_7d` / `health.state`. Do not recompute with the old spike/freeze weights after ingest.
+Live `health_score` / `status` are recomputed from stored labels over 168 hours. Weather does not count. Do not use the v2 in-memory tracker, and do not recompute with the old spike/freeze weights.
 
 ## Demo controller — `demo.py`
 
@@ -58,7 +61,7 @@ In-memory view/ingest sets (D15). `POST /demo/stream-filter` expands with the bu
 
 ## Concurrency
 
-One process. Lock per `station_id` around window update + ML call so two POSTs cannot interleave. Neighborhood storm still ingests station-by-station.
+One process. Lock per `station_id` around window update + the v2 call so two POSTs cannot interleave. Neighborhood storm still ingests station-by-station.
 
 ## Testing (backend)
 
@@ -71,7 +74,7 @@ Need loaded artifacts **or** a fixture engine. Minimum:
 - Same storm-shaped move on a station and ≥2 neighbors → `GENUINE_WEATHER_EVENT`
 - Isolate / &lt;2 buddies + LSTM flag → `UNCONFIRMED_ANOMALY`
 - Duplicate timestamp → 409
-- Unknown station → 404
+- Unknown station → 404. Catalog station with no scaler → 400
 - Health does not drop after a weather label
 - Live ingest does not import/call `skyguard.engine.tier1.evaluate`
 

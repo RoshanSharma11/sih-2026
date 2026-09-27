@@ -106,19 +106,29 @@ Response:
   "health_score": 88.0,
   "station_status": "HEALTHY",
   "demo_injected": null,
+  "imputed_interval": {
+    "temp_c": [27.1, 29.6],
+    "pres_hpa": [1006.4, 1009.2],
+    "rhum_pct": [74.0, 82.0]
+  },
+  "thermo": {"dewpoint_c": 41.2, "td_minus_t": -6.9, "passed": true},
   "tier1": {"passed": true, "violations": []},
   "tier2": {
     "ran": true,
+    "score": 0.041,
     "window_mse": 0.041,
-    "threshold": 0.00605,
+    "threshold": 0.008487,
     "feature_contributions": {"temp_c": 0.941, "rhum_pct": 0.032, "pres_hpa": 0.027}
   },
   "tier3": {
     "performed": true,
+    "method": "cw_idw",
     "buddy_ids": ["42181"],
     "usable_count": 2,
     "neighbors_agree": false,
-    "reason_skip": null
+    "reason_skip": null,
+    "mix": {"temp_c": 28.1, "pres_hpa": 1008.0, "rhum_pct": 76.0},
+    "corr": {"42181": 0.42}
   }
 }
 ```
@@ -128,6 +138,10 @@ Response:
 `severity` is derived (not emitted by ML): `PHYSICAL_FAULT`/`HARDWARE_ANOMALY` + high confidence → `HIGH`; weather → `LOW`; unconfirmed → `LOW`/`MEDIUM`.
 
 `contribution_pct` is ML feature shares × 100, keys in public channel names. Order in ML is `temp, rhum, pres`.
+
+`explainability_text` is v2 `reason`. `imputed` is v2 `predicted` (public channel names). `imputed_interval` is the 90% band, or `null` when the overlay is hidden (`CLEAN`, `GENUINE_WEATHER_EVENT`, `UNCONFIRMED_ANOMALY`). `thermo` is dew point, Td−T, and whether that check passed. `tier2.score` is the last-hour-weighted reconstruction score. `tier3.method` is `cw_idw` on the product path. `tier3.mix` is the neighbor blend (not the dashed line). `tier3.corr` maps buddy id → correlation.
+
+`health_score` / `station_status` are recomputed from stored labels over the last 168 hours (seed rows count). `PHYSICAL_FAULT`, `HARDWARE_ANOMALY`, and `UNCONFIRMED_ANOMALY` lower the score. `GENUINE_WEATHER_EVENT` does not. The engine’s in-memory tracker is not the product score.
 
 ## Demo inject
 
@@ -219,7 +233,7 @@ Station summary (list **includes** `latest` so a 151-station map does not N+1):
 
 `cluster_id` is omitted unless the imported CSV supplies a region tag. QC must not read it. List rows include `buddy_ids`, `isolate`, and `latest` (null until the first seeded or ingested hour).
 
-Telemetry rows keep observed + imputed columns. `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label.
+Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, and `tier3_corr`. `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
 
 `GET /buddy-map` is the ML graph for the dashboard, not a QC input:
 
@@ -240,9 +254,9 @@ Telemetry rows keep observed + imputed columns. `is_anomaly` follows D18. `label
 Not a public HTTP contract. Backend calls in-process:
 
 ```python
-ml.engine.process_aws_data({
+v2.engine.process_aws_data({
     "station_id": str,
-    "timestamp": datetime,  # naive or UTC; ML coerces naive
+    "timestamp": datetime,  # naive or UTC; v2 coerces naive
     "temp": float | None,
     "rhum": float | None,
     "pres": float | None,
@@ -251,9 +265,11 @@ ml.engine.process_aws_data({
 })
 ```
 
-Unknown station / missing scaler → backend 404.
+Load `v2.engine.get_engine(use_stgnn=False, timing_async=True)`. Graph model stays off (`tier3.method = "cw_idw"`). TIMING is queued; the ingest JSON does not wait on it.
 
-Do not send the public `/ingest` body straight into ML (field names and missing window would break T2/T3).
+Unknown station (not in the product catalog) → 404. In the catalog but no train scaler → 400. Do not borrow another station’s scaler.
+
+Do not send the public `/ingest` body straight into v2 (field names and missing window would break T2/T3). Do not call `ml.engine` on this path.
 
 Legacy `Detector` protocol / `IdentityDetector` / `MODEL_PATH` are not the live path.
 
@@ -292,6 +308,13 @@ CREATE TABLE telemetry_logs (
   label           VARCHAR(40) NOT NULL DEFAULT 'CLEAN',
   pipeline_status VARCHAR(20) NOT NULL DEFAULT 'CLEAN',
   mse             REAL,
+  explainability_text TEXT,
+  imputed_interval TEXT,
+  thermo          TEXT,
+  tier2_score     REAL,
+  tier3_method    VARCHAR(20),
+  tier3_mix       TEXT,
+  tier3_corr      TEXT,
   UNIQUE (station_id, timestamp)
 );
 
@@ -315,7 +338,9 @@ CREATE INDEX idx_alerts_station_time ON anomaly_alerts (station_id, timestamp);
 
 Drop `cluster_id NOT NULL` on `stations` in the same migration as the catalog import.
 
-Health comes from ML `HealthTracker` (7-day flag rate, weather excluded):
+`imputed_interval`, `thermo`, `tier3_mix`, and `tier3_corr` are JSON text. `tier3_method` is `cw_idw` on the product path.
+
+Health is recomputed from stored `telemetry_logs.label` over the last 168 hours (7-day flag rate, weather excluded). The v2 in-memory tracker is not this score:
 
 ```
 index_7d = 1 - flagged_hours / window_hours
@@ -349,8 +374,8 @@ Live demo uses the same functions. Storm is applied to every station in the **ne
 | HTTP | When |
 |---|---|
 | 422 | Schema violation |
-| 404 | Unknown `station_id` (not in catalog or no scaler) |
+| 404 | Unknown `station_id` (not in the product catalog) |
 | 409 | Duplicate `(station_id, timestamp)` ingest |
-| 400 | Storm inject targeting a single station; missing channel on SPIKE; legacy `cluster` target |
+| 400 | No train scaler for a catalog station; storm inject targeting a single station; missing channel on SPIKE; legacy `cluster` target |
 
 Duplicate timestamps: do not silently overwrite. The streamer must be deterministic.

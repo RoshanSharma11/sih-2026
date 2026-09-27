@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from skyguard.api.deps import get_db
 from skyguard.engine.pipeline import ingest_observation, seed_station
-from skyguard.errors import CatalogNotLoaded, DuplicateObservation, StationNotFound
+from skyguard.errors import CatalogNotLoaded, DuplicateObservation, StationNotFound, UnknownScaler
 from skyguard.schemas import IngestPayload, IngestResult, SeedPayload, SeedResult
 
 router = APIRouter()
@@ -16,6 +16,8 @@ router = APIRouter()
 def _translate(exc: Exception) -> HTTPException:
     if isinstance(exc, CatalogNotLoaded):
         return HTTPException(status_code=503, detail=str(exc))
+    if isinstance(exc, UnknownScaler):
+        return HTTPException(status_code=400, detail=f"Unknown scaler for station_id: {exc}")
     if isinstance(exc, StationNotFound):
         return HTTPException(status_code=404, detail=f"Unknown station_id: {exc}")
     if isinstance(exc, DuplicateObservation):
@@ -34,7 +36,7 @@ def ingest(payload: IngestPayload, request: Request, session: Session = Depends(
             demo=request.app.state.demo,
             qc_engine=request.app.state.qc_engine,
         )
-    except (CatalogNotLoaded, StationNotFound, DuplicateObservation) as exc:
+    except (CatalogNotLoaded, StationNotFound, UnknownScaler, DuplicateObservation) as exc:
         raise _translate(exc) from exc
 
 

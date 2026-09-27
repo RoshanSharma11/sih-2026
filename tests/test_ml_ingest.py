@@ -1,4 +1,4 @@
-"""I2/I5 live ingest uses ml.engine — D18 mapping, buddy T3, isolate honesty."""
+"""Live ingest uses v2.engine — D18 mapping, buddy T3, stored-label health."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from skyguard.api.main import create_app
+from skyguard.engine.adapter import load_qc_engine
 from skyguard.engine.pipeline import ingest_observation
 
 PALAM = "42181"
@@ -161,11 +162,14 @@ def _iso(ts: datetime) -> str:
     return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _seed(client: TestClient, station_id: str, hours: int = 23, *, bait: bool = False) -> None:
+def _seed(client: TestClient, station_id: str, hours: int = 23, *, bait: bool = False, vary: bool = False) -> None:
     observations = []
     for i in range(hours):
         if bait and 4 <= i <= 18:
             temp_c, pres_hpa, rhum_pct = 59.0, 991.0, 8.0
+        elif vary:
+            # v2 calls 12 flat hours a freeze. A range spike needs a moving history.
+            temp_c, pres_hpa, rhum_pct = 32.0 + 0.05 * i, 1004.0 + 0.1 * i, 58.0 + 0.2 * i
         else:
             temp_c, pres_hpa, rhum_pct = 32.0 + 0.02 * i, 1005.0, 60.0
         observations.append(
@@ -207,6 +211,20 @@ def test_pipeline_source_does_not_call_legacy_tiers() -> None:
     assert "skyguard.engine.classify" not in source
     assert "health.recompute" not in source
     assert "IdentityDetector" not in source
+    assert "ml.engine" not in source
+    adapter = Path(load_qc_engine.__code__.co_filename).read_text(encoding="utf-8")
+    assert "ml.engine" not in adapter
+    assert "v2.engine" in adapter
+
+
+def test_live_engine_is_v2_cw_idw_with_timing(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        _require_artifacts(client)
+        engine = client.app.state.qc_engine
+        assert engine is not None
+        assert type(engine).__module__.startswith("v2.")
+        assert engine.use_stgnn is False
+        assert engine.timing_async is True
 
 
 def test_healthz_reports_model_fields(tmp_path: Path) -> None:
@@ -242,7 +260,7 @@ def test_null_channel_is_physical_comm_error(tmp_path: Path) -> None:
 
 def test_temp_99c_is_physical_fault(tmp_path: Path) -> None:
     with _client(tmp_path) as client:
-        _seed(client, PALAM)
+        _seed(client, PALAM, vary=True)
         response = _ingest(client, PALAM, temp_c=99.0)
         assert response.status_code == 200, response.text
         body = response.json()
@@ -250,6 +268,17 @@ def test_temp_99c_is_physical_fault(tmp_path: Path) -> None:
         assert body["pipeline_status"] == "HARDWARE"
         assert body["fault_type"] == "SPIKE"
         assert body["observed"]["temp_c"] == 99.0
+        # 23 clean seed hours + this fault. Weather is not in the set. Engine tracker is not the score.
+        assert body["health_score"] == 95.83
+        assert body["station_status"] == "HEALTHY"
+        assert body["thermo"] is not None
+        assert body["explainability_text"]
+        assert body["tier3"]["method"] == "cw_idw"
+        row = client.get("/stations/42181/telemetry?limit=1").json()[0]
+        assert row["explainability_text"] == body["explainability_text"]
+        assert row["thermo"]["passed"] == body["thermo"]["passed"]
+        assert row["tier2_score"] == body["tier2"]["score"]
+        assert row["tier3_method"] == "cw_idw"
 
 
 def test_lone_palam_spike_is_not_weather(tmp_path: Path) -> None:
@@ -316,7 +345,7 @@ def test_health_does_not_drop_on_weather_label(tmp_path: Path) -> None:
 
 def test_d18_persists_physical_fault_on_telemetry_and_alert(tmp_path: Path) -> None:
     with _client(tmp_path) as client:
-        _seed(client, PALAM)
+        _seed(client, PALAM, vary=True)
         body = _ingest(client, PALAM, temp_c=99.0).json()
         assert body["label"] == "PHYSICAL_FAULT"
         assert body["pipeline_status"] == "HARDWARE"
@@ -346,6 +375,7 @@ def test_two_usable_buddies_runs_tier3(tmp_path: Path) -> None:
             )
         assert body["tier1"]["passed"] is True
         assert body["tier3"]["performed"] is True
+        assert body["tier3"]["method"] == "cw_idw"
         assert body["tier3"]["usable_count"] >= 2
         assert body["label"] == "HARDWARE_ANOMALY"
         assert body["pipeline_status"] == "HARDWARE"
@@ -398,3 +428,61 @@ def test_isolate_skips_tier3_unconfirmed(tmp_path: Path) -> None:
         assert row["label"] == "UNCONFIRMED_ANOMALY"
         alert = client.get("/alerts").json()[0]
         assert alert["label"] == "UNCONFIRMED_ANOMALY"
+
+
+def _write_unknown_scaler_catalog(path: Path) -> None:
+    path.write_text(
+        """
+{
+  "generated_at": "2026-09-09T00:00:00Z",
+  "notes": "catalog station with no train scaler",
+  "stations": [
+    {
+      "station_id": "42181",
+      "name": "New Delhi / Palam",
+      "latitude": 28.5667,
+      "longitude": 77.1167,
+      "elevation_m": 220.0,
+      "buddy_ids": []
+    },
+    {
+      "station_id": "99999",
+      "name": "No scaler",
+      "latitude": 19.0,
+      "longitude": 72.8,
+      "elevation_m": 10.0,
+      "buddy_ids": []
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+
+def test_unknown_scaler_is_400_catalog_miss_is_404(tmp_path: Path) -> None:
+    with _client(tmp_path, catalog_writer=_write_unknown_scaler_catalog, edges=[]) as client:
+        _require_artifacts(client)
+        missing = client.post(
+            "/ingest",
+            json={
+                "station_id": "00000",
+                "timestamp": _iso(INGEST_HOUR),
+                "temp_c": 26.0,
+                "pres_hpa": 1010.0,
+                "rhum_pct": 60.0,
+            },
+        )
+        assert missing.status_code == 404
+        refused = client.post(
+            "/ingest",
+            json={
+                "station_id": "99999",
+                "timestamp": _iso(INGEST_HOUR),
+                "temp_c": 26.0,
+                "pres_hpa": 1010.0,
+                "rhum_pct": 60.0,
+            },
+        )
+        assert refused.status_code == 400, refused.text
+        assert client.get("/stations/99999/telemetry").json() == []

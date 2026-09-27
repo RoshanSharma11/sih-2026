@@ -82,6 +82,7 @@ class Tier1View(BaseModel):
 
 class Tier2View(BaseModel):
     ran: bool
+    score: float | None = None
     window_mse: float | None = None
     threshold: float | None = None
     feature_contributions: dict[str, float | None] = Field(default_factory=dict)
@@ -89,10 +90,27 @@ class Tier2View(BaseModel):
 
 class Tier3View(BaseModel):
     performed: bool
+    method: str | None = None
     buddy_ids: list[str] = Field(default_factory=list)
     usable_count: int = 0
     neighbors_agree: bool | None = None
     reason_skip: str | None = None
+    mix: ChannelValues | None = None
+    corr: dict[str, float] = Field(default_factory=dict)
+
+
+class ImputedInterval(BaseModel):
+    """90% band per channel. Present only when the overlay is drawn."""
+
+    temp_c: list[float] | None = None
+    pres_hpa: list[float] | None = None
+    rhum_pct: list[float] | None = None
+
+
+class ThermoView(BaseModel):
+    dewpoint_c: float | None = None
+    td_minus_t: float | None = None
+    passed: bool = True
 
 
 class IngestPayload(BaseModel):
@@ -139,6 +157,8 @@ class IngestResult(BaseModel):
     health_score: float
     station_status: StationStatus
     demo_injected: FaultType | None = None
+    imputed_interval: ImputedInterval | None = None
+    thermo: ThermoView | None = None
     tier1: Tier1View | None = None
     tier2: Tier2View | None = None
     tier3: Tier3View | None = None
@@ -206,6 +226,13 @@ class TelemetryRow(BaseModel):
     label: Label | None = None
     pipeline_status: PipelineStatus
     mse: float | None = None
+    explainability_text: str | None = None
+    imputed_interval: ImputedInterval | None = None
+    thermo: ThermoView | None = None
+    tier2_score: float | None = None
+    tier3_method: str | None = None
+    tier3_mix: ChannelValues | None = None
+    tier3_corr: dict[str, float] | None = None
 
 
 class AlertRow(BaseModel):

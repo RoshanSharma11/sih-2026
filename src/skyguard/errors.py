@@ -9,6 +9,10 @@ class StationNotFound(SkyGuardError):
     pass
 
 
+class UnknownScaler(SkyGuardError):
+    """Station is in the catalog but has no train scaler. Product HTTP is 400."""
+
+
 class DuplicateObservation(SkyGuardError):
     pass
 
