@@ -11,7 +11,7 @@ python scripts/run_api.py
 On startup:
 
 1. Create tables (including `station_buddies`, `telemetry_logs.label`)
-2. Upsert imported `data/processed/stations.json` + `buddy_edges.json` (if missing, `/healthz` is ok, `/ingest` 503s)
+2. Upsert imported `data/processed/stations.json` + `buddy_edges.json` (the live 48; stations left over from the 151 are dropped). If the catalog is missing, `/healthz` is ok and `/ingest` 503s. `/healthz` includes `v2_artifacts` (`lstm`, `overlay`, `stgnn`) and the v2 threshold `0.008487` when weights load.
 3. Hydrate 24-hour windows from `telemetry_logs`
 4. Call `v2.engine.get_engine(use_stgnn=False, timing_async=True)` once (CW-IDW, TIMING queued)
 
@@ -39,7 +39,7 @@ Do not start `uvicorn v2.main:app` or `uvicorn ml.main:app` as the product serve
 | `imputed` | `predicted` |
 | `imputed_interval` | `imputed_interval` |
 | window deque | `window` list of hour rows |
-| `station_buddies` + neighbor deques | `buddies` |
+| `station_buddies` + neighbor deques that already have hours | `buddies` |
 
 Persist `predicted` (imputed columns), `imputed_interval`, `thermo`, `tier2.score`, `tier3.method` / `mix` / `corr`, and `reason`. If the engine raises `UnknownStationError`, or the station has no train scaler, return 400. A station missing from the product catalog is still 404.
 
@@ -81,7 +81,7 @@ Need loaded artifacts **or** a fixture engine. Minimum:
 ## What “done” looks like
 
 - All routes in contracts respond
-- SQLite has 151 (or imported) stations, telemetry, alerts, buddy edges
+- SQLite has the live 48, telemetry, alerts, and buddy edges inside that set
 - Clean streamer can run a filtered ingest set without 500s
 - `/demo/inject` neighborhood storm vs single-station spike produce different `label`s
 - Frontend can poll `/stations?ids=` and `/alerts` without undocumented fields

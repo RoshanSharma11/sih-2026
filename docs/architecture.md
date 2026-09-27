@@ -1,11 +1,11 @@
 # Architecture
 
-SkyGuard is a 3-tier quality-control service in front of an Indian AWS network. **Production QC lives in `v2-deliverable/`**. Backend is the product shell (persist, demo, query). The processed catalog is still the imported 151 until the live plan switches it to the 48.
+SkyGuard is a 3-tier quality-control service in front of an Indian AWS network. **Production QC lives in `v2-deliverable/`**. Backend is the product shell (persist, demo, query). The processed catalog is the live 48 from `stations_judge48.csv`. Training scalers still cover 151 ids; Palam is not on the live map.
 
 ## System
 
 ```
-ML catalog (151) + hourly series
+Live catalog (48) + buddy edges inside that set
         │
         ▼
 ┌─────────────────────────────┐
@@ -128,7 +128,7 @@ view set  --UI / GET ?ids= / stream-filter.view-->
 ingest set = view ∪ 1-hop buddies   (streamer POSTs these)
 ```
 
-`GET /stations` may return 151 rows. For the map, each summary includes `latest` so the client does not N+1 poll.
+`GET /stations` returns the live 48 (or an `ids=` subset). Each summary includes `latest` so the client does not N+1 poll.
 
 ## Config
 

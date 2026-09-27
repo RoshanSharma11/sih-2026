@@ -201,6 +201,9 @@ class StationSummary(BaseModel):
     latitude: float
     longitude: float
     elevation_m: float | None = None
+    aws_id: str | None = None
+    aws_name: str | None = None
+    aws_distance_km: float | None = None
     buddy_ids: list[str] = Field(default_factory=list)
     isolate: bool = False
     cluster_id: ClusterId | None = None
@@ -249,12 +252,19 @@ class AlertRow(BaseModel):
     contribution_rhum: float | None = None
 
 
+class V2Artifacts(BaseModel):
+    lstm: bool = False
+    overlay: bool = False
+    stgnn: bool = False
+
+
 class Healthz(BaseModel):
     ok: bool = True
     model_loaded: bool = False
     threshold: float | None = None
     n_stations: int = 0
     n_isolates: int = 0
+    v2_artifacts: V2Artifacts = Field(default_factory=V2Artifacts)
 
 
 class DemoOverlayStatus(BaseModel):

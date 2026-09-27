@@ -1,16 +1,20 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 
+from skyguard.db.models import Station, StationBuddy
+from skyguard.db.session import create_tables, make_engine, make_session_factory
 from skyguard.engine.adapter import (
     LABEL_TO_PIPELINE,
     ML_TO_PUBLIC,
     PUBLIC_TO_ML,
+    build_ml_payload,
     map_ml_result,
     point_to_ml,
     severity_for,
 )
-from skyguard.engine.windows import WindowPoint
+from skyguard.engine.windows import WindowPoint, WindowStore
 from skyguard.schemas import FaultType, Label, PipelineStatus, Severity
 
 
@@ -19,6 +23,30 @@ def test_public_and_ml_channel_names_round_trip() -> None:
     assert ML_TO_PUBLIC["temp"] == "temp_c"
     assert ML_TO_PUBLIC["rhum"] == "rhum_pct"
     assert ML_TO_PUBLIC["pres"] == "pres_hpa"
+
+
+def test_buddy_payload_skips_neighbors_with_no_hours(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path / "buddies.db")
+    create_tables(engine)
+    session = make_session_factory(engine)()
+    for station_id, name in (("43003", "Santa Cruz"), ("43057", "Colaba"), ("43002", "Juhu")):
+        session.add(
+            Station(station_id=station_id, name=name, latitude=19.1, longitude=72.8, isolate=False)
+        )
+    session.flush()
+    session.add(StationBuddy(station_id="43003", buddy_id="43057", distance_km=24.3))
+    session.add(StationBuddy(station_id="43003", buddy_id="43002", distance_km=1.8))
+    session.commit()
+
+    windows = WindowStore()
+    ts = datetime(2024, 12, 31, 23, tzinfo=timezone.utc)
+    windows.append("43003", WindowPoint(ts, 26.0, 1013.0, 65.0))
+    windows.append("43057", WindowPoint(ts, 25.0, 1013.0, 66.0))
+    payload = build_ml_payload(session, "43003", ts, 26.0, 1013.0, 65.0, windows)
+    session.close()
+
+    assert {row["station_id"] for row in payload["buddies"]} == {"43057"}
+    assert payload["buddies"][0]["window"][0]["temp"] == 25.0
 
 
 def test_point_to_ml_uses_engine_field_names() -> None:

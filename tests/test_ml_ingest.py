@@ -235,6 +235,12 @@ def test_healthz_reports_model_fields(tmp_path: Path) -> None:
         assert "model_loaded" in body
         assert "threshold" in body
         assert body["n_isolates"] == 0
+        assert set(body["v2_artifacts"]) == {"lstm", "overlay", "stgnn"}
+        if body["model_loaded"]:
+            assert body["v2_artifacts"]["lstm"] is True
+            assert body["v2_artifacts"]["overlay"] is True
+            assert body["v2_artifacts"]["stgnn"] is True
+            assert round(body["threshold"], 6) == 0.008487
 
 
 def test_null_channel_is_physical_comm_error(tmp_path: Path) -> None:

@@ -199,7 +199,7 @@ Empty `station_ids` means all catalog stations (view = ingest = full catalog). S
 
 | Method | Path | Returns |
 |---|---|---|
-| `GET` | `/healthz` | `{ok, model_loaded, threshold, n_stations, n_isolates}` |
+| `GET` | `/healthz` | `{ok, model_loaded, threshold, n_stations, n_isolates, v2_artifacts}` |
 | `GET` | `/stations?ids=` | list of station summaries (`ids` = view set, optional) |
 | `GET` | `/stations/{id}` | summary + latest observation |
 | `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | raw + imputed series |
@@ -208,7 +208,7 @@ Empty `station_ids` means all catalog stations (view = ingest = full catalog). S
 | `GET` | `/demo/stream-filter` | current view + ingest sets |
 | `GET` | `/buddy-map` | `{stations, isolates, buddies}` (from ML graph) |
 
-Station summary (list **includes** `latest` so a 151-station map does not N+1):
+Station summary (list **includes** `latest` so the live map does not N+1):
 
 ```json
 {
@@ -217,8 +217,11 @@ Station summary (list **includes** `latest` so a 151-station map does not N+1):
   "latitude": 28.5833,
   "longitude": 77.2,
   "elevation_m": 211.0,
-  "buddy_ids": ["42181"],
-  "isolate": false,
+  "aws_id": "55FDD400",
+  "aws_name": "SAFDARJUNG",
+  "aws_distance_km": 1.631,
+  "buddy_ids": [],
+  "isolate": true,
   "health_score": 88.0,
   "status": "HEALTHY",
   "latest": {
@@ -231,7 +234,11 @@ Station summary (list **includes** `latest` so a 151-station map does not N+1):
 }
 ```
 
-`cluster_id` is omitted unless the imported CSV supplies a region tag. QC must not read it. List rows include `buddy_ids`, `isolate`, and `latest` (null until the first seeded or ingested hour).
+`cluster_id` is omitted unless the imported CSV supplies a region tag. QC must not read it. List rows include `buddy_ids`, `isolate`, `aws_id`, `aws_name`, `aws_distance_km`, and `latest` (null until the first seeded or ingested hour).
+
+`aws_id` matches the IMD AWS/ARG `ID`. `aws_distance_km` is the WMO-to-AWS site offset from `stations_judge48.csv` (`distance_km` there). It is not a buddy-edge length. Safdarjung has no buddies inside the live 48, so `buddy_ids` is empty and `isolate` is true.
+
+`/healthz` `v2_artifacts` is `{lstm, overlay, stgnn}`: each flag is true when that weight file loaded. `threshold` is the v2 operating score (`0.008487`). Graph weights may be loaded while ingest still uses `cw_idw`.
 
 Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, and `tier3_corr`. `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
 
@@ -283,6 +290,9 @@ CREATE TABLE stations (
   longitude    REAL NOT NULL,
   elevation_m  REAL,
   isolate      BOOLEAN NOT NULL DEFAULT 0,
+  aws_id       VARCHAR(32),
+  aws_name     VARCHAR(100),
+  aws_distance_km REAL,
   health_score REAL NOT NULL DEFAULT 100.0,
   status       VARCHAR(20) NOT NULL DEFAULT 'HEALTHY'
 );

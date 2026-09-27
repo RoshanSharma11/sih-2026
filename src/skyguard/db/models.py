@@ -22,6 +22,9 @@ class Station(Base):
     elevation_m: Mapped[float | None] = mapped_column(Float, nullable=True)
     cluster_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
     isolate: Mapped[bool] = mapped_column(Boolean, default=False)
+    aws_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    aws_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    aws_distance_km: Mapped[float | None] = mapped_column(Float, nullable=True)
     health_score: Mapped[float] = mapped_column(Float, default=100.0)
     status: Mapped[str] = mapped_column(String(20), default="HEALTHY")
 

@@ -26,7 +26,14 @@ def create_app(
 ) -> FastAPI:
     resolved_db = db_path or DB_PATH
     resolved_stations = stations_path or STATIONS_PATH
-    resolved_edges = buddy_edges_path or BUDDY_EDGES_PATH
+    # A custom catalog owns its buddy_ids. The product edges file is only the
+    # pair of the default stations.json, unless the caller passes one.
+    if buddy_edges_path is not None:
+        resolved_edges = buddy_edges_path
+    elif stations_path is None:
+        resolved_edges = BUDDY_EDGES_PATH
+    else:
+        resolved_edges = None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -44,7 +51,7 @@ def create_app(
             if resolved_stations.exists():
                 document = read_catalog(resolved_stations)
                 upsert_catalog(session, document)
-                if resolved_edges.exists():
+                if resolved_edges is not None and resolved_edges.exists():
                     edges_doc = read_catalog(resolved_edges)
                     known = {row["station_id"] for row in document.get("stations", [])}
                     upsert_buddies(session, load_buddy_edges_document(edges_doc), known)

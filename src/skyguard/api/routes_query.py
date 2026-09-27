@@ -17,6 +17,7 @@ from skyguard.schemas import (
     ClusterId,
     FaultType,
     Healthz,
+    V2Artifacts,
     Label,
     PipelineStatus,
     Severity,
@@ -100,6 +101,9 @@ def _summary(
         latitude=station.latitude,
         longitude=station.longitude,
         elevation_m=station.elevation_m,
+        aws_id=station.aws_id,
+        aws_name=station.aws_name,
+        aws_distance_km=station.aws_distance_km,
         buddy_ids=list(buddy_ids or []),
         isolate=bool(station.isolate),
         cluster_id=_cluster(station.cluster_id),
@@ -116,6 +120,17 @@ def _require_station(session: Session, station_id: str) -> Station:
     return station
 
 
+def _artifact_flags(engine: object | None) -> V2Artifacts:
+    if engine is None:
+        return V2Artifacts()
+
+    def _loaded(name: str) -> bool:
+        model = getattr(engine, name, None)
+        return bool(model is not None and getattr(model, "loaded", False))
+
+    return V2Artifacts(lstm=_loaded("lstm"), overlay=_loaded("overlay"), stgnn=_loaded("stgnn"))
+
+
 @router.get("/healthz", response_model=Healthz)
 def healthz(request: Request, session: Session = Depends(get_db)) -> Healthz:
     engine = getattr(request.app.state, "qc_engine", None)
@@ -130,6 +145,7 @@ def healthz(request: Request, session: Session = Depends(get_db)) -> Healthz:
         threshold=getattr(lstm, "threshold", None),
         n_stations=int(n_stations),
         n_isolates=int(n_isolates),
+        v2_artifacts=_artifact_flags(engine),
     )
 
 

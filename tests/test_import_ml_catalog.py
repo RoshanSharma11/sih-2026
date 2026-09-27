@@ -4,12 +4,14 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 from fastapi.testclient import TestClient
 
 from skyguard.api.main import create_app
 from skyguard.data.import_ml_catalog import (
     DEMO_STATION_IDS,
     CatalogImportError,
+    import_live_catalog,
     import_ml_catalog,
     load_scaler_ids,
 )
@@ -174,6 +176,70 @@ def test_scaler_ids_subset_of_full_imported_catalog(tmp_path) -> None:
         assert station_id in imported
     # No edges → everyone is an isolate (ML rule: fewer than 2 buddies).
     assert imported["42181"]["isolate"] is True
+
+
+def test_live_catalog_is_the_judge_48(tmp_path) -> None:
+    result = import_live_catalog(
+        stations_path=tmp_path / "stations.json",
+        edges_out=tmp_path / "buddy_edges.json",
+    )
+    catalog = json.loads(Path(result["catalog_path"]).read_text(encoding="utf-8"))
+    by_id = {row["station_id"]: row for row in catalog["stations"]}
+    live_ids = set(by_id)
+    assert catalog["n_stations"] == 48
+    assert "42181" not in live_ids
+    assert result["missing_scalers"] == []
+    safdarjung = by_id["42182"]
+    assert safdarjung["aws_id"] == "55FDD400"
+    assert safdarjung["aws_name"] == "SAFDARJUNG"
+    assert safdarjung["aws_distance_km"] == pytest.approx(1.631)
+    assert safdarjung["isolate"] is True
+    assert safdarjung["buddy_ids"] == []
+    santa = by_id["43003"]
+    assert santa["aws_id"] == "B489804E"
+    assert set(santa["buddy_ids"]) == {"43002", "43057", "43058"}
+    assert santa["isolate"] is False
+    for row in catalog["stations"]:
+        assert row["aws_id"]
+        assert set(row["buddy_ids"]) <= live_ids
+
+    app = create_app(
+        db_path=tmp_path / "wide.db",
+        stations_path=tmp_path / "old.json",
+        buddy_edges_path=tmp_path / "old_edges.json",
+    )
+    # Seed a station that is outside the 48, then boot the live catalog over it.
+    old = {
+        "stations": [
+            {
+                "station_id": "42181",
+                "name": "New Delhi / Palam",
+                "latitude": 28.5667,
+                "longitude": 77.1167,
+                "elevation_m": 220.0,
+                "isolate": False,
+                "buddy_ids": [],
+            }
+        ]
+    }
+    (tmp_path / "old.json").write_text(json.dumps(old), encoding="utf-8")
+    (tmp_path / "old_edges.json").write_text(json.dumps({"edges": []}), encoding="utf-8")
+    with TestClient(app) as client:
+        assert client.get("/stations/42181").status_code == 200
+
+    live = create_app(
+        db_path=tmp_path / "wide.db",
+        stations_path=tmp_path / "stations.json",
+        buddy_edges_path=tmp_path / "buddy_edges.json",
+    )
+    with TestClient(live) as client:
+        body = client.get("/healthz").json()
+        assert body["n_stations"] == 48
+        assert client.get("/stations/42181").status_code == 404
+        listed = client.get("/stations/42182").json()
+        assert listed["aws_id"] == "55FDD400"
+        assert listed["aws_distance_km"] == pytest.approx(1.631)
+        assert set(body["v2_artifacts"]) == {"lstm", "overlay", "stgnn"}
 
 
 def test_api_boot_upserts_station_buddies(tmp_path) -> None:

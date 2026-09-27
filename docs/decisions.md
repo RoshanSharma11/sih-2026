@@ -94,7 +94,9 @@ The F0–F6 Streamlit page remains until the frontend rewrite. After integration
 
 ## D14 — One catalog: ML’s 151 stations + buddy graph
 
-**Lock:** Source of truth for who exists and who may buddy whom is ML. Backend upserts all exported ids. LSTM **refuses** a station with no train scaler (do not borrow another station’s scaler).
+**Superseded for the product catalog by D19.** Training scalers still cover 151 ids. The live map does not.
+
+**Lock (training):** Source of truth for who was trained, and who may buddy whom inside that training graph, is ML. LSTM **refuses** a station with no train scaler (do not borrow another station’s scaler).
 
 Named clusters (NORTH/WEST) may remain as optional UI region tags if the CSV has them. They are not used for QC.
 
@@ -120,7 +122,7 @@ Never ingest a lone station and expect `GENUINE_WEATHER_EVENT`. If the user turn
 
 ## D17 — Frontend rewrite comes after integration
 
-**Lock:** Do not rebuild the dashboard until slices I1–I5 work. Then multi-page UI with station filter, 151-station map (or filtered subset), predicted overlay, health, alerts, inject on neighborhoods.
+**Lock:** Do not rebuild the dashboard until slices I1–I5 work. The five-page console is that UI. The live map is the 48 in D19, not the 151 training ids.
 
 ## D18 — Label mapping (ML → existing dashboard)
 
@@ -135,3 +137,13 @@ Until the new UI ships, keep `pipeline_status` so F0–F6 does not go dark.
 | `UNCONFIRMED_ANOMALY` | `UNKNOWN` | true | yes |
 
 `is_anomaly` follows ML (true for weather). Health follows ML’s `SENSOR_HEALTH_LABELS` (weather excluded).
+
+## D19 — Live catalog is the 48
+
+**Lock:** The product catalog is `v2-deliverable/v2/data/stations_judge48.csv` plus `buddy_edges.csv`, restricted to those 48 ids. Palam `42181` is not in it. Each station stores `aws_id`, `aws_name`, and `aws_distance_km` (the CSV `distance_km`: WMO site to the IMD AWS/ARG).
+
+Buddy edges and ingest buddy payloads include only neighbors that are in this catalog and that already have hours. An empty neighbor window is omitted. Stations with fewer than two buddies inside the 48 are isolates (Safdarjung).
+
+Boot replaces the SQLite catalog with this document, including dropping stations that are no longer in it.
+
+`/healthz` reports `v2_artifacts.lstm`, `v2_artifacts.overlay`, and `v2_artifacts.stgnn` (graph weights loaded). `threshold` is the v2 operating score `0.008487`. Loading the graph weights does not turn GAT on.

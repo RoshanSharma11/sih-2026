@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
-from skyguard.db.models import Station, StationBuddy
+from skyguard.db.models import AnomalyAlert, Station, StationBuddy, TelemetryLog
 from skyguard.errors import StationNotFound
 from skyguard.schemas import StationStatus
 
@@ -17,6 +17,9 @@ def upsert_catalog(session: Session, document: dict[str, Any]) -> int:
     for row in document.get("stations", []):
         station = session.get(Station, row["station_id"])
         isolate = bool(row.get("isolate", False))
+        aws_id = row.get("aws_id")
+        aws_name = row.get("aws_name")
+        aws_distance_km = row.get("aws_distance_km")
         if station is None:
             station = Station(
                 station_id=row["station_id"],
@@ -26,6 +29,9 @@ def upsert_catalog(session: Session, document: dict[str, Any]) -> int:
                 elevation_m=row.get("elevation_m"),
                 cluster_id=row.get("cluster_id"),
                 isolate=isolate,
+                aws_id=aws_id,
+                aws_name=aws_name,
+                aws_distance_km=aws_distance_km,
                 health_score=100.0,
                 status=StationStatus.HEALTHY.value,
             )
@@ -38,6 +44,9 @@ def upsert_catalog(session: Session, document: dict[str, Any]) -> int:
             if "cluster_id" in row:
                 station.cluster_id = row.get("cluster_id")
             station.isolate = isolate
+            station.aws_id = aws_id
+            station.aws_name = aws_name
+            station.aws_distance_km = aws_distance_km
         count += 1
     session.flush()
 
@@ -56,7 +65,27 @@ def upsert_catalog(session: Session, document: dict[str, Any]) -> int:
             edges.append((station_id, buddy_id, distances.get(buddy_id, 0.0)))
     if edges:
         upsert_buddies(session, edges, known)
+    if known:
+        prune_catalog(session, known)
     return count
+
+
+def prune_catalog(session: Session, keep_ids: set[str]) -> int:
+    """Drop stations that are no longer in the imported catalog, and their rows."""
+    existing = set(session.scalars(select(Station.station_id)).all())
+    remove = existing - keep_ids
+    if not remove:
+        return 0
+    session.execute(
+        delete(StationBuddy).where(
+            or_(StationBuddy.station_id.in_(remove), StationBuddy.buddy_id.in_(remove))
+        )
+    )
+    session.execute(delete(TelemetryLog).where(TelemetryLog.station_id.in_(remove)))
+    session.execute(delete(AnomalyAlert).where(AnomalyAlert.station_id.in_(remove)))
+    session.execute(delete(Station).where(Station.station_id.in_(remove)))
+    session.flush()
+    return len(remove)
 
 
 def upsert_buddies(

@@ -1,14 +1,15 @@
-"""Import ML's 151-station catalog + buddy graph (+ optional hourly CSVs).
+"""Import the live 48-station catalog (or the legacy 151-station dump).
 
-Expected files (gitignored, not in the ml-branch pull):
+Default source is v2's judge set, not the 151 training catalog:
 
-    ml/data/raw/stations.csv
-    ml/data/raw/buddy_edges.csv          # or buddy columns on stations.csv
-    ml/data/raw/{station_id}.csv        # hourly temp/rhum/pres
+    v2-deliverable/v2/data/stations_judge48.csv
+    v2-deliverable/v2/data/buddy_edges.csv
 
-Writes data/processed/stations.json, buddy_edges.json, and optional parquet.
+Writes data/processed/stations.json and buddy_edges.json. Buddy edges are
+kept only when both stations are in the imported set.
 
     python -m skyguard.data.import_ml_catalog
+    python -m skyguard.data.import_ml_catalog --legacy-151
 """
 
 from __future__ import annotations
@@ -24,10 +25,13 @@ import pandas as pd
 
 from skyguard.config import (
     BUDDY_EDGES_PATH,
+    JUDGE48_CSV,
     ML_RAW_DIR,
     ML_SCALERS_PATH,
     PROCESSED_DIR,
     STATIONS_PATH,
+    V2_EDGES_CSV,
+    V2_SCALERS_PATH,
 )
 from skyguard.data.catalog import nearest_cluster, write_catalog
 
@@ -90,6 +94,8 @@ def load_stations_table(path: Path) -> pd.DataFrame:
     if "station_id" not in df.columns:
         raise CatalogImportError(f"{path} has no station_id column")
     df["station_id"] = df["station_id"].astype(str)
+    if "aws_id" in df.columns:
+        df["aws_id"] = df["aws_id"].map(lambda value: "" if pd.isna(value) else str(value).strip())
     return df
 
 
@@ -158,6 +164,11 @@ def build_buddy_graph(
     return graph, isolates
 
 
+def _text_or_none(value: object) -> str | None:
+    text = _series_str(value)
+    return text or None
+
+
 def _float_or_none(value: object) -> float | None:
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return None
@@ -176,6 +187,9 @@ def catalog_rows(
     lat_col = _pick_column(table, ("latitude", "lat", "Latitude"))
     lon_col = _pick_column(table, ("longitude", "lon", "Longitude"))
     elev_col = _pick_column(table, ("elevation_m", "elevation", "elev", "Elevation"))
+    aws_col = _pick_column(table, ("aws_id",))
+    aws_name_col = _pick_column(table, ("aws_name",))
+    aws_dist_col = _pick_column(table, ("distance_km",))
     if lat_col is None or lon_col is None:
         raise CatalogImportError(
             "stations.csv needs latitude and longitude columns (latitude/lat, longitude/lon)."
@@ -198,6 +212,9 @@ def catalog_rows(
                 "cluster_id": nearest_cluster(latitude, longitude),
                 "isolate": station_id in isolates,
                 "buddy_ids": [item["station_id"] for item in buddies],
+                "aws_id": _text_or_none(raw[aws_col]) if aws_col else None,
+                "aws_name": _text_or_none(raw[aws_name_col]) if aws_name_col else None,
+                "aws_distance_km": _float_or_none(raw[aws_dist_col]) if aws_dist_col else None,
             }
         )
     return rows
@@ -274,27 +291,36 @@ def import_ml_catalog(
     processed_dir: Path | None = None,
     scalers_path: Path | None = None,
     convert_station_hours: bool = True,
+    stations_csv: Path | None = None,
+    edges_csv: Path | None = None,
+    notes: str | None = None,
+    report_extra_scalers: bool = True,
 ) -> dict[str, Any]:
     root = raw_dir or ML_RAW_DIR
-    stations_csv = root / "stations.csv"
-    if not stations_csv.exists():
-        raise CatalogImportError(_missing_raw_message(root))
+    stations_file = stations_csv or (root / "stations.csv")
+    if not stations_file.exists():
+        if stations_csv is None:
+            raise CatalogImportError(_missing_raw_message(root))
+        raise CatalogImportError(f"Station catalog not found: {stations_file}")
 
-    table = load_stations_table(stations_csv)
-    edges_csv = root / "buddy_edges.csv"
-    graph, isolates = build_buddy_graph(table, edges_csv if edges_csv.exists() else None)
+    table = load_stations_table(stations_file)
+    edges_file = edges_csv if edges_csv is not None else root / "buddy_edges.csv"
+    graph, isolates = build_buddy_graph(table, edges_file if edges_file.exists() else None)
     stations = catalog_rows(table, graph, isolates)
     scaler_ids = load_scaler_ids(scalers_path or ML_SCALERS_PATH)
     imported_ids = {row["station_id"] for row in stations}
     missing_scalers = sorted(imported_ids - scaler_ids) if scaler_ids else []
-    missing_catalog = sorted(scaler_ids - imported_ids) if scaler_ids else []
+    missing_catalog = (
+        sorted(scaler_ids - imported_ids) if scaler_ids and report_extra_scalers else []
+    )
 
     document = {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "source": str(stations_csv),
+        "source": str(stations_file),
         "n_stations": len(stations),
         "n_isolates": len(isolates),
-        "notes": (
+        "notes": notes
+        or (
             "Imported from ML catalog. cluster_id is a UI region tag only; "
             "QC uses buddy_ids. isolate = fewer than 2 exported buddies."
         ),
@@ -325,13 +351,46 @@ def import_ml_catalog(
     }
 
 
+def import_live_catalog(
+    stations_csv: Path | None = None,
+    edges_csv: Path | None = None,
+    stations_path: Path | None = None,
+    edges_out: Path | None = None,
+    scalers_path: Path | None = None,
+) -> dict[str, Any]:
+    """Import the 48-station live map. Edges outside that set are dropped."""
+    return import_ml_catalog(
+        stations_csv=stations_csv or JUDGE48_CSV,
+        edges_csv=edges_csv or V2_EDGES_CSV,
+        stations_path=stations_path,
+        edges_out=edges_out,
+        scalers_path=scalers_path or V2_SCALERS_PATH,
+        convert_station_hours=False,
+        report_extra_scalers=False,
+        notes=(
+            "Live catalog is the 48 stations in stations_judge48.csv. "
+            "Buddy edges include only neighbors in this set. "
+            "aws_distance_km is the WMO-to-AWS match, not a buddy distance. "
+            "isolate = fewer than 2 buddies inside the 48."
+        ),
+    )
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Import ML stations.csv + buddy graph.")
-    parser.add_argument("--raw-dir", type=Path, default=None, help="Default ml/data/raw")
-    parser.add_argument("--no-hours", action="store_true", help="Skip parquet conversion.")
+    parser = argparse.ArgumentParser(description="Import the live 48-station catalog.")
+    parser.add_argument(
+        "--legacy-151",
+        action="store_true",
+        help="Import ml/data/raw (151 training stations) instead of the live 48.",
+    )
+    parser.add_argument("--raw-dir", type=Path, default=None, help="Legacy raw dir (with --legacy-151).")
+    parser.add_argument("--no-hours", action="store_true", help="Skip parquet conversion on the legacy import.")
     args = parser.parse_args()
     try:
-        result = import_ml_catalog(raw_dir=args.raw_dir, convert_station_hours=not args.no_hours)
+        if args.legacy_151:
+            result = import_ml_catalog(raw_dir=args.raw_dir, convert_station_hours=not args.no_hours)
+        else:
+            result = import_live_catalog()
     except CatalogImportError as exc:
         raise SystemExit(str(exc)) from exc
     print(f"Wrote {result['n_stations']} stations to {result['catalog_path']}")

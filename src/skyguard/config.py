@@ -19,6 +19,15 @@ ML_RAW_DIR = Path(os.environ.get("SKYGUARD_ML_RAW", REPO_ROOT / "ml" / "data" / 
 ML_SCALERS_PATH = Path(
     os.environ.get("SKYGUARD_ML_SCALERS", REPO_ROOT / "ml" / "ml" / "artifacts" / "scalers.json")
 )
+V2_DATA_DIR = REPO_ROOT / "v2-deliverable" / "v2" / "data"
+JUDGE48_CSV = Path(os.environ.get("SKYGUARD_JUDGE48", V2_DATA_DIR / "stations_judge48.csv"))
+V2_EDGES_CSV = Path(os.environ.get("SKYGUARD_V2_EDGES", V2_DATA_DIR / "buddy_edges.csv"))
+V2_SCALERS_PATH = Path(
+    os.environ.get(
+        "SKYGUARD_V2_SCALERS",
+        REPO_ROOT / "v2-deliverable" / "v2" / "artifacts" / "scalers.json",
+    )
+)
 
 WINDOW_HOURS = int(os.environ.get("SKYGUARD_WINDOW", "24"))
 STREAM_MS = int(os.environ.get("SKYGUARD_STREAM_MS", "200"))

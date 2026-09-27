@@ -214,15 +214,21 @@ def severity_for(label: Label, confidence: float | None) -> Severity | None:
 
 
 def _buddy_payloads(session: Session, station_id: str, windows: WindowStore) -> list[dict[str, Any]]:
+    """1-hop neighbors that already have hours. An empty window was never ingested."""
     rows = session.scalars(select(StationBuddy).where(StationBuddy.station_id == station_id)).all()
-    return [
-        {
-            "station_id": row.buddy_id,
-            "distance_km": float(row.distance_km),
-            "window": [point_to_ml(point) for point in windows.points(row.buddy_id)],
-        }
-        for row in rows
-    ]
+    payloads: list[dict[str, Any]] = []
+    for row in rows:
+        points = windows.points(row.buddy_id)
+        if not points:
+            continue
+        payloads.append(
+            {
+                "station_id": row.buddy_id,
+                "distance_km": float(row.distance_km),
+                "window": [point_to_ml(point) for point in points],
+            }
+        )
+    return payloads
 
 
 def _fault_type(raw: str | None, label: Label) -> FaultType | None:
