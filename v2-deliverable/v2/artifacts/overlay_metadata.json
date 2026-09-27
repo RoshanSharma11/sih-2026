@@ -1,0 +1,31 @@
+{
+  "task": "last_hour_gaussian",
+  "seed": 42,
+  "hidden": 64,
+  "train_years": "2020-2022",
+  "val_year": 2023,
+  "test_used": false,
+  "n_steps": 1,
+  "interval_z": 1.64,
+  "val_mae_scaled": {
+    "temp": 0.017485445365309715,
+    "rhum": 0.034546125680208206,
+    "pres": 0.01061466708779335
+  },
+  "val_mse_scaled": 0.0010820817516651005,
+  "val_coverage_90": {
+    "temp": 0.92285,
+    "rhum": 0.90875,
+    "pres": 0.91615
+  },
+  "gates": {
+    "temp": 0.03,
+    "rhum": 0.05,
+    "pres": 0.03
+  },
+  "gates_passed": true,
+  "best_epoch": 19,
+  "n_train_windows": 80000,
+  "n_val_windows": 20000,
+  "note": "Ingest ignores overlay.pt unless gates_passed. Fallback is LSTM last step / CW-IDW mix, interval null."
+}

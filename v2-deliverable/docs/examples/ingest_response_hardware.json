@@ -1,0 +1,109 @@
+{
+  "station_id": "43003",
+  "timestamp": "2024-12-31T23:00:00",
+  "observed": {
+    "temp": 55.0,
+    "rhum": 95.0,
+    "pres": 980.0
+  },
+  "predicted": {
+    "temp": 25.237392902374268,
+    "rhum": 69.0666788816452,
+    "pres": 1013.2884755134583
+  },
+  "reconstructed": {
+    "temp": 25.237392902374268,
+    "rhum": 69.0666788816452,
+    "pres": 1013.2884755134583
+  },
+  "imputed_interval": {
+    "temp": [
+      24.19672405719757,
+      26.278061747550964
+    ],
+    "rhum": [
+      61.93787693977356,
+      76.19548082351685
+    ],
+    "pres": [
+      1012.6984699964523,
+      1013.8784810304642
+    ]
+  },
+  "is_anomaly": true,
+  "confidence": 1.0,
+  "label": "HARDWARE_ANOMALY",
+  "fault_type": "SPIKE",
+  "affected_variables": [
+    "temp",
+    "pres"
+  ],
+  "reason": "temp observed 55.00 vs predicted 25.24. Neighbor mix 24.40 (n=3). Neighbors disagree; treated as hardware anomaly.",
+  "thermo": {
+    "dewpoint_c": 53.933,
+    "td_minus_t": -1.067,
+    "passed": true
+  },
+  "tier1": {
+    "passed": false,
+    "violations": [
+      "STEP:|dT|=29.00>=10.0",
+      "STEP:|dRH|=30.00>=30.0",
+      "STEP:|dP|=33.00>=10.0"
+    ]
+  },
+  "tier2": {
+    "ran": true,
+    "score": 0.16455959528684616,
+    "window_mse": 0.03274358808994293,
+    "threshold": 0.008487140408717099,
+    "feature_contributions": {
+      "temp": 0.4635363646545354,
+      "rhum": 0.03805309901936294,
+      "pres": 0.49841054819943836
+    }
+  },
+  "tier3": {
+    "performed": true,
+    "method": "cw_idw",
+    "neighbors_agree": false,
+    "buddy_ids": [
+      "43057",
+      "43002",
+      "43058"
+    ],
+    "usable_count": 3,
+    "mix": {
+      "temp": 24.399572594367637,
+      "rhum": 77.00320554224268,
+      "pres": 1012.8020519282239
+    },
+    "idw_estimate": {
+      "temp": 24.399572594367637,
+      "rhum": 77.00320554224268,
+      "pres": 1012.8020519282239
+    },
+    "corr": {
+      "43057": 0.2445,
+      "43002": 0.2119,
+      "43058": 0.2154
+    },
+    "residual": {
+      "temp": 30.600427405632363,
+      "rhum": 17.996794457757318,
+      "pres": -32.80205192822393
+    },
+    "reason_skip": null,
+    "p_agree": null
+  },
+  "climatology": {
+    "temp_p999_train": null,
+    "last_vs_p999": null
+  },
+  "timing": null,
+  "health": {
+    "index_7d": 0.5,
+    "state": "CRITICAL",
+    "window_hours": 2
+  }
+}
