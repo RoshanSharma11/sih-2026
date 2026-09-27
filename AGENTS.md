@@ -2,7 +2,13 @@
 
 This is SIH PS 26073 (SkyGuard AI). Read `docs/` before writing code.
 
-Required read order: `docs/README.md` → `docs/progress.md` → `docs/context.md` → `docs/decisions.md` → `docs/contracts.md` → the file for the area you are changing.
+## Do this next
+
+The current build is **live IMD hours through v2**, not the Palam / `ml/` demo. Read [`docs/v2-live-plan.md`](docs/v2-live-plan.md) and implement **step 2** before anything else. Steps are ordered. Update `docs/contracts.md` in the same change when a step adds a field.
+
+IMD credentials are already in `.env` (`IMD_API_KEY`, `IMD_EMAIL`, `IMD_PASSWORD`, `IMD_TOKEN_URL`, `IMD_AWS_URL`). That file is gitignored. Never copy those values into code, docs, or commits. Names only live in `.env.example`.
+
+Required read order: `docs/v2-live-plan.md` → `v2-deliverable/docs/CONTRACT.md` → `docs/progress.md` → `docs/contracts.md` → the file for the area you are changing.
 
 - Status / handoff: `docs/progress.md`
 - Data / streamer / inject: `docs/data-simulator.md`
@@ -31,5 +37,5 @@ The history must stay reviewable. Do not batch a whole afternoon of work into on
 2. Fault math lives only in `skyguard.data.inject`.
 3. The streamer sends clean data. Live faults go through `/demo/inject`.
 4. Never overwrite raw observations. Imputed values are overlay columns.
-5. Do not train models unless asked. Production QC is `ml/ml/engine.py` (in-process from the backend). Do not call legacy `skyguard.engine` tiers on live ingest after I2. Dashboard polls contracts only; do not invent API fields.
+5. Do not train models unless asked. Production QC is `v2-deliverable` `v2.engine.process_aws_data` (in-process, GAT off). Do not call `ml.engine` or legacy `skyguard.engine` tiers on live ingest. Dashboard polls the product API only; do not invent API fields. Palam is not the default station. Live catalog is the 48 in `stations_judge48.csv`.
 6. Buddy check uses the ML buddy graph (≥2 neighbors). Delhi must not validate Mumbai. Station view filters must still ingest 1-hop buddies.
