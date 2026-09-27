@@ -60,6 +60,10 @@ Storm overlay lists every station in the **neighborhood** of `station_id` (D3). 
 
 `POST /demo/replay` loads `demo_windows.json` and plays one story through `ingest_observation` (D22). Seeded hours are `CLEAN`. The scored hour is mutated in `inject.py` before QC, then the arm is cleared. Stories 2 and 3 (`hardware`, `weather`) ingest the Mumbai four, Santa Cruz last. A newer in-memory window is restored afterward so a live poll does not sit on the 2024 hours. Playing the story again replaces that fixture span.
 
+## TIMING
+
+`GET /stations/{id}/timing?ts=` is the only reader of the v2 cache (D23). Ingest queues the job inside `process_aws_data` and returns without it. `wait_s` defaults to 0.
+
 ## Stream filter
 
 In-memory view/ingest sets (D15). `POST /demo/stream-filter` expands with the buddy graph when `include_buddies` is true. Streamer process reads `GET /demo/stream-filter` each tick **or** takes CLI `--stations` (CLI wins if both set — lock: CLI overrides).

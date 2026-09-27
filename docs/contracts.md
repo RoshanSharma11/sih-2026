@@ -241,6 +241,7 @@ Empty `station_ids` means all catalog stations (view = ingest = full catalog). S
 | `GET` | `/stations?ids=` | list of station summaries (`ids` = view set, optional) |
 | `GET` | `/stations/{id}` | summary + latest observation |
 | `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | raw + imputed series |
+| `GET` | `/stations/{id}/timing?ts=&wait_s=` | v2 TIMING cache for that hour |
 | `GET` | `/alerts?station_id=&limit=` | newest first |
 | `GET` | `/demo/status` | armed overlays |
 | `POST` | `/demo/replay` | play one Mumbai story through `/ingest` |
@@ -279,6 +280,24 @@ Station summary (list **includes** `latest` so the live map does not N+1):
 `aws_id` matches the IMD AWS/ARG `ID`. `aws_distance_km` is the WMO-to-AWS site offset from `stations_judge48.csv` (`distance_km` there). It is not a buddy-edge length. Safdarjung has no buddies inside the live 48, so `buddy_ids` is empty and `isolate` is true.
 
 `/healthz` `v2_artifacts` is `{lstm, overlay, stgnn}`: each flag is true when that weight file loaded. `threshold` is the v2 operating score (`0.008487`). Graph weights may be loaded while ingest still uses `cw_idw`.
+
+`GET /stations/{id}/timing?ts=` reads the v2 cache. `ts` is the hour. `wait_s` defaults to 0 and cannot exceed 10. Ingest does not call this and does not wait on it.
+
+```json
+{
+  "station_id": "43003",
+  "timestamp": "2024-12-31T23:00:00Z",
+  "status": "ready",
+  "timing": {
+    "start_hour_in_window": 22,
+    "channel_attr": {"temp_c": 0.5, "rhum_pct": 0.17, "pres_hpa": 0.33},
+    "hour_attr": [0.01, 0.5],
+    "reason": "Anomaly attribution starts at hour 22 of the 24 h window (mostly temp)."
+  }
+}
+```
+
+`status` is `pending`, `ready`, `not_requested`, or `error`. `timing` is null unless `ready`. `channel_attr` uses public channel names. `hour_attr` is oldest → newest, length 24 when the job finished. `reason` is the engine sentence. A clean hour is `not_requested`. Unknown station → 404.
 
 `/healthz` `imd` is the live poll:
 

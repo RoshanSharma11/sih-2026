@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -114,6 +114,18 @@ def unknown_station_error_type():
         return UnknownStationError
     except Exception:
         return None
+
+
+def read_timing(engine, station_id: str, timestamp: datetime, wait_s: float = 0.0) -> dict[str, Any]:
+    """Read the v2 TIMING cache. Ingest does not call this."""
+    if engine is None or not hasattr(engine, "get_timing"):
+        raw: dict[str, Any] = {"status": "not_requested", "timing": None}
+    else:
+        try:
+            raw = engine.get_timing(station_id, timestamp, wait_s=wait_s)
+        except Exception:
+            raw = {"status": "error", "timing": None}
+    return _map_timing(raw if isinstance(raw, dict) else {}, station_id, timestamp)
 
 
 def qc_has_scaler(engine, station_id: str) -> bool | None:
@@ -243,6 +255,53 @@ def _fault_type(raw: str | None, label: Label) -> FaultType | None:
 
 def _public_name(name: str) -> str:
     return ML_TO_PUBLIC.get(name, name)
+
+
+_TIMING_STATUS = {"pending", "ready", "not_requested", "error"}
+
+
+def _map_timing(raw: dict[str, Any], station_id: str, timestamp: datetime) -> dict[str, Any]:
+    status = raw.get("status") or "not_requested"
+    if status not in _TIMING_STATUS:
+        status = "error"
+    timing = raw.get("timing")
+    mapped = None
+    if isinstance(timing, dict):
+        attrs = timing.get("channel_attr") or {}
+        mapped = {
+            "start_hour_in_window": int(timing.get("start_hour_in_window") or 0),
+            "channel_attr": {
+                _public_name(str(key)): float(value)
+                for key, value in attrs.items()
+                if value is not None
+            },
+            "hour_attr": [float(value) for value in timing.get("hour_attr") or []],
+            "reason": str(timing.get("reason") or ""),
+        }
+    return {
+        "station_id": str(raw.get("station_id") or station_id),
+        "timestamp": _timing_timestamp(raw.get("timestamp"), timestamp),
+        "status": status,
+        "timing": mapped,
+    }
+
+
+def _timing_timestamp(value: Any, fallback: datetime) -> datetime:
+    if isinstance(value, datetime):
+        return as_utc_timestamp(value)
+    if isinstance(value, str) and value.strip():
+        text = value.strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        parsed = datetime.fromisoformat(text)
+        return as_utc_timestamp(parsed)
+    return fallback
+
+
+def as_utc_timestamp(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _tier1(raw: dict[str, Any]) -> Tier1View:

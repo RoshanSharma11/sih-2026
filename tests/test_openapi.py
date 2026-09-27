@@ -6,6 +6,7 @@ CONTRACT_PATHS = {
     "/stations/{station_id}": {"get"},
     "/stations/{station_id}/seed": {"post"},
     "/stations/{station_id}/telemetry": {"get"},
+    "/stations/{station_id}/timing": {"get"},
     "/alerts": {"get"},
     "/buddy-map": {"get"},
     "/ingest": {"post"},
@@ -159,6 +160,8 @@ CONTRACT_PROPERTIES = {
     },
     "ImputedInterval": {"temp_c", "pres_hpa", "rhum_pct"},
     "ThermoView": {"dewpoint_c", "td_minus_t", "passed"},
+    "TimingView": {"start_hour_in_window", "channel_attr", "hour_attr", "reason"},
+    "TimingResponse": {"station_id", "timestamp", "status", "timing"},
 }
 
 
@@ -170,6 +173,8 @@ def test_openapi_matches_contracts() -> None:
 
     telemetry = spec["paths"]["/stations/{station_id}/telemetry"]["get"]["parameters"]
     assert {item["name"] for item in telemetry} >= {"from", "to", "limit"}
+    timing = spec["paths"]["/stations/{station_id}/timing"]["get"]["parameters"]
+    assert {item["name"] for item in timing} >= {"ts", "wait_s"}
     stations = spec["paths"]["/stations"]["get"]["parameters"]
     assert {item["name"] for item in stations} >= {"ids"}
     alerts = spec["paths"]["/alerts"]["get"]["parameters"]

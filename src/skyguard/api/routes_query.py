@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from skyguard.api.deps import get_db
 from skyguard.db.models import AnomalyAlert, Station, StationBuddy, TelemetryLog
+from skyguard.engine.adapter import read_timing
 from skyguard.engine.pipeline import as_utc, latest_snapshot_from_row, telemetry_qc
 from skyguard.schemas import (
     AlertRow,
@@ -26,6 +27,7 @@ from skyguard.schemas import (
     StationStatus,
     StationSummary,
     TelemetryRow,
+    TimingResponse,
 )
 
 router = APIRouter()
@@ -199,6 +201,20 @@ def buddy_map(session: Session = Depends(get_db)) -> BuddyMap:
     buddies = _buddy_ids_by_station(session, ids)
     isolates = [row.station_id for row in stations if row.isolate]
     return BuddyMap(stations=ids, isolates=isolates, buddies=buddies)
+
+
+@router.get("/stations/{station_id}/timing", response_model=TimingResponse)
+def station_timing(
+    station_id: str,
+    request: Request,
+    ts: datetime = Query(),
+    wait_s: float = Query(default=0.0, ge=0.0, le=10.0),
+    session: Session = Depends(get_db),
+) -> TimingResponse:
+    _require_station(session, station_id)
+    return TimingResponse.model_validate(
+        read_timing(request.app.state.qc_engine, station_id, as_utc(ts), wait_s)
+    )
 
 
 @router.get("/stations/{station_id}/telemetry", response_model=list[TelemetryRow])

@@ -171,3 +171,7 @@ The poller calls `ingest_observation`. `DuplicateObservation` (HTTP 409) is skip
 The arm is cleared before the response returns, so the next live hour is not rewritten. `POST /demo/reset` also clears it and does not delete rows. A second play deletes that fixture span first, then writes it again.
 
 A station window that already contains an hour after the fixture end is put back when the story finishes. Replay rows remain at the 2024 timestamps. The two timelines do not share one 24-hour window.
+
+## D23 — TIMING is polled, not on the ingest path
+
+**Lock:** `GET /stations/{id}/timing?ts=` reads `v2` `get_timing`. `wait_s` defaults to 0 and is capped at 10. Ingest never calls it. The first ingest JSON has no timing field. `channel_attr` is returned with public names (`temp_c`, `rhum_pct`, `pres_hpa`). `pending` means poll again. `not_requested` means that hour was not queued. `error` hides the sentence.

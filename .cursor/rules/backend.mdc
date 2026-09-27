@@ -14,6 +14,7 @@ alwaysApply: false
 - The IMD poller calls `ingest_observation`. It does not score hours itself. A 409 does not stop the poll.
 - Fewer than 24 hourly rows: store the raw hour, `warming_up`, null label. Do not call v2 and do not invent a label. The 24th hour returns the real v2 label.
 - `POST /demo/replay` seeds `demo_windows.json` and ingests the scored hour through the pipeline. Clear the replay arm before returning. Restore a newer live window so the 2024 hours do not become the live 24.
+- `GET /stations/{id}/timing?ts=` reads the v2 cache. Ingest does not call it and does not wait on it.
 - Health is the 7-day rate of stored labels. Weather does not lower it.
 - `GENUINE_WEATHER_EVENT` is `is_anomaly=true` and does **not** lower health.
 

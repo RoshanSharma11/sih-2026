@@ -308,6 +308,27 @@ class ReplayResult(BaseModel):
     results: list[IngestResult]
 
 
+class TimingStatus(str, Enum):
+    PENDING = "pending"
+    READY = "ready"
+    NOT_REQUESTED = "not_requested"
+    ERROR = "error"
+
+
+class TimingView(BaseModel):
+    start_hour_in_window: int
+    channel_attr: dict[str, float]
+    hour_attr: list[float]
+    reason: str
+
+
+class TimingResponse(BaseModel):
+    station_id: str
+    timestamp: datetime
+    status: TimingStatus
+    timing: TimingView | None = None
+
+
 class StreamFilterRequest(BaseModel):
     station_ids: list[str] = Field(default_factory=list)
     include_buddies: bool = True
