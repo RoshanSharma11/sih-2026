@@ -1,0 +1,27 @@
+{
+  "task": "neighbors_agree",
+  "seed": 42,
+  "hidden": 32,
+  "k_max": 8,
+  "train_years": "2020-2022",
+  "val_year": 2023,
+  "test_used": false,
+  "hw_temp_delta_c": 8.0,
+  "wx_temp_delta_c": 8.0,
+  "agree_threshold": 0.875,
+  "agree_if_p_agree_gte": 0.875,
+  "val_hardware_disagree": 0.998,
+  "val_weather_agree": 0.9983,
+  "val_clean_agree": 0.9663,
+  "gates": {
+    "hardware_disagree_ge_0.85": 0.85,
+    "weather_agree_ge_0.85": 0.85,
+    "clean_agree_ge_0.90": 0.9
+  },
+  "gates_passed": true,
+  "best_epoch": 20,
+  "best_val_bce": 0.017100873785217602,
+  "n_train_graphs": 60000,
+  "n_val_graphs": 15000,
+  "note": "Ingest must ignore stgnn.pt unless gates_passed is true. Fallback is CW-IDW."
+}

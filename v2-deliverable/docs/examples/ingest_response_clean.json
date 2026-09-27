@@ -1,0 +1,81 @@
+{
+  "station_id": "43003",
+  "timestamp": "2024-12-31T23:00:00",
+  "observed": {
+    "temp": 26.0,
+    "rhum": 65.0,
+    "pres": 1013.0
+  },
+  "predicted": {
+    "temp": 26.0,
+    "rhum": 65.0,
+    "pres": 1013.0
+  },
+  "reconstructed": {
+    "temp": 26.0,
+    "rhum": 65.0,
+    "pres": 1013.0
+  },
+  "imputed_interval": null,
+  "is_anomaly": false,
+  "confidence": 0.0,
+  "label": "CLEAN",
+  "fault_type": null,
+  "affected_variables": [],
+  "reason": "Last-hour-weighted reconstruction within the frozen 2023 threshold.",
+  "thermo": {
+    "dewpoint_c": 18.899,
+    "td_minus_t": -7.101,
+    "passed": true
+  },
+  "tier1": {
+    "passed": true,
+    "violations": []
+  },
+  "tier2": {
+    "ran": true,
+    "score": 0.0041164281778037545,
+    "window_mse": 0.0030628456734120846,
+    "threshold": 0.008487140408717099,
+    "feature_contributions": {
+      "temp": 0.6006571471683098,
+      "rhum": 0.3374698922290642,
+      "pres": 0.06187294521473987
+    }
+  },
+  "tier3": {
+    "performed": false,
+    "method": "cw_idw",
+    "neighbors_agree": null,
+    "buddy_ids": [],
+    "usable_count": 0,
+    "mix": {
+      "temp": null,
+      "rhum": null,
+      "pres": null
+    },
+    "idw_estimate": {
+      "temp": null,
+      "rhum": null,
+      "pres": null
+    },
+    "corr": {},
+    "residual": {
+      "temp": null,
+      "rhum": null,
+      "pres": null
+    },
+    "reason_skip": "not_required",
+    "p_agree": null
+  },
+  "climatology": {
+    "temp_p999_train": null,
+    "last_vs_p999": null
+  },
+  "timing": null,
+  "health": {
+    "index_7d": 1.0,
+    "state": "HEALTHY",
+    "window_hours": 1
+  }
+}

@@ -1,0 +1,433 @@
+primary_station_id,primary_station_name,buddy_station_id,buddy_station_name,distance_km,buddy_complete_pct
+42080,Bilaspur,VISM0,Shimla / Kanda,42.517,80.318
+42080,Bilaspur,42105,Chandigarh / S?rajpur,61.052,83.632
+42080,Bilaspur,42099,Ludhiana,81.834,82.82
+42080,Bilaspur,42103,Ambala,96.845,86.086
+42099,Ludhiana,42101,Patiala,78.257,86.2
+42099,Ludhiana,42080,Bilaspur,81.834,81.434
+42099,Ludhiana,42105,Chandigarh / S?rajpur,91.941,83.632
+42099,Ludhiana,42103,Ambala,96.168,86.086
+42101,Patiala,42103,Ambala,29.316,86.086
+42101,Patiala,42105,Chandigarh / S?rajpur,59.752,83.632
+42101,Patiala,42099,Ludhiana,78.257,82.82
+42101,Patiala,42137,Karnal,89.078,80.654
+42103,Ambala,42101,Patiala,29.316,86.2
+42103,Ambala,42105,Chandigarh / S?rajpur,40.488,83.632
+42103,Ambala,42137,Karnal,80.196,80.654
+42103,Ambala,VISM0,Shimla / Kanda,82.837,80.318
+42103,Ambala,42099,Ludhiana,96.168,82.82
+42103,Ambala,42080,Bilaspur,96.845,81.434
+42105,Chandigarh / S?rajpur,42103,Ambala,40.488,86.086
+42105,Chandigarh / S?rajpur,VISM0,Shimla / Kanda,42.57,80.318
+42105,Chandigarh / S?rajpur,42101,Patiala,59.752,86.2
+42105,Chandigarh / S?rajpur,42080,Bilaspur,61.052,81.434
+42105,Chandigarh / S?rajpur,42099,Ludhiana,91.941,82.82
+42111,Dehradun,VIDN0,Dehradun / R?ni Pokhri,19.97,82.818
+42111,Dehradun,42143,Najibabad,84.825,81.082
+42137,Karnal,42103,Ambala,80.196,86.086
+42137,Karnal,42101,Patiala,89.078,86.2
+42137,Karnal,42139,Meerut,95.677,82.743
+42139,Meerut,42182,New Delhi / Safdarjung,64.071,100.0
+42139,Meerut,42181,New Delhi / Palam,70.979,99.995
+42139,Meerut,42137,Karnal,95.677,80.654
+42139,Meerut,42143,Najibabad,98.684,81.082
+42143,Najibabad,VIDN0,Dehradun / R?ni Pokhri,66.652,82.818
+42143,Najibabad,42111,Dehradun,84.825,86.12
+42143,Najibabad,42139,Meerut,98.684,82.743
+42148,Pantnagar,42146,Nainital,40.775,80.816
+42148,Pantnagar,42189,Bareilly,74.408,86.077
+42170,Churu,42174,Pilani,65.922,80.914
+42170,Churu,42249,Sikar,73.564,81.012
+42174,Pilani,42170,Churu,65.922,86.113
+42174,Pilani,42249,Sikar,91.116,81.012
+42174,Pilani,42131,Hissar,93.817,85.997
+42181,New Delhi / Palam,42182,New Delhi / Safdarjung,8.341,100.0
+42181,New Delhi / Palam,42139,Meerut,70.979,82.743
+42182,New Delhi / Safdarjung,42181,New Delhi / Palam,8.341,99.995
+42182,New Delhi / Safdarjung,42139,Meerut,64.071,82.743
+42189,Bareilly,42266,Shahjahanpur,72.756,81.08
+42189,Bareilly,42148,Pantnagar,74.408,82.82
+42249,Sikar,42170,Churu,73.564,86.113
+42249,Sikar,42174,Pilani,91.116,80.914
+42266,Shahjahanpur,42271,Hardoi,61.493,81.073
+42266,Shahjahanpur,42189,Bareilly,72.756,86.077
+42271,Hardoi,42266,Shahjahanpur,61.493,81.08
+42271,Hardoi,42369,Lucknow / Amausi,99.968,99.733
+42314,Dibrugarh / Mohanbari,42220,Pasighat,77.478,83.68
+42314,Dibrugarh / Mohanbari,42309,North Lakhimpur,93.128,89.888
+42367,Kanpur / Chakeri,42469,Hamirpur,55.912,81.085
+42367,Kanpur / Chakeri,42369,Lucknow / Amausi,61.844,99.733
+42367,Kanpur / Chakeri,42372,Fursatganj / R?e Bareli,97.777,82.77
+42369,Lucknow / Amausi,42367,Kanpur / Chakeri,61.844,81.091
+42369,Lucknow / Amausi,42372,Fursatganj / R?e Bareli,73.519,82.77
+42369,Lucknow / Amausi,42271,Hardoi,99.968,81.073
+42372,Fursatganj / R?e Bareli,42369,Lucknow / Amausi,73.519,99.733
+42372,Fursatganj / R?e Bareli,42475,Allahabad / Bamhrauli,96.223,100.0
+42372,Fursatganj / R?e Bareli,42367,Kanpur / Chakeri,97.777,81.091
+42408,Rangia,42410,Gauhati,37.211,97.364
+42408,Rangia,42414,Chaparmukh,93.379,80.747
+42410,Gauhati,42408,Rangia,37.211,80.261
+42410,Gauhati,42414,Chaparmukh,93.827,80.747
+42410,Gauhati,42407,Goalpara,95.281,80.752
+42414,Chaparmukh,42415,Tezpur,53.403,85.698
+42414,Chaparmukh,42523,Lumding,83.331,81.135
+42414,Chaparmukh,42408,Rangia,93.379,80.261
+42414,Chaparmukh,42410,Gauhati,93.827,97.364
+42459,Shivpuri,42559,Guna,83.074,86.175
+42459,Shivpuri,42463,Jhansi,94.647,85.963
+42463,Jhansi,42562,Tikamgarh,80.041,80.371
+42463,Jhansi,42361,Gwalior,93.267,88.907
+42463,Jhansi,42459,Shivpuri,94.647,80.841
+42463,Jhansi,42467,Nowgong,97.021,81.176
+42467,Nowgong,42567,Khajuraho,47.929,82.864
+42467,Nowgong,42562,Tikamgarh,70.573,80.371
+42467,Nowgong,42463,Jhansi,97.021,85.963
+42469,Hamirpur,42367,Kanpur / Chakeri,55.912,81.091
+42469,Hamirpur,42473,Banda,57.96,81.098
+42469,Hamirpur,42468,Orai,65.086,81.091
+42473,Banda,42469,Hamirpur,57.96,81.085
+42473,Banda,42567,Khajuraho,70.273,82.864
+42492,Patna,42488,Chapra,42.019,80.854
+42492,Patna,42591,Gaya,95.714,98.57
+42522,Haflong,42523,Lumding,66.982,81.135
+42522,Haflong,42623,Imphal Tulihal,99.531,90.77
+42523,Lumding,VEMR0,Manipur Road / R?jb?ri,60.481,81.0
+42523,Lumding,42522,Haflong,66.982,81.041
+42523,Lumding,42414,Chaparmukh,83.331,80.747
+42546,Chittorgarh,42447,Bhilwara,51.895,80.526
+42546,Chittorgarh,VAUD0,Udaipur / Naramagra,80.087,89.803
+42559,Guna,42459,Shivpuri,83.074,80.841
+42559,Guna,42557,Rajgarh,94.445,81.169
+42562,Tikamgarh,42467,Nowgong,70.573,81.176
+42562,Tikamgarh,42463,Jhansi,80.041,85.963
+42567,Khajuraho,42467,Nowgong,47.929,81.176
+42567,Khajuraho,42473,Banda,70.273,81.098
+42618,Kailashahar,VELP0,Lengpui / Hmunpui,82.222,87.591
+42618,Kailashahar,42724,Agartala,90.098,93.213
+42631,Naliya,42634,Bhuj-Rudramata,83.438,86.211
+42631,Naliya,42730,Okha,89.525,86.218
+42634,Bhuj-Rudramata,42638,Kandla Aerodrome,47.317,81.206
+42634,Bhuj-Rudramata,42639,New Kandla,62.738,81.187
+42634,Bhuj-Rudramata,42631,Naliya,83.438,86.193
+42638,Kandla Aerodrome,42639,New Kandla,19.566,81.187
+42638,Kandla Aerodrome,42634,Bhuj-Rudramata,47.317,86.211
+42639,New Kandla,42638,Kandla Aerodrome,19.566,81.206
+42639,New Kandla,42634,Bhuj-Rudramata,62.738,86.211
+42639,New Kandla,42737,Rajkot,97.155,88.015
+42662,Ujjain,42754,Indore,51.912,91.582
+42662,Ujjain,42661,Ratlam,76.372,80.797
+42674,Damoh,42671,Sagar,71.219,80.168
+42674,Damoh,42675,Jabalpur,86.936,87.261
+42675,Jabalpur,42776,Mandla,80.774,80.993
+42675,Jabalpur,42674,Damoh,86.936,81.158
+42705,Purulia,42798,Jamshedpur,62.208,92.38
+42705,Purulia,VOND0,Ondal / And?l,85.881,82.106
+42711,Krishnanagar,42809,Calcutta / Dum Dum,83.675,99.998
+42711,Krishnanagar,42603,Berhampore,85.416,80.736
+42711,Krishnanagar,42807,Calcutta / Alipore,98.185,86.072
+42730,Okha,42731,Dwarka,13.412,86.216
+42730,Okha,42631,Naliya,89.525,86.193
+42731,Dwarka,42730,Okha,13.412,86.218
+42731,Dwarka,42830,Porbandar,99.841,89.6
+42737,Rajkot,42740,Surendranagar,96.741,81.18
+42737,Rajkot,42639,New Kandla,97.155,81.187
+42744,Vallabh Vidyanagar,42748,Baroda Aerodrome,42.982,93.943
+42744,Vallabh Vidyanagar,42647,Ahmadabad,63.534,100.0
+42807,Calcutta / Alipore,42809,Calcutta / Dum Dum,17.661,99.998
+42807,Calcutta / Alipore,42811,Diamond Harbour,41.262,86.05
+42807,Calcutta / Alipore,42812,Canning,46.554,82.852
+42807,Calcutta / Alipore,42711,Krishnanagar,98.185,80.25
+42809,Calcutta / Dum Dum,42807,Calcutta / Alipore,17.661,86.072
+42809,Calcutta / Dum Dum,42812,Canning,49.742,82.852
+42809,Calcutta / Dum Dum,42811,Diamond Harbour,57.909,86.05
+42809,Calcutta / Dum Dum,42711,Krishnanagar,83.675,80.25
+42811,Diamond Harbour,42807,Calcutta / Alipore,41.262,86.072
+42811,Diamond Harbour,42812,Canning,48.611,82.852
+42811,Diamond Harbour,42809,Calcutta / Dum Dum,57.909,99.998
+42811,Diamond Harbour,42900,Contai,64.275,80.802
+42812,Canning,42807,Calcutta / Alipore,46.554,86.072
+42812,Canning,42811,Diamond Harbour,48.611,86.05
+42812,Canning,42809,Calcutta / Dum Dum,49.742,99.998
+42837,Mahuva,42838,Bhaunagar,85.77,82.677
+42837,Mahuva,42914,Diu,98.821,81.174
+42837,Mahuva,VASU0,Surat / Magdala,99.494,90.602
+42838,Bhaunagar,42837,Mahuva,85.77,81.162
+42838,Bhaunagar,42840,Surat,89.635,86.211
+42838,Bhaunagar,VASU0,Surat / Magdala,90.248,90.602
+42840,Surat,VASU0,Surat / Magdala,13.464,90.602
+42840,Surat,42838,Bhaunagar,89.635,82.677
+42851,Jalgaon,42849,Khargone,85.41,81.139
+42851,Jalgaon,42931,Buldana,90.016,82.677
+42872,Mana / Raipur,42874,Pbo Raipur,2.531,86.193
+42872,Mana / Raipur,42948,Rajnandgaon / R?j N?ndgaon,65.643,80.911
+42874,Pbo Raipur,42872,Mana / Raipur,2.531,81.171
+42874,Pbo Raipur,42948,Rajnandgaon / R?j N?ndgaon,66.952,80.911
+42895,Balasore,42894,Baripada,49.417,81.021
+42895,Balasore,42973,Chandbali,84.147,86.2
+42895,Balasore,42900,Contai,89.461,80.802
+42900,Contai,42811,Diamond Harbour,64.275,86.05
+42900,Contai,42895,Balasore,89.461,86.232
+42914,Diu,42909,Veraval,60.693,86.191
+42914,Diu,42837,Mahuva,98.821,81.162
+42931,Buldana,42933,Akola,85.297,86.221
+42931,Buldana,42851,Jalgaon,90.016,80.952
+42933,Akola,42935,Washim / W?sh?m,65.692,80.845
+42933,Akola,42937,Amraoti,82.156,82.558
+42933,Akola,42931,Buldana,85.297,82.677
+42937,Amraoti,42933,Akola,82.156,86.221
+42937,Amraoti,42939,Wardha,88.284,82.67
+42939,Wardha,42867,Nagpur Sonegaon,68.354,99.982
+42939,Wardha,42937,Amraoti,88.284,82.558
+42948,Rajnandgaon / R?j N?ndgaon,42872,Mana / Raipur,65.643,81.171
+42948,Rajnandgaon / R?j N?ndgaon,42874,Pbo Raipur,66.952,86.193
+42969,Angul,42970,Cuttack,95.81,80.863
+42969,Angul,42891,Keongjhargarh,97.23,82.857
+42970,Cuttack,42971,Bhubaneswar,26.254,99.044
+42970,Cuttack,43053,Puri,75.127,86.209
+42970,Cuttack,42976,Paradip C. W. R.,80.342,84.168
+42970,Cuttack,42973,Chandbali,90.391,86.2
+42970,Cuttack,42969,Angul,95.81,80.877
+42971,Bhubaneswar,42970,Cuttack,26.254,80.863
+42971,Bhubaneswar,43053,Puri,50.068,86.209
+42971,Bhubaneswar,42976,Paradip C. W. R.,88.834,84.168
+42973,Chandbali,42976,Paradip C. W. R.,53.992,84.168
+42973,Chandbali,42895,Balasore,84.147,86.232
+42973,Chandbali,42970,Cuttack,90.391,80.863
+42976,Paradip C. W. R.,42973,Chandbali,53.992,86.2
+42976,Paradip C. W. R.,42970,Cuttack,80.342,80.863
+42976,Paradip C. W. R.,42971,Bhubaneswar,88.834,99.044
+43001,Dahanu,43002,Bombay / Juhu,95.302,88.262
+43001,Dahanu,43003,Bombay / Santacruz,95.542,100.0
+43002,Bombay / Juhu,43003,Bombay / Santacruz,1.755,100.0
+43002,Bombay / Juhu,43057,Bombay / Colaba,24.159,100.0
+43002,Bombay / Juhu,43058,Alibag,53.866,80.676
+43002,Bombay / Juhu,43005,T.B.I.A,87.618,82.074
+43002,Bombay / Juhu,43001,Dahanu,95.302,83.632
+43003,Bombay / Santacruz,43002,Bombay / Juhu,1.755,88.262
+43003,Bombay / Santacruz,43057,Bombay / Colaba,24.349,100.0
+43003,Bombay / Santacruz,43058,Alibag,53.78,80.676
+43003,Bombay / Santacruz,43005,T.B.I.A,89.371,82.074
+43003,Bombay / Santacruz,43001,Dahanu,95.542,83.632
+43005,T.B.I.A,43002,Bombay / Juhu,87.618,88.262
+43005,T.B.I.A,43003,Bombay / Santacruz,89.371,100.0
+43005,T.B.I.A,43057,Bombay / Colaba,90.241,100.0
+43021,Nanded,43017,Parbhani,62.905,81.931
+43021,Nanded,43081,Nizamabad,93.023,85.119
+43053,Puri,42971,Bhubaneswar,50.068,99.044
+43053,Puri,42970,Cuttack,75.127,80.863
+43057,Bombay / Colaba,43002,Bombay / Juhu,24.159,88.262
+43057,Bombay / Colaba,43003,Bombay / Santacruz,24.349,100.0
+43057,Bombay / Colaba,43058,Alibag,30.119,80.676
+43057,Bombay / Colaba,43005,T.B.I.A,90.241,82.074
+43058,Alibag,43057,Bombay / Colaba,30.119,100.0
+43058,Alibag,43003,Bombay / Santacruz,53.78,100.0
+43058,Alibag,43002,Bombay / Juhu,53.866,88.262
+43058,Alibag,43109,Harnai,94.086,82.683
+43069,Baramati,43063,Poona,88.356,86.173
+43069,Baramati,43113,Satara,90.253,81.053
+43081,Nizamabad,43083,Medak,70.795,81.11
+43081,Nizamabad,43021,Nanded,93.023,80.879
+43083,Medak,43128,Hyderabad Airport,69.998,97.941
+43083,Medak,43081,Nizamabad,70.795,85.119
+43083,Medak,VOHS0,Hyderabad / Anthredigudam,91.628,97.697
+43109,Harnai,43058,Alibag,94.086,80.676
+43109,Harnai,43110,Ratnagiri,95.919,86.17
+43110,Ratnagiri,43109,Harnai,95.919,82.683
+43110,Ratnagiri,43113,Satara,96.49,81.053
+43113,Satara,43069,Baramati,90.253,80.891
+43113,Satara,43157,Kolhapur,92.879,85.851
+43113,Satara,43158,Sangli,94.39,80.234
+43113,Satara,43110,Ratnagiri,96.49,86.17
+43128,Hyderabad Airport,VOHS0,Hyderabad / Anthredigudam,23.627,97.697
+43128,Hyderabad Airport,43083,Medak,69.998,81.11
+43147,Tuni,43189,Kakinada,55.773,86.198
+43147,Tuni,VORY0,Rajahmundry / R?j?nagaram,82.16,90.634
+43147,Tuni,VOVZ0,Vizagapatam / Gajuwaka,83.136,98.223
+43147,Tuni,43150,Cwc Vishakhapatnam / Waltair,88.538,80.061
+43150,Cwc Vishakhapatnam / Waltair,VOVZ0,Vizagapatam / Gajuwaka,7.305,98.223
+43150,Cwc Vishakhapatnam / Waltair,43147,Tuni,88.538,86.034
+43157,Kolhapur,43158,Sangli,42.454,80.234
+43157,Kolhapur,43113,Satara,92.879,81.053
+43157,Kolhapur,43197,Belgaum,99.793,80.998
+43158,Sangli,43157,Kolhapur,42.454,85.851
+43158,Sangli,43113,Satara,94.39,81.053
+43189,Kakinada,VORY0,Rajahmundry / R?j?nagaram,47.601,90.634
+43189,Kakinada,43147,Tuni,55.773,86.034
+43192,Goa / Panjim,43196,Mormugao,8.225,81.103
+43192,Goa / Panjim,43194,Goa / Dabolim Airport,11.12,98.873
+43192,Goa / Panjim,43225,Karwar,84.932,82.756
+43192,Goa / Panjim,43197,Belgaum,86.884,80.998
+43192,Goa / Panjim,43198,Belgaum / Sambra,94.862,86.166
+43194,Goa / Dabolim Airport,43196,Mormugao,5.159,81.103
+43194,Goa / Dabolim Airport,43192,Goa / Panjim,11.12,86.193
+43194,Goa / Dabolim Airport,43225,Karwar,74.877,82.756
+43194,Goa / Dabolim Airport,43197,Belgaum,92.64,80.998
+43196,Mormugao,43194,Goa / Dabolim Airport,5.159,98.873
+43196,Mormugao,43192,Goa / Panjim,8.225,86.193
+43196,Mormugao,43225,Karwar,79.827,82.756
+43196,Mormugao,43197,Belgaum,93.655,80.998
+43197,Belgaum,43198,Belgaum / Sambra,8.921,86.166
+43197,Belgaum,43200,Dharwad,63.117,80.385
+43197,Belgaum,43192,Goa / Panjim,86.884,86.193
+43197,Belgaum,43194,Goa / Dabolim Airport,92.64,98.873
+43197,Belgaum,43196,Mormugao,93.655,81.103
+43197,Belgaum,43157,Kolhapur,99.793,85.851
+43198,Belgaum / Sambra,43197,Belgaum,8.921,80.998
+43198,Belgaum / Sambra,43200,Dharwad,56.596,80.385
+43198,Belgaum / Sambra,43192,Goa / Panjim,94.862,86.193
+43200,Dharwad,43198,Belgaum / Sambra,56.596,86.166
+43200,Dharwad,43197,Belgaum,63.117,80.998
+43200,Dharwad,43201,Gadag,70.057,86.159
+43207,Parangipettai,43329,Cuddalore,29.656,86.154
+43207,Parangipettai,43331,M.O. Pondicherry / Puducherry,52.179,86.123
+43207,Parangipettai,VOPC0,Pondicherry / Auroville,52.331,80.873
+43207,Parangipettai,43346,Karaikal,65.266,86.166
+43207,Parangipettai,43347,Nagappattinam,82.044,85.438
+43225,Karwar,43226,Honavar,65.216,85.769
+43225,Karwar,43194,Goa / Dabolim Airport,74.877,98.873
+43225,Karwar,43196,Mormugao,79.827,81.103
+43225,Karwar,43192,Goa / Panjim,84.932,86.193
+43225,Karwar,43229,Shirali,90.58,81.007
+43226,Honavar,43229,Shirali,25.705,81.007
+43226,Honavar,43225,Karwar,65.216,82.756
+43229,Shirali,43226,Honavar,25.705,85.769
+43229,Shirali,43225,Karwar,90.58,82.756
+43243,Kavali,43245,Nellore,50.038,85.849
+43243,Kavali,43221,Ongole,67.574,86.198
+43245,Nellore,43243,Kavali,50.038,86.166
+43245,Nellore,43275,Tirupathi,97.2,83.584
+43266,M.O. Agathi Airport / Kavaratti,VOAT0,Agatti / Kavaratti,31.882,84.702
+43266,M.O. Agathi Airport / Kavaratti,43311,Amini Divi,41.55,86.164
+43271,Arogyavaram,VOBL0,Bangalore / Bengaluru / Devenahalli / BIAL 2 Wheeler Parking,93.615,98.436
+43271,Arogyavaram,43303,Vellore,98.241,82.781
+43275,Tirupathi,VOTP0,Tirupati / Renigunta,5.757,91.01
+43275,Tirupathi,43303,Vellore,95.674,82.781
+43275,Tirupathi,43245,Nellore,97.2,85.849
+43275,Tirupathi,43278,Madras,98.251,84.423
+43275,Tirupathi,43279,Madras / Minambakkam,98.54,99.998
+43278,Madras,43279,Madras / Minambakkam,10.355,99.998
+43278,Madras,43275,Tirupathi,98.251,83.584
+43278,Madras,VOTP0,Tirupati / Renigunta,99.015,91.01
+43279,Madras / Minambakkam,43278,Madras,10.355,84.423
+43279,Madras / Minambakkam,43275,Tirupathi,98.54,83.584
+43279,Madras / Minambakkam,VOTP0,Tirupati / Renigunta,98.702,91.01
+43301,Dharmapuri,43325,Salem,55.666,82.09
+43301,Dharmapuri,43302,Tiruppattur,69.804,81.085
+43302,Tiruppattur,43301,Dharmapuri,69.804,81.114
+43302,Tiruppattur,43303,Vellore,79.536,82.781
+43303,Vellore,43302,Tiruppattur,79.536,81.085
+43303,Vellore,VOTP0,Tirupati / Renigunta,90.26,91.01
+43303,Vellore,43275,Tirupathi,95.674,83.584
+43303,Vellore,43271,Arogyavaram,98.241,80.966
+43310,Long Island,43309,Maya Bandar,55.627,81.119
+43310,Long Island,43333,Port Blair,86.659,86.182
+43310,Long Island,VOPB0,Port Blair / Portblair / Austin?b?d,89.029,80.291
+43311,Amini Divi,43266,M.O. Agathi Airport / Kavaratti,41.55,81.069
+43311,Amini Divi,VOAT0,Agatti / Kavaratti,69.011,84.702
+43314,Kozhikode,VOCL0,Calicut / Kondotti,22.593,96.536
+43314,Kozhikode,43315,Cannur,81.304,83.482
+43314,Kozhikode,43357,Thrissur,94.278,80.916
+43325,Salem,43301,Dharmapuri,55.666,81.114
+43325,Salem,43342,K. Paramathy,78.366,81.032
+43329,Cuddalore,43331,M.O. Pondicherry / Puducherry,22.895,86.123
+43329,Cuddalore,VOPC0,Pondicherry / Auroville,22.953,80.873
+43329,Cuddalore,43207,Parangipettai,29.656,80.92
+43329,Cuddalore,43346,Karaikal,94.794,86.166
+43331,M.O. Pondicherry / Puducherry,VOPC0,Pondicherry / Auroville,0.752,80.873
+43331,M.O. Pondicherry / Puducherry,43329,Cuddalore,22.895,86.154
+43331,M.O. Pondicherry / Puducherry,43207,Parangipettai,52.179,80.92
+43333,Port Blair,VOPB0,Port Blair / Portblair / Austin?b?d,3.169,80.291
+43333,Port Blair,43310,Long Island,86.659,81.13
+43335,Palakkad,43321,Coimbatore / Peelamedu,52.786,98.924
+43335,Palakkad,43357,Thrissur,54.909,80.916
+43335,Palakkad,VOCI0,Cochin / K?ladi,73.539,98.28
+43335,Palakkad,VOCL0,Calicut / Kondotti,86.286,96.536
+43342,K. Paramathy,43344,Tiruchchirapalli,72.11,99.291
+43342,K. Paramathy,43325,Salem,78.366,82.09
+43344,Tiruchchirapalli,43342,K. Paramathy,72.11,81.032
+43344,Tiruchchirapalli,43348,Atiramapattinam,87.364,86.072
+43346,Karaikal,43347,Nagappattinam,16.779,85.438
+43346,Karaikal,43207,Parangipettai,65.266,80.92
+43346,Karaikal,43348,Atiramapattinam,81.406,86.072
+43346,Karaikal,43329,Cuddalore,94.794,86.154
+43347,Nagappattinam,43346,Karaikal,16.779,86.166
+43347,Nagappattinam,43348,Atiramapattinam,70.18,86.072
+43347,Nagappattinam,43207,Parangipettai,82.044,80.92
+43348,Atiramapattinam,43347,Nagappattinam,70.18,85.438
+43348,Atiramapattinam,43361,Tondi,76.94,86.056
+43348,Atiramapattinam,43346,Karaikal,81.406,86.166
+43348,Atiramapattinam,43344,Tiruchchirapalli,87.364,99.291
+43353,Cochin / Willingdon,VOCI0,Cochin / K?ladi,26.901,98.28
+43353,Cochin / Willingdon,43355,Kottayam,49.124,80.987
+43353,Cochin / Willingdon,43357,Thrissur,63.251,80.916
+43353,Cochin / Willingdon,43356,Periakulum / Ellakkal,95.068,80.724
+43354,Punalur,43371,Thiruvananthapuram,57.571,100.0
+43354,Punalur,43372,Thiruvananthapuram,59.413,99.998
+43354,Punalur,43355,Kottayam,78.317,80.987
+43354,Punalur,43376,Palayankottai,96.235,80.847
+43355,Kottayam,43353,Cochin / Willingdon,49.124,85.949
+43355,Kottayam,VOCI0,Cochin / K?ladi,64.475,98.28
+43355,Kottayam,43354,Punalur,78.317,80.993
+43355,Kottayam,43356,Periakulum / Ellakkal,81.926,80.724
+43356,Periakulum / Ellakkal,VOCI0,Cochin / K?ladi,81.838,98.28
+43356,Periakulum / Ellakkal,43355,Kottayam,81.926,80.987
+43356,Periakulum / Ellakkal,43353,Cochin / Willingdon,95.068,85.949
+43357,Thrissur,VOCI0,Cochin / K?ladi,45.332,98.28
+43357,Thrissur,43335,Palakkad,54.909,81.055
+43357,Thrissur,43353,Cochin / Willingdon,63.251,85.949
+43357,Thrissur,VOCL0,Calicut / Kondotti,74.629,96.536
+43357,Thrissur,43314,Kozhikode,94.278,85.961
+43361,Tondi,43363,Pamban,59.56,86.054
+43361,Tondi,43348,Atiramapattinam,76.94,86.072
+43371,Thiruvananthapuram,43372,Thiruvananthapuram,1.846,99.998
+43371,Thiruvananthapuram,43354,Punalur,57.571,80.993
+43371,Thiruvananthapuram,43377,Kanniyakumari,75.106,86.061
+43371,Thiruvananthapuram,43376,Palayankottai,92.242,80.847
+43372,Thiruvananthapuram,43371,Thiruvananthapuram,1.846,100.0
+43372,Thiruvananthapuram,43354,Punalur,59.413,80.993
+43372,Thiruvananthapuram,43377,Kanniyakumari,74.029,86.061
+43372,Thiruvananthapuram,43376,Palayankottai,92.817,80.847
+43376,Palayankottai,43377,Kanniyakumari,77.332,86.061
+43376,Palayankottai,43371,Thiruvananthapuram,92.242,100.0
+43376,Palayankottai,43372,Thiruvananthapuram,92.817,99.998
+43376,Palayankottai,43354,Punalur,96.235,80.993
+43377,Kanniyakumari,43372,Thiruvananthapuram,74.029,99.998
+43377,Kanniyakumari,43371,Thiruvananthapuram,75.106,100.0
+43377,Kanniyakumari,43376,Palayankottai,77.332,80.847
+VASU0,Surat / Magdala,42840,Surat,13.464,86.211
+VASU0,Surat / Magdala,42838,Bhaunagar,90.248,82.677
+VASU0,Surat / Magdala,42837,Mahuva,99.494,81.162
+VAUD0,Udaipur / Naramagra,42546,Chittorgarh,80.087,80.914
+VAUD0,Udaipur / Naramagra,42441,Erinpura / Jawai Dam Site,96.985,80.268
+VIDN0,Dehradun / R?ni Pokhri,42111,Dehradun,19.97,86.12
+VIDN0,Dehradun / R?ni Pokhri,42143,Najibabad,66.652,81.082
+VISM0,Shimla / Kanda,42080,Bilaspur,42.517,81.434
+VISM0,Shimla / Kanda,42105,Chandigarh / S?rajpur,42.57,83.632
+VISM0,Shimla / Kanda,42103,Ambala,82.837,86.086
+VOAT0,Agatti / Kavaratti,43266,M.O. Agathi Airport / Kavaratti,31.882,81.069
+VOAT0,Agatti / Kavaratti,43311,Amini Divi,69.011,86.164
+VOBL0,Bangalore / Bengaluru / Devenahalli / BIAL 2 Wheeler Parking,43296,Bangalore / Hindustan Airport,28.677,100.0
+VOBL0,Bangalore / Bengaluru / Devenahalli / BIAL 2 Wheeler Parking,43271,Arogyavaram,93.615,80.966
+VOCI0,Cochin / K?ladi,43353,Cochin / Willingdon,26.901,85.949
+VOCI0,Cochin / K?ladi,43357,Thrissur,45.332,80.916
+VOCI0,Cochin / K?ladi,43355,Kottayam,64.475,80.987
+VOCI0,Cochin / K?ladi,43335,Palakkad,73.539,81.055
+VOCI0,Cochin / K?ladi,43356,Periakulum / Ellakkal,81.838,80.724
+VOCL0,Calicut / Kondotti,43314,Kozhikode,22.593,85.961
+VOCL0,Calicut / Kondotti,43357,Thrissur,74.629,80.916
+VOCL0,Calicut / Kondotti,43335,Palakkad,86.286,81.055
+VOHS0,Hyderabad / Anthredigudam,43128,Hyderabad Airport,23.627,97.941
+VOHS0,Hyderabad / Anthredigudam,43083,Medak,91.628,81.11
+VOPB0,Port Blair / Portblair / Austin?b?d,43333,Port Blair,3.169,86.182
+VOPB0,Port Blair / Portblair / Austin?b?d,43310,Long Island,89.029,81.13
+VOPC0,Pondicherry / Auroville,43331,M.O. Pondicherry / Puducherry,0.752,86.123
+VOPC0,Pondicherry / Auroville,43329,Cuddalore,22.953,86.154
+VOPC0,Pondicherry / Auroville,43207,Parangipettai,52.331,80.92
+VORY0,Rajahmundry / R?j?nagaram,43189,Kakinada,47.601,86.198
+VORY0,Rajahmundry / R?j?nagaram,43147,Tuni,82.16,86.034
+VOTP0,Tirupati / Renigunta,43275,Tirupathi,5.757,83.584
+VOTP0,Tirupati / Renigunta,43303,Vellore,90.26,82.781
+VOTP0,Tirupati / Renigunta,43279,Madras / Minambakkam,98.702,99.998
+VOTP0,Tirupati / Renigunta,43278,Madras,99.015,84.423
+VOVZ0,Vizagapatam / Gajuwaka,43150,Cwc Vishakhapatnam / Waltair,7.305,80.061
+VOVZ0,Vizagapatam / Gajuwaka,43147,Tuni,83.136,86.034

@@ -1,0 +1,91 @@
+{
+  "station_id": "43003",
+  "timestamp": "2024-12-31T23:00:00",
+  "observed": {
+    "temp": 34.0,
+    "rhum": 65.0,
+    "pres": 1013.0
+  },
+  "predicted": {
+    "temp": 34.0,
+    "rhum": 65.0,
+    "pres": 1013.0
+  },
+  "reconstructed": {
+    "temp": 34.0,
+    "rhum": 65.0,
+    "pres": 1013.0
+  },
+  "imputed_interval": null,
+  "is_anomaly": true,
+  "confidence": 0.138,
+  "label": "GENUINE_WEATHER_EVENT",
+  "fault_type": "STORM",
+  "affected_variables": [
+    "temp"
+  ],
+  "reason": "temp observed 34.00 vs predicted 34.00. Neighbor mix 32.40 (n=3). neighbors agree on CW-IDW; treated as a genuine weather event.",
+  "thermo": {
+    "dewpoint_c": 26.468,
+    "td_minus_t": -7.532,
+    "passed": true
+  },
+  "tier1": {
+    "passed": true,
+    "violations": []
+  },
+  "tier2": {
+    "ran": true,
+    "score": 0.010829160641878843,
+    "window_mse": 0.0043783606961369514,
+    "threshold": 0.008487140408717099,
+    "feature_contributions": {
+      "temp": 0.9981929699240842,
+      "rhum": 4.294123922587699e-05,
+      "pres": 0.0017641361617044627
+    }
+  },
+  "tier3": {
+    "performed": true,
+    "method": "cw_idw",
+    "neighbors_agree": true,
+    "buddy_ids": [
+      "43057",
+      "43002",
+      "43058"
+    ],
+    "usable_count": 3,
+    "mix": {
+      "temp": 32.39961481395026,
+      "rhum": 77.00288889537308,
+      "pres": 1012.8019714319673
+    },
+    "idw_estimate": {
+      "temp": 32.39961481395026,
+      "rhum": 77.00288889537308,
+      "pres": 1012.8019714319673
+    },
+    "corr": {
+      "43057": 0.9177,
+      "43002": 0.9012,
+      "43058": 0.8682
+    },
+    "residual": {
+      "temp": 1.600385186049742,
+      "rhum": -12.002888895373076,
+      "pres": 0.19802856803266877
+    },
+    "reason_skip": null,
+    "p_agree": null
+  },
+  "climatology": {
+    "temp_p999_train": null,
+    "last_vs_p999": null
+  },
+  "timing": null,
+  "health": {
+    "index_7d": 0.6667,
+    "state": "CRITICAL",
+    "window_hours": 3
+  }
+}
