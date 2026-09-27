@@ -2,7 +2,7 @@ import pytest
 
 pytest.importorskip("plotly")
 
-from charts import telemetry_figures
+from charts import cluster_around, telemetry_figures
 from map_view import MAP_HEIGHT, india_map, map_camera, offscreen_stations
 from status import PIPELINE_COLOR
 from theme import HARDWARE, WEATHER
@@ -95,6 +95,26 @@ def test_default_camera_frames_mumbai_and_safdarjung() -> None:
     fig = india_map(stations, "42182", focus_ids=DEMO_FOCUS)
     hover = " ".join(fig.data[-1].hovertext)
     assert "Weather versus hardware cannot be called here." in hover
+
+
+def test_chart_keeps_the_replay_run_apart_from_a_later_live_hour() -> None:
+    story = [
+        {
+            "timestamp": f"2024-12-31T{hour:02d}:00:00Z",
+            "temp_observed": 55.0 if hour == 23 else 26.0,
+            "temp_imputed": 25.2 if hour == 23 else 26.0,
+            "imputed_interval": {"temp_c": [24.2, 26.3]} if hour == 23 else None,
+        }
+        for hour in range(24)
+    ]
+    live = {"timestamp": "2026-09-27T18:00:00Z", "temp_observed": 25.7, "imputed_interval": None}
+    window = cluster_around(story + [live], "2024-12-31T23:00:00Z")
+    assert len(window) == 24
+    assert window[-1]["temp_observed"] == 55.0
+    assert live not in window
+    figs = telemetry_figures(window, mark_at="2024-12-31T23:00:00Z", mark_label="Replay hour")
+    assert figs[0].data[0].y[-1] == 55.0
+    assert "Predicted" in [trace.name for trace in figs[0].data]
 
 
 def test_warming_is_its_own_idle_state() -> None:

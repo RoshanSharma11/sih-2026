@@ -45,7 +45,7 @@ The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43
 - Selected `station_id` from session (default Santa Cruz). The selector is the full catalog. A station opened from Alerts stays selected.
 - Identity, health 0–100 + `status`, isolate / buddy chips from `buddy_ids`.
 - Live verdict is **this hour** from `latest.label`. Matching `GET /alerts?station_id=` row (same timestamp) supplies `explainability_text` / contribution. Do not reuse an older alert as the live verdict after the hour has gone clean.
-- Open on Alerts pins `alert_id`. Station then shows that alert’s label, explainability, contribution, and a dotted marker on the chart, with a **Show live hour** control. Health stays the 7-day index.
+- Open on Alerts pins `alert_id`. A replay pins that story’s end hour, even when a newer live hour exists. Station then shows that hour’s label, explainability, contribution, and a dotted marker on the chart, with a **Show live hour** control. The chart is the continuous run around that hour, so a year-long gap does not draw a line to the live point. Health stays the 7-day index.
 - Charts: observed solid always. Dashed correction and the 90% band only when that row’s `imputed_interval` is a pair. Raw series never replaced.
 - Root cause, in order: `explainability_text`, dew point and Td−T from `thermo`, channel bars from the matching alert, neighbor table from `tier3_corr` / `tier3_mix` / `tier3_method`, then `GET /stations/{id}/timing?ts=&wait_s=0` polled until `ready`.
 - Health caption: 7-day sensor flag rate. Genuine weather does not count.

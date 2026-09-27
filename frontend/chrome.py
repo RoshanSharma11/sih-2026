@@ -93,6 +93,8 @@ def init_session() -> None:
         st.session_state.alerts_station_only = False
     if "alert_id" not in st.session_state:
         st.session_state.alert_id = None
+    if "replay_ts" not in st.session_state:
+        st.session_state.replay_ts = None
 
 
 @st.cache_resource
@@ -129,12 +131,15 @@ def fire_replay(story: str) -> None:
         flash(str(exc), kind="bad")
         return
     focus_station(SANTACRUZ)
+    end = body.get("end")
+    st.session_state.replay_ts = None if end is None else str(end)
     santa = next((row for row in body.get("results") or [] if row.get("station_id") == SANTACRUZ), None)
     if santa and santa.get("warming_up"):
         flash("Santa Cruz is warming up. The raw hour is on Station.")
-        return
-    label = None if santa is None else santa.get("label")
-    flash(f"Replay {story} · Santa Cruz {label or 'scored'}. Open Station.")
+    else:
+        label = None if santa is None else santa.get("label")
+        flash(f"Replay {story} · Santa Cruz {label or 'scored'}.")
+    go_page("station")
 
 
 def fire_reset() -> None:

@@ -7,7 +7,7 @@ from typing import Any
 import streamlit as st
 
 from api import SkyGuardApiError, merge_station
-from charts import contribution_html, telemetry_figures
+from charts import cluster_around, contribution_html, telemetry_figures
 from chrome import (
     catalog_stations,
     fmt_value,
@@ -25,6 +25,7 @@ from status import (
     is_weather,
     latest_payload,
     pick_alert,
+    pipeline_label,
     short_name,
     status_label,
     stamp_key,
@@ -79,8 +80,8 @@ def station_live() -> None:
     try:
         detail = client.station(station_id)
         station = merge_station(detail)
-        telemetry = client.telemetry(station_id)
-        alerts = client.alerts(station_id, limit=200)
+        telemetry = client.telemetry(station_id, limit=2000)
+        alerts = client.alerts(station_id, limit=1000)
     except SkyGuardApiError as exc:
         offline_help(str(exc))
         return
@@ -90,11 +91,19 @@ def station_live() -> None:
         st.caption("That alert is no longer in the recent feed. Showing this hour instead.")
         st.session_state.alert_id = None
 
-    _identity(station, pinned)
-    _verdict(station, alerts, telemetry, pinned)
-    _health_and_buddies(station, pinned)
-    _charts(telemetry, None if pinned is None else pinned.get("timestamp"))
-    hour = _focus_hour(station, telemetry, pinned)
+    replay_hour = hour_telemetry(telemetry, st.session_state.get("replay_ts"))
+    focus = None if pinned is not None else replay_hour
+    _identity(station, pinned, focus)
+    _verdict(station, alerts, telemetry, pinned, focus)
+    _health_and_buddies(station, pinned, focus)
+    if pinned is not None:
+        mark_at, mark_label = pinned.get("timestamp"), "Pinned alert"
+    elif focus is not None:
+        mark_at, mark_label = focus.get("timestamp"), "Replay hour"
+    else:
+        mark_at, mark_label = latest_payload(station).get("timestamp"), None
+    _charts(telemetry, mark_at, mark_label)
+    hour = _focus_hour(station, telemetry, pinned, focus)
     alert = pinned if pinned is not None else hour_alert(alerts, (hour or latest_payload(station)).get("timestamp"))
     timing = _timing_for(client, station_id, hour or latest_payload(station))
     _root_cause(station, hour, alert, timing)
@@ -121,11 +130,17 @@ def _sync_alert_pin(current: str) -> None:
     st.session_state._station_seen = current
 
 
-def _identity(station: dict[str, Any], pinned: dict[str, Any] | None) -> None:
+def _identity(
+    station: dict[str, Any],
+    pinned: dict[str, Any] | None,
+    focus: dict[str, Any] | None = None,
+) -> None:
     name = short_name(station.get("name", station["station_id"]))
     isolate = station.get("isolate")
     if pinned is not None:
         tag = f"Pinned alert · {alert_status_label(pinned)}"
+    elif focus is not None:
+        tag = f"Replay · {_hour_label(focus)}"
     elif isolate:
         tag = "Isolate · Tier 3 skipped"
     else:
@@ -135,11 +150,24 @@ def _identity(station: dict[str, Any], pinned: dict[str, Any] | None) -> None:
     )
 
 
+def _hour_label(hour: dict[str, Any]) -> str:
+    if hour.get("warming_up"):
+        return "Warming up"
+    return pipeline_label(hour.get("label") or hour.get("pipeline_status"))
+
+
+def _clear_focus() -> None:
+    st.session_state.alert_id = None
+    st.session_state.replay_ts = None
+    st.rerun()
+
+
 def _verdict(
     station: dict[str, Any],
     alerts: list[dict[str, Any]],
     telemetry: list[dict[str, Any]],
     pinned: dict[str, Any] | None,
+    focus: dict[str, Any] | None = None,
 ) -> None:
     latest = latest_payload(station)
     name = short_name(station.get("name", station["station_id"]))
@@ -168,6 +196,28 @@ def _verdict(
                 f" · P {fmt_value(observed.get('pres_hpa'))} hPa"
                 f" · H {fmt_value(observed.get('rhum_pct'))}%"
             )
+    elif focus is not None:
+        matched = hour_alert(alerts, focus.get("timestamp"))
+        kind = alert_kind(matched) if matched is not None else (
+            "warming" if focus.get("warming_up") else alert_kind(
+                {"label": focus.get("label"), "pipeline_status": focus.get("pipeline_status")}
+            )
+        )
+        stamp = str(focus.get("timestamp", "")).replace("T", " ").replace("Z", " UTC")
+        text = (
+            (matched or {}).get("explainability_text")
+            or focus.get("explainability_text")
+            or f"{name} · {_hour_label(focus)}"
+        )
+        kicker = f"Replay · {_hour_label(focus)} · {name}"
+        meta = (
+            f"{stamp}"
+            f" · T {fmt_value(focus.get('temp_observed'))}°C"
+            f" · P {fmt_value(focus.get('pres_observed'))} hPa"
+            f" · H {fmt_value(focus.get('rhum_observed'))}%"
+        )
+        if matched and matched.get("fault_type"):
+            meta = f"{matched.get('fault_type')} · {meta}"
     elif latest:
         kind = verdict_kind(station)
         matched = hour_alert(alerts, latest.get("timestamp"))
@@ -210,25 +260,43 @@ def _verdict(
         </div>""",
         unsafe_allow_html=True,
     )
-    if pinned is not None:
+    if pinned is not None or focus is not None:
         live_kind = verdict_kind(station)
-        if live_kind != kind or stamp_key(latest.get("timestamp")) != stamp_key(pinned.get("timestamp")):
+        same_hour = stamp_key(latest.get("timestamp")) == stamp_key(
+            (pinned or focus or {}).get("timestamp")
+        )
+        if not same_hour:
+            observed = latest.get("observed") or {}
             st.caption(
-                f"Live hour is {live_label}. Health below is the 7-day index, not this alert."
+                f"Live hour is {live_label}"
+                f" · T {fmt_value(observed.get('temp_c'))}°C"
+                f" · P {fmt_value(observed.get('pres_hpa'))} hPa"
+                f" · H {fmt_value(observed.get('rhum_pct'))}%."
+                " Health below is the 7-day index."
             )
+        elif live_kind != kind:
+            st.caption(f"Live hour is {live_label}. Health below is the 7-day index.")
         if st.button("Show live hour", key="clear_alert_pin"):
-            st.session_state.alert_id = None
-            st.rerun()
+            _clear_focus()
 
 
-def _health_and_buddies(station: dict[str, Any], pinned: dict[str, Any] | None) -> None:
+def _health_and_buddies(
+    station: dict[str, Any],
+    pinned: dict[str, Any] | None,
+    focus: dict[str, Any] | None = None,
+) -> None:
     health = station.get("health_score")
     status = station.get("status")
     m1, m2, m3 = st.columns(3)
     m1.metric("Health (7-day)", f"{health:.0f}" if isinstance(health, (int, float)) else "—")
     m2.metric("Station status", status or "—")
-    hour_label = alert_status_label(pinned) if pinned is not None else status_label(station)
-    m3.metric("This hour" if pinned is None else "Pinned hour", hour_label)
+    if pinned is not None:
+        hour_label, hour_name = alert_status_label(pinned), "Pinned hour"
+    elif focus is not None:
+        hour_label, hour_name = _hour_label(focus), "Replay hour"
+    else:
+        hour_label, hour_name = status_label(station), "This hour"
+    m3.metric(hour_name, hour_label)
     st.caption("7-day sensor flag rate. Genuine weather does not count.")
 
     buddies = station.get("buddy_ids") or []
@@ -243,15 +311,22 @@ def _health_and_buddies(station: dict[str, Any], pinned: dict[str, Any] | None) 
     )
 
 
-def _charts(telemetry: list[dict[str, Any]], mark_at: Any | None) -> None:
+def _charts(telemetry: list[dict[str, Any]], mark_at: Any | None, mark_label: str | None) -> None:
     st.markdown("##### Observed")
-    st.caption(
-        "Solid = raw, always. Dashed correction and the 90% band appear only when this hour has an imputed interval."
-    )
-    if not telemetry:
+    window = cluster_around(telemetry, mark_at)
+    if window and len(window) != len(telemetry):
+        st.caption(
+            "Solid = raw. The dashed correction and 90% band show on a distrusted hour. "
+            "This chart is that continuous run, not the gap to a later live hour."
+        )
+    else:
+        st.caption(
+            "Solid = raw, always. Dashed correction and the 90% band appear only when this hour has an imputed interval."
+        )
+    if not window:
         st.info("No telemetry yet for this station.")
         return
-    for fig in telemetry_figures(telemetry, mark_at=mark_at):
+    for fig in telemetry_figures(window, mark_at=mark_at if mark_label else None, mark_label=mark_label):
         st.plotly_chart(fig, theme=None, width="stretch")
 
 
@@ -259,11 +334,14 @@ def _focus_hour(
     station: dict[str, Any],
     telemetry: list[dict[str, Any]],
     pinned: dict[str, Any] | None,
+    focus: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     if pinned is not None:
         hour = hour_telemetry(telemetry, pinned.get("timestamp"))
         if hour is not None:
             return hour
+    if focus is not None:
+        return focus
     latest = latest_payload(station)
     hour = hour_telemetry(telemetry, latest.get("timestamp"))
     return hour or (telemetry[-1] if telemetry else None)

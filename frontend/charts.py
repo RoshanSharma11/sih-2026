@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import plotly.graph_objects as go
@@ -34,6 +35,57 @@ def _band(row: dict[str, Any], channel: str) -> tuple[float, float] | None:
         return None
 
 
+def _as_dt(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    text = str(value).strip().replace("Z", "+00:00")
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def cluster_around(
+    telemetry: list[dict[str, Any]],
+    timestamp: Any | None,
+    gap: timedelta = timedelta(hours=6),
+) -> list[dict[str, Any]]:
+    """Hours that belong to the same continuous run as timestamp.
+
+    A live hour a year after the replay must not draw a line across the gap.
+    """
+    rows = [row for row in telemetry if _as_dt(row.get("timestamp")) is not None]
+    rows.sort(key=lambda row: _as_dt(row.get("timestamp")) or datetime.min.replace(tzinfo=timezone.utc))
+    if not rows:
+        return []
+    target = _as_dt(timestamp) or _as_dt(rows[-1].get("timestamp"))
+    assert target is not None
+    index = min(
+        range(len(rows)),
+        key=lambda i: abs((_as_dt(rows[i].get("timestamp")) - target).total_seconds()),
+    )
+    start = index
+    while start > 0:
+        left = _as_dt(rows[start - 1].get("timestamp"))
+        right = _as_dt(rows[start].get("timestamp"))
+        if left is None or right is None or right - left > gap:
+            break
+        start -= 1
+    end = index
+    while end + 1 < len(rows):
+        left = _as_dt(rows[end].get("timestamp"))
+        right = _as_dt(rows[end + 1].get("timestamp"))
+        if left is None or right is None or right - left > gap:
+            break
+        end += 1
+    return rows[start : end + 1]
+
+
 def channel_figure(
     telemetry: list[dict[str, Any]],
     observed_key: str,
@@ -41,6 +93,7 @@ def channel_figure(
     interval_key: str,
     title: str,
     mark_at: Any | None = None,
+    mark_label: str | None = None,
 ) -> go.Figure:
     stamps = [row.get("timestamp") for row in telemetry]
     observed = [row.get(observed_key) for row in telemetry]
@@ -125,16 +178,28 @@ def channel_figure(
             line_dash="dot",
             line_color=MUTED,
             line_width=1,
-            annotation_text="Pinned alert",
+            annotation_text=mark_label or "Pinned hour",
             annotation_position="top",
             annotation_font=dict(size=10, color=MUTED),
         )
     return fig
 
 
-def telemetry_figures(telemetry: list[dict[str, Any]], mark_at: Any | None = None) -> list[go.Figure]:
+def telemetry_figures(
+    telemetry: list[dict[str, Any]],
+    mark_at: Any | None = None,
+    mark_label: str | None = None,
+) -> list[go.Figure]:
     return [
-        channel_figure(telemetry, observed, imputed, interval, title, mark_at=mark_at)
+        channel_figure(
+            telemetry,
+            observed,
+            imputed,
+            interval,
+            title,
+            mark_at=mark_at,
+            mark_label=mark_label,
+        )
         for observed, imputed, interval, title, _unit in CHANNELS
     ]
 
