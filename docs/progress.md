@@ -42,7 +42,7 @@ Next: v2 live plan step 8 (check the two paths).
 | V2-4 | `49ad285` | Fewer than 24 hours returns the raw hour and `warming_up`; the 24th hour returns the v2 label |
 | V2-5 | `0ee8d6b` | Replay `demo_windows.json` through ingest so the Mumbai stories mutate before QC and a newer live window stays put |
 | V2-6 | `7af74ba` | `GET /stations/{id}/timing` reads the v2 cache so ingest can return before the attribution sentence is ready |
-| V2-7 | (this change) | Dashboard shows the 48, warming up, interval-gated bands, root cause, and Mumbai replay instead of the Palam buttons |
+| V2-7 | `3a2b639` | Dashboard shows the 48, warming up, interval-gated bands, root cause, and Mumbai replay instead of the Palam buttons |
 
 ## What works today (post-I6)
 
