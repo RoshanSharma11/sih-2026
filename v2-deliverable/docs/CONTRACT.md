@@ -3,6 +3,8 @@
 This is the **only** I/O document backend and frontend should implement against.  
 ML lives in this folder. You persist raw, build windows, call ML, map names, draw the console.
 
+Story, stats, plots, and gaps: [`SKYGUARD_V2.md`](SKYGUARD_V2.md).
+
 | | |
 |---|---|
 | Problem | SIH 2026 PS 26073 · MoES / IMD · **software only** |
@@ -357,7 +359,7 @@ Keep the five-page console. Additive only.
 - Default camera: Mumbai four + Safdarjung. **Not Palam.**
 - Marker color = latest `label` color (§4).
 - Draw 1-hop edges from `/buddy-map` ∩ stations you actually ingest.
-- Isolates (degree &lt; 2 in the *ingested* set): slate tooltip “not enough neighbors for weather vs hardware”.
+- Isolates (degree < 2 in the *ingested* set): slate tooltip “not enough neighbors for weather vs hardware”.
 
 ### 7.2 Station chart
 

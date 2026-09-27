@@ -5,7 +5,8 @@ Input is hourly **temperature, relative humidity, pressure**. Output is a five-w
 
 This folder is the **team deliverable**: runtime, frozen weights, catalogs, demo windows, and the I/O contract. Notebooks, Kaggle zips, IMD probes, and `_build_*.py` are not here.
 
-**Teammates start here:** [`docs/CONTRACT.md`](docs/CONTRACT.md) — exact input JSON, exact output JSON, overlay, TIMING, what to draw.
+**Teammates start here:** [`docs/CONTRACT.md`](docs/CONTRACT.md) — exact JSON and UI rules.  
+**Full briefing (problem, architecture, stats, plots, files, gaps):** [`docs/SKYGUARD_V2.md`](docs/SKYGUARD_V2.md).
 
 ---
 
