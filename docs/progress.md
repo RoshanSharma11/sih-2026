@@ -40,7 +40,7 @@ Next: v2 live plan step 6 (TIMING proxy). No further frontend slices in this ste
 | V2-2 | `22ee5c7` | Product catalog is the judge 48, with `aws_id` and in-set buddies; `/healthz` reports v2 weights |
 | V2-3 | `48b9be0` | IMD poller posts matched hours through ingest; `/healthz` records poll status |
 | V2-4 | `49ad285` | Fewer than 24 hours returns the raw hour and `warming_up`; the 24th hour returns the v2 label |
-| V2-5 | (this change) | Replay `demo_windows.json` through ingest so the Mumbai stories mutate before QC and a newer live window stays put |
+| V2-5 | `0ee8d6b` | Replay `demo_windows.json` through ingest so the Mumbai stories mutate before QC and a newer live window stays put |
 
 ## What works today (post-I6)
 
