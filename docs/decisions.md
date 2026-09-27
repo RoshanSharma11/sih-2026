@@ -159,3 +159,15 @@ The poller calls `ingest_observation`. `DuplicateObservation` (HTTP 409) is skip
 ## D21 — Warm-up is not a label
 
 **Lock:** Until a station has 24 hourly rows, ingest stores the raw hour and returns `warming_up: true` with `label` and `pipeline_status` null. It does not call `process_aws_data` and it does not open an alert. The hour that fills the window is scored, and that response carries the real v2 label with `warming_up: false`. Null-label hours are left out of the 7-day health rate. Seed rows stay `CLEAN` and count toward the 24.
+
+## D22 — Replay uses the same ingest path
+
+**Lock:** `POST /demo/replay` reads `demo_windows.json` (24 hours ending `2024-12-31T23:00:00Z` for `43003`, `43057`, `43002`, `43058`, `42182`). It seeds the earlier hours as `CLEAN` and sends the scored hour through `ingest_observation`. Story mutations live in `inject.py` and are armed only for that call.
+
+- `hardware` ingests the Mumbai four and sets Santa Cruz to 55 °C / 95% / 980 hPa.
+- `weather` ingests the Mumbai four and adds 8 °C on Santa Cruz, Colaba, and Juhu `43002`. Alibag is the clean fourth window.
+- `freeze` holds Santa Cruz temperature for 12 hours. `comms` nulls that temperature. `clean` streams all five with no mutation.
+
+The arm is cleared before the response returns, so the next live hour is not rewritten. `POST /demo/reset` also clears it and does not delete rows. A second play deletes that fixture span first, then writes it again.
+
+A station window that already contains an hour after the fixture end is put back when the story finishes. Replay rows remain at the 2024 timestamps. The two timelines do not share one 24-hour window.

@@ -4,9 +4,12 @@ import pytest
 from skyguard.data.inject import (
     Observation,
     apply_live,
+    apply_replay_mutation,
     inject_comm_error,
     inject_drift,
     inject_freeze,
+    inject_hardware_reading,
+    inject_heat,
     inject_spike,
     inject_storm,
 )
@@ -69,3 +72,23 @@ def test_apply_live_spike_and_freeze_and_storm() -> None:
 
     missing = apply_live(FaultType.COMM_ERROR, clean, None, 0)
     assert missing == Observation(None, None, None)
+
+
+def test_replay_mutations_are_fixed_readings() -> None:
+    reading = inject_hardware_reading()
+    assert reading == Observation(55.0, 980.0, 95.0)
+    assert inject_heat(26.0) == pytest.approx(34.0)
+    hardware, kind = apply_replay_mutation("hardware", Observation(26.0, 1013.0, 65.0))
+    assert kind is FaultType.SPIKE
+    assert hardware == reading
+    heated, weather = apply_replay_mutation("weather", Observation(24.4, 1013.2, 77.0))
+    assert weather is FaultType.GENUINE_WEATHER
+    assert heated.temp_c == pytest.approx(32.4)
+    assert heated.pres_hpa == pytest.approx(1013.2)
+    frozen, freeze = apply_replay_mutation("freeze", Observation(30.0, 1013.0, 65.0), freeze_anchor=26.0)
+    assert freeze is FaultType.FREEZE
+    assert frozen.temp_c == 26.0
+    missing, comms = apply_replay_mutation("comms", Observation(26.0, 1013.0, 65.0))
+    assert comms is FaultType.COMM_ERROR
+    assert missing.temp_c is None
+    assert missing.pres_hpa == 1013.0

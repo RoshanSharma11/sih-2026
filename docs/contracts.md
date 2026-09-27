@@ -171,7 +171,42 @@ Response:
 
 Legacy body `{target: "cluster", cluster_id: "NORTH"}` is rejected with 400 after I3. Use Palam neighborhood (`42181`) for the storm hero.
 
-`POST /demo/reset` — clear all armed overlays.
+`POST /demo/reset` — clear all armed overlays and any replay arm. It does not delete stored hours.
+
+## Demo replay
+
+`POST /demo/replay`
+
+```json
+{"story": "hardware"}
+```
+
+| `story` | What is ingested | Mutation before QC |
+|---|---|---|
+| `clean` | Five demo ids | none |
+| `hardware` | Mumbai four `43057`, `43002`, `43058`, `43003` | Santa Cruz only → 55 °C / 95% / 980 hPa |
+| `weather` | Mumbai four, Santa Cruz last | +8 °C on Santa Cruz, Colaba `43057`, and Juhu `43002`. Alibag stays on the fixture hour |
+| `freeze` | Santa Cruz | temperature held for 12 hours at the fixture's last temperature |
+| `comms` | Santa Cruz | temperature null on the last hour |
+
+Hours come from `v2-deliverable/v2/data/demo_windows.json`: 24 aligned hours ending `2024-12-31T23:00:00Z`. Earlier hours are seeded `CLEAN`. The scored hour goes through `/ingest`, so the mutation is applied before QC and then the arm is cleared. A later live hour is not rewritten.
+
+`demo_injected` on that hour is `SPIKE` (hardware), `GENUINE_WEATHER` (weather), `FREEZE`, or `COMM_ERROR`. The hardware reading is the fixed 55 / 95 / 980, not `inject_spike`'s random offset.
+
+Response:
+
+```json
+{
+  "story": "hardware",
+  "end": "2024-12-31T23:00:00Z",
+  "station_ids": ["43057", "43002", "43058", "43003"],
+  "results": []
+}
+```
+
+`results` is one ingest result per station, in `station_ids` order. Santa Cruz is last on the Mumbai stories so its buddies already have that hour. Playing the same story again replaces the fixture span. It does not 409.
+
+If the in-memory window already has an hour newer than `end`, that live window is restored after the story. The replay rows stay at the 2024 timestamps. Live and replay do not share one 24-hour window.
 
 ## Stream / view filter
 
@@ -208,6 +243,7 @@ Empty `station_ids` means all catalog stations (view = ingest = full catalog). S
 | `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | raw + imputed series |
 | `GET` | `/alerts?station_id=&limit=` | newest first |
 | `GET` | `/demo/status` | armed overlays |
+| `POST` | `/demo/replay` | play one Mumbai story through `/ingest` |
 | `GET` | `/demo/stream-filter` | current view + ingest sets |
 | `GET` | `/buddy-map` | `{stations, isolates, buddies}` (from ML graph) |
 
@@ -398,6 +434,6 @@ Live demo uses the same functions. Storm is applied to every station in the **ne
 | 422 | Schema violation |
 | 404 | Unknown `station_id` (not in the product catalog) |
 | 409 | Duplicate `(station_id, timestamp)` ingest |
-| 400 | No train scaler for a catalog station; storm inject targeting a single station; missing channel on SPIKE; legacy `cluster` target |
+| 400 | No train scaler for a catalog station; storm inject targeting a single station; missing channel on SPIKE; legacy `cluster` target; demo windows file missing or not the 24-hour replay |
 
 Duplicate timestamps: do not silently overwrite. The streamer must be deterministic.

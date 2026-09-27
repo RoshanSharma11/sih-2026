@@ -8,8 +8,16 @@ from sqlalchemy.orm import Session
 from skyguard.api.deps import get_db
 from skyguard.db.catalog import buddy_map_from_db, catalog_station_ids, neighborhood_ids
 from skyguard.db.models import Station
-from skyguard.errors import CatalogNotLoaded, InvalidDemoRequest, StationNotFound
-from skyguard.schemas import DemoInjectRequest, DemoStatus, StreamFilterRequest, StreamFilterStatus
+from skyguard.engine.replay import play_replay
+from skyguard.errors import CatalogNotLoaded, DuplicateObservation, InvalidDemoRequest, StationNotFound, UnknownScaler
+from skyguard.schemas import (
+    DemoInjectRequest,
+    DemoStatus,
+    ReplayRequest,
+    ReplayResult,
+    StreamFilterRequest,
+    StreamFilterStatus,
+)
 
 router = APIRouter()
 
@@ -23,6 +31,10 @@ def _translate(exc: Exception) -> HTTPException:
         return HTTPException(status_code=404, detail=f"Unknown station_id: {exc}")
     if isinstance(exc, InvalidDemoRequest):
         return HTTPException(status_code=400, detail=str(exc))
+    if isinstance(exc, UnknownScaler):
+        return HTTPException(status_code=400, detail=f"Unknown scaler for station_id: {exc}")
+    if isinstance(exc, DuplicateObservation):
+        return HTTPException(status_code=409, detail=f"Duplicate observation: {exc}")
     raise exc
 
 
@@ -62,6 +74,26 @@ def inject_demo(
     except (CatalogNotLoaded, StationNotFound, InvalidDemoRequest) as exc:
         raise _translate(exc) from exc
     return request.app.state.demo.status()
+
+
+@router.post("/demo/replay", response_model=ReplayResult)
+def replay_demo(
+    body: ReplayRequest,
+    request: Request,
+    session: Session = Depends(get_db),
+) -> ReplayResult:
+    try:
+        _require_catalog(request)
+        return play_replay(
+            session,
+            body.story,
+            catalog_ready=request.app.state.catalog_ready,
+            windows=request.app.state.windows,
+            demo=request.app.state.demo,
+            qc_engine=request.app.state.qc_engine,
+        )
+    except (CatalogNotLoaded, StationNotFound, InvalidDemoRequest, UnknownScaler, DuplicateObservation) as exc:
+        raise _translate(exc) from exc
 
 
 @router.post("/demo/reset", response_model=DemoStatus)

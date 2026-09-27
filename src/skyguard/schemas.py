@@ -66,6 +66,14 @@ class DemoKind(str, Enum):
     GENUINE_WEATHER = "GENUINE_WEATHER"
 
 
+class ReplayStory(str, Enum):
+    CLEAN = "clean"
+    HARDWARE = "hardware"
+    WEATHER = "weather"
+    FREEZE = "freeze"
+    COMMS = "comms"
+
+
 CHANNEL_FAULTS = {DemoKind.SPIKE, DemoKind.FREEZE, DemoKind.DRIFT}
 
 
@@ -287,6 +295,17 @@ class DemoOverlayStatus(BaseModel):
 
 class DemoStatus(BaseModel):
     overlays: list[DemoOverlayStatus]
+
+
+class ReplayRequest(BaseModel):
+    story: ReplayStory
+
+
+class ReplayResult(BaseModel):
+    story: ReplayStory
+    end: datetime
+    station_ids: list[str]
+    results: list[IngestResult]
 
 
 class StreamFilterRequest(BaseModel):

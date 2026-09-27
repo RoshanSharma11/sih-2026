@@ -14,6 +14,11 @@ DEFAULT_STD = {
     Channel.RHUM_PCT: 5.0,
 }
 DRIFT_SLOPE = 0.1
+# Mumbai replay stories. These are fixed readings, not the random spike/storm draws.
+HARDWARE_TEMP_C = 55.0
+HARDWARE_PRES_HPA = 980.0
+HARDWARE_RHUM_PCT = 95.0
+HEAT_DELTA_C = 8.0
 
 
 @dataclass(frozen=True)
@@ -69,6 +74,38 @@ def inject_drift(
 
 def inject_comm_error() -> None:
     return None
+
+
+def inject_hardware_reading() -> Observation:
+    """Santa Cruz sensor story: 55 °C / 95% / 980 hPa."""
+    return Observation(HARDWARE_TEMP_C, HARDWARE_PRES_HPA, HARDWARE_RHUM_PCT)
+
+
+def inject_heat(temp_c: float, delta_c: float = HEAT_DELTA_C) -> float:
+    """Neighborhood heat story: the same +8 °C on every armed station."""
+    return float(temp_c) + delta_c
+
+
+def apply_replay_mutation(
+    story: str,
+    observation: Observation,
+    freeze_anchor: float | None = None,
+) -> tuple[Observation, FaultType]:
+    """Story mutations for `/demo/replay`. Fault math stays here; the pipeline calls it before QC."""
+    if story == "hardware":
+        return inject_hardware_reading(), FaultType.SPIKE
+    if story == "weather":
+        if observation.temp_c is None:
+            return observation, FaultType.GENUINE_WEATHER
+        return observation.set(Channel.TEMP_C, inject_heat(observation.temp_c)), FaultType.GENUINE_WEATHER
+    if story == "freeze":
+        anchor = observation.temp_c if freeze_anchor is None else freeze_anchor
+        if anchor is None:
+            return observation, FaultType.FREEZE
+        return observation.set(Channel.TEMP_C, float(anchor)), FaultType.FREEZE
+    if story == "comms":
+        return observation.set(Channel.TEMP_C, inject_comm_error()), FaultType.COMM_ERROR
+    raise ValueError(f"Unsupported replay story: {story}")
 
 
 def inject_storm(

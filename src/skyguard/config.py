@@ -20,6 +20,9 @@ ML_SCALERS_PATH = Path(
     os.environ.get("SKYGUARD_ML_SCALERS", REPO_ROOT / "ml" / "ml" / "artifacts" / "scalers.json")
 )
 V2_DATA_DIR = REPO_ROOT / "v2-deliverable" / "v2" / "data"
+DEMO_WINDOWS_PATH = Path(
+    os.environ.get("SKYGUARD_DEMO_WINDOWS", V2_DATA_DIR / "demo_windows.json")
+)
 JUDGE48_CSV = Path(os.environ.get("SKYGUARD_JUDGE48", V2_DATA_DIR / "stations_judge48.csv"))
 V2_EDGES_CSV = Path(os.environ.get("SKYGUARD_V2_EDGES", V2_DATA_DIR / "buddy_edges.csv"))
 V2_SCALERS_PATH = Path(

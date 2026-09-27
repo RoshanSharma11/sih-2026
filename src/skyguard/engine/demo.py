@@ -6,7 +6,7 @@ import threading
 from dataclasses import dataclass, field
 
 from skyguard.data.catalog import resolve_view_and_ingest
-from skyguard.data.inject import Observation, apply_live, default_rng
+from skyguard.data.inject import Observation, apply_live, apply_replay_mutation, default_rng
 from skyguard.errors import InvalidDemoRequest
 from skyguard.schemas import (
     Channel,
@@ -15,6 +15,7 @@ from skyguard.schemas import (
     DemoOverlayStatus,
     DemoStatus,
     FaultType,
+    ReplayStory,
     StreamFilterStatus,
 )
 
@@ -66,11 +67,20 @@ class Overlay:
         )
 
 
+@dataclass
+class ReplayArm:
+    story: ReplayStory
+    station_ids: set[str]
+    remaining: dict[str, int]
+    freeze_anchor: float | None = None
+
+
 class DemoController:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._overlays: list[Overlay] = []
         self._next_seed = 26073
+        self._replay: ReplayArm | None = None
 
     def arm(self, request: DemoInjectRequest, station_ids: list[str]) -> DemoOverlayStatus:
         if not station_ids:
@@ -90,9 +100,36 @@ class DemoController:
             self._overlays.append(overlay)
             return overlay.status()
 
+    def arm_replay(
+        self,
+        story: ReplayStory,
+        station_ids: list[str],
+        hours: int,
+        freeze_anchor: float | None = None,
+    ) -> None:
+        if story is ReplayStory.CLEAN:
+            return
+        if hours < 1:
+            raise InvalidDemoRequest("replay mutation hours must be >= 1")
+        ids = list(dict.fromkeys(station_ids))
+        if not ids:
+            raise InvalidDemoRequest("replay mutation requires at least one station")
+        with self._lock:
+            self._replay = ReplayArm(
+                story=story,
+                station_ids=set(ids),
+                remaining={station_id: hours for station_id in ids},
+                freeze_anchor=freeze_anchor,
+            )
+
+    def clear_replay(self) -> None:
+        with self._lock:
+            self._replay = None
+
     def reset(self) -> None:
         with self._lock:
             self._overlays.clear()
+            self._replay = None
 
     def status(self) -> DemoStatus:
         with self._lock:
@@ -107,11 +144,30 @@ class DemoController:
                 if kind is not None:
                     observation = updated
                     injected = kind
+            updated, replay_kind = self._apply_replay(station_id, observation)
+            if replay_kind is not None:
+                observation = updated
+                injected = replay_kind
             self._drop_spent()
         return observation, injected
 
     def _drop_spent(self) -> None:
         self._overlays = [overlay for overlay in self._overlays if overlay.active()]
+
+    def _apply_replay(
+        self,
+        station_id: str,
+        observation: Observation,
+    ) -> tuple[Observation, FaultType | None]:
+        arm = self._replay
+        if arm is None or station_id not in arm.station_ids:
+            return observation, None
+        remaining = arm.remaining.get(station_id, 0)
+        if remaining <= 0:
+            return observation, None
+        mutated, kind = apply_replay_mutation(arm.story.value, observation, arm.freeze_anchor)
+        arm.remaining[station_id] = remaining - 1
+        return mutated, kind
 
     def _apply_one(
         self,

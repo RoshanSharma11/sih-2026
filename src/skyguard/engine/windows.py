@@ -44,6 +44,15 @@ class WindowStore:
     def append(self, station_id: str, point: WindowPoint) -> None:
         self._windows[station_id].append(point)
 
+    def clear(self, station_id: str) -> None:
+        self._windows.pop(station_id, None)
+
+    def replace(self, station_id: str, points: list[WindowPoint]) -> None:
+        window: deque[WindowPoint] = deque(maxlen=self.size)
+        for point in points[-self.size :]:
+            window.append(point)
+        self._windows[station_id] = window
+
     def hydrate(self, session: Session) -> None:
         station_ids = session.scalars(select(Station.station_id)).all()
         for station_id in station_ids:

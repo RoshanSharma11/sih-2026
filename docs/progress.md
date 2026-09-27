@@ -1,8 +1,8 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-27 (v2 live plan step 4: warm-up).
+Last updated: 2026-09-27 (v2 live plan step 5: replay).
 
-**Next session:** implement [`v2-live-plan.md`](v2-live-plan.md) from step 5 (replay on the same ingest path). Do not extend the Palam / `ml/` path. Credentials are in `.env` only.
+**Next session:** implement [`v2-live-plan.md`](v2-live-plan.md) from step 6 (TIMING proxy). Do not extend the Palam / `ml/` path. Credentials are in `.env` only.
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -12,13 +12,13 @@ Nothing product-blocking. `ml/data/raw/` is on disk (gitignored). Do not commit 
 
 Optional, not blocking: the frozen v1 threshold note in `ml/` is not the live score. Product ingest uses the v2 threshold (`0.008487`).
 
-Nothing else needs a product decision. Language and D14–D21 are locked. D19 is the live 48. D20 is the IMD poller. D21 is warm-up: null label until 24 hours, then the real v2 label.
+Nothing else needs a product decision. Language and D14–D22 are locked. D19 is the live 48. D20 is the IMD poller. D21 is warm-up: null label until 24 hours, then the real v2 label. D22 is replay on the same ingest path.
 
 ## Status
 
-**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**, **V2-1** ingest on `v2.engine`, **V2-2** live catalog is the 48, **V2-3** IMD poller, **V2-4** warm-up. Palam `42181` is not in the product catalog. Safdarjung `42182` is an isolate inside the 48. Storm inject still uses whatever neighborhood the catalog has.
+**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**, **V2-1** ingest on `v2.engine`, **V2-2** live catalog is the 48, **V2-3** IMD poller, **V2-4** warm-up, **V2-5** replay. Palam `42181` is not in the product catalog. Safdarjung `42182` is an isolate inside the 48. Storm inject still uses whatever neighborhood the catalog has.
 
-Next: v2 live plan step 5 (replay). No further frontend slices in this step.
+Next: v2 live plan step 6 (TIMING proxy). No further frontend slices in this step.
 
 | Slice | Commit | Why |
 |---|---|---|
@@ -40,6 +40,7 @@ Next: v2 live plan step 5 (replay). No further frontend slices in this step.
 | V2-2 | `22ee5c7` | Product catalog is the judge 48, with `aws_id` and in-set buddies; `/healthz` reports v2 weights |
 | V2-3 | `48b9be0` | IMD poller posts matched hours through ingest; `/healthz` records poll status |
 | V2-4 | `49ad285` | Fewer than 24 hours returns the raw hour and `warming_up`; the 24th hour returns the v2 label |
+| V2-5 | (this change) | Replay `demo_windows.json` through ingest so the Mumbai stories mutate before QC and a newer live window stays put |
 
 ## What works today (post-I6)
 
@@ -48,6 +49,7 @@ Next: v2 live plan step 5 (replay). No further frontend slices in this step.
 - IMD poller: JWT from `IMD_TOKEN_URL`, state snapshots `sid` on `IMD_AWS_URL`, `ID` → `aws_id`, hour bucket in UTC, duplicate hours skipped. Off when `SKYGUARD_IMD_POLL=0` or when tests pass their own database.
 - Live QC: `engine/adapter.py` maps public fields ↔ v2; `pipeline.py` persists raw, calls `v2.engine.process_aws_data` (`use_stgnn=False`, `timing_async=True`), writes overlay (`predicted`, `imputed_interval`, `thermo`, `tier2.score`, `tier3.method` / `mix` / `corr`, `reason`) and recomputes 7-day health from stored labels. Weather does not count. `ml.engine` and legacy `skyguard.engine.tier*` are not on this path.
 - Missing artifacts on a full window → persist anyway, `UNCONFIRMED_ANOMALY`. Fewer than 24 hourly rows → raw hour, `warming_up`, null label, no v2 call. Catalog station with no train scaler → 400. Station not in the catalog → 404.
+- Replay: `POST /demo/replay` with `clean`, `hardware`, `weather`, `freeze`, or `comms`. Seeds the 2024-12-31 fixture, ingests the scored hour, and clears the arm. `hardware` and `weather` ingest the Mumbai four. A newer live window is restored after the story.
 - Streamer: `--stations 42181 --with-buddies` (default true) seeds/POSTs the ingest set. CLI overrides `GET /demo/stream-filter`. Empty filter = full catalog.
 - Demo inject: `target=neighborhood` expands via the buddy graph. `target=cluster` is 400.
 - Dashboard: five-page light console (Network, Station, Alerts, Control, Guide). Default view Palam∪buddies + Santacruz. Hero on Control. Network map is a Carto tile view that zooms to the selected cluster; names sit in a roster. Alerts **Open** pins that hour on Station.
@@ -101,7 +103,7 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Next
 
-[`v2-live-plan.md`](v2-live-plan.md) step 5: replay `demo_windows.json` through the same ingest path. Stories 2 and 3 ingest the Mumbai four together.
+[`v2-live-plan.md`](v2-live-plan.md) step 6: `GET /stations/{id}/timing?ts=` reads the v2 cache. Ingest does not wait on it.
 
 ## Open issues
 

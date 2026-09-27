@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import threading
 from collections import defaultdict
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -47,7 +49,23 @@ _SENSOR_HEALTH_LABELS = {
     Label.HARDWARE_ANOMALY.value,
     Label.UNCONFIRMED_ANOMALY.value,
 }
-_STATION_LOCKS: dict[str, threading.Lock] = defaultdict(threading.Lock)
+_STATION_LOCKS: dict[str, threading.RLock] = defaultdict(threading.RLock)
+
+
+@contextmanager
+def hold_station_locks(station_ids: list[str]) -> Iterator[None]:
+    """Hold every station lock for one replay so a live poll cannot join that window.
+
+    Locks are re-entrant. `ingest_observation` takes the same lock on this thread.
+    """
+    locks = [_STATION_LOCKS[station_id] for station_id in sorted(set(station_ids))]
+    for lock in locks:
+        lock.acquire()
+    try:
+        yield
+    finally:
+        for lock in reversed(locks):
+            lock.release()
 
 
 def as_utc(value: datetime) -> datetime:
