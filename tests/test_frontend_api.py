@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import httpx
 
 from api import SkyGuardApiError, SkyGuardClient, merge_station
@@ -170,6 +172,19 @@ def test_healthz_false_when_down() -> None:
     snap = client.snapshot("42181")
     assert snap.ok is False
     assert "not reachable" in (snap.error or "")
+
+
+def test_dashboard_polls_the_product_api_only() -> None:
+    client = SkyGuardClient(transport=httpx.MockTransport(_app))
+    assert client.base_url == "http://127.0.0.1:8000"
+    assert "8001" not in client.base_url
+    root = Path(__file__).resolve().parents[1] / "frontend"
+    for path in root.rglob("*.py"):
+        text = path.read_text()
+        assert "ml.engine" not in text
+        assert "ml.ml" not in text
+        if "8001" in text:
+            assert "does not call port 8001" in text
 
 
 def test_merge_station_reads_latest_label() -> None:

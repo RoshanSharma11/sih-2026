@@ -1,8 +1,8 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-28 (v2 live plan step 7: dashboard on the live 48).
+Last updated: 2026-09-28 (v2 live plan step 8: both paths checked).
 
-**Next session:** implement [`v2-live-plan.md`](v2-live-plan.md) from step 8 (check the two paths). Do not extend the Palam / `ml/` path. Credentials are in `.env` only.
+**Next session:** the live plan is complete. Do not extend the Palam / `ml/` path. Credentials stay in `.env` only.
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -16,9 +16,9 @@ Nothing else needs a product decision. Language and D14–D23 are locked. D19 is
 
 ## Status
 
-**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**, **V2-1** ingest on `v2.engine`, **V2-2** live catalog is the 48, **V2-3** IMD poller, **V2-4** warm-up, **V2-5** replay, **V2-6** TIMING proxy, **V2-7** dashboard on the live 48. Palam `42181` is not in the product catalog. Safdarjung `42182` is an isolate inside the 48. Storm inject still uses whatever neighborhood the catalog has.
+**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**, **V2-1** ingest on `v2.engine`, **V2-2** live catalog is the 48, **V2-3** IMD poller, **V2-4** warm-up, **V2-5** replay, **V2-6** TIMING proxy, **V2-7** dashboard on the live 48, **V2-8** both paths checked. Palam `42181` is not in the product catalog. Safdarjung `42182` is an isolate inside the 48. Storm inject still uses whatever neighborhood the catalog has.
 
-Next: v2 live plan step 8 (check the two paths).
+Next: nothing on the v2 live plan. Steps 1–8 are done.
 
 | Slice | Commit | Why |
 |---|---|---|
@@ -43,6 +43,7 @@ Next: v2 live plan step 8 (check the two paths).
 | V2-5 | `0ee8d6b` | Replay `demo_windows.json` through ingest so the Mumbai stories mutate before QC and a newer live window stays put |
 | V2-6 | `7af74ba` | `GET /stations/{id}/timing` reads the v2 cache so ingest can return before the attribution sentence is ready |
 | V2-7 | `3a2b639` | Dashboard shows the 48, warming up, interval-gated bands, root cause, and Mumbai replay instead of the Palam buttons |
+| V2-8 | (this change) | One live poll stored raw warming-up hours; replay story 2 is hardware with a band near 25 °C and story 3 is weather with no band and health unchanged |
 
 ## What works today (post-I6)
 
@@ -55,7 +56,8 @@ Next: v2 live plan step 8 (check the two paths).
 - TIMING: `GET /stations/{id}/timing?ts=` reads the v2 cache (`pending` / `ready` / `not_requested` / `error`). `wait_s` defaults to 0, max 10. Ingest does not call it.
 - Streamer: `--stations 42181 --with-buddies` (default true) seeds/POSTs the ingest set. CLI overrides `GET /demo/stream-filter`. Empty filter = full catalog.
 - Demo inject: `target=neighborhood` expands via the buddy graph. `target=cluster` is 400.
-- Dashboard: five-page light console. Network plots all 48 and frames Mumbai plus Safdarjung. Warming up is its own state. Station keeps the raw line solid and draws a dashed band only when `imputed_interval` is present, then reason, dew point, channel bars, neighbors, and TIMING. Control shows the IMD poll line and the replay stories. Palam is not on the map. Alerts **Open** pins that hour on Station.
+- Dashboard: five-page light console. Network plots all 48 and frames Mumbai plus Safdarjung. Warming up is its own state. Station keeps the raw line solid and draws a dashed band only when `imputed_interval` is present, then reason, dew point, channel bars, neighbors, and TIMING. Control shows the IMD poll line and the replay stories. Palam is not on the map. Alerts **Open** pins that hour on Station. The client default is `http://127.0.0.1:8000`. It does not call port 8001 or `ml.engine`.
+- Checked 2026-09-28 on a fresh database: one IMD poll stored 46 raw hours, each `warming_up` with a null label. Replay `hardware` scored Santa Cruz `HARDWARE_ANOMALY` with imputed temperature 25.2 °C and a band of 24.2–26.3 °C. Replay `weather` scored `GENUINE_WEATHER_EVENT` with no band and health 100. The live hour stayed the latest after both stories. Dum Dum `42809` and Hyderabad Airport `43128` were absent from that snapshot.
 - ML standalone: `ml/ml/main.py` remains eval-only. Do not point the dashboard at 8001.
 - Tests: D18 mapping is unit-tested; live ingest covers two-buddy T3, isolate/one-buddy → `UNCONFIRMED_ANOMALY`, weather does not lower health. IdentityDetector / NORTH live-path tests are skipped. Engine integration skips when artifacts are missing.
 
@@ -87,11 +89,10 @@ See the [root README](../README.md) (import catalog, API, filtered stream, injec
 
 ```text
 python scripts/run_api.py
-python -m skyguard.data.stream --api http://127.0.0.1:8000 --ms 200 --start 2024-07-01T00:00:00Z --stations 42181 --with-buddies
 python scripts/run_dashboard.py
 ```
 
-Streaming all 151 without a filter will overwhelm the console. Prefer Palam’s neighborhood (or `POST /demo/stream-filter`). Default F7 view is Palam∪buddies + Santacruz.
+The API polls IMD when the credentials in `.env` are set. Control plays the Mumbai replay. Palam is not in the live catalog.
 
 ML-only smoke (optional):
 
@@ -106,7 +107,7 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Next
 
-[`v2-live-plan.md`](v2-live-plan.md) step 7: dashboard on the 48, with replay controls and the TIMING sentence polled until ready.
+[`v2-live-plan.md`](v2-live-plan.md) steps 1–8 are done. Do not resume the Palam demo as the product path.
 
 ## Open issues
 

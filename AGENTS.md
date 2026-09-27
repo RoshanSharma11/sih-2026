@@ -4,7 +4,7 @@ This is SIH PS 26073 (SkyGuard AI). Read `docs/` before writing code.
 
 ## Do this next
 
-The current build is **live IMD hours through v2**, not the Palam / `ml/` demo. Read [`docs/v2-live-plan.md`](docs/v2-live-plan.md) and implement **step 8** before anything else. Steps are ordered. Update `docs/contracts.md` in the same change when a step adds a field.
+The current build is **live IMD hours through v2**, not the Palam / `ml/` demo. [`docs/v2-live-plan.md`](docs/v2-live-plan.md) steps 1–8 are done. Do not start a new product slice unless asked. Update `docs/contracts.md` in the same change when a change adds a field.
 
 IMD credentials are already in `.env` (`IMD_API_KEY`, `IMD_EMAIL`, `IMD_PASSWORD`, `IMD_TOKEN_URL`, `IMD_AWS_URL`). That file is gitignored. Never copy those values into code, docs, or commits. Names only live in `.env.example`.
 

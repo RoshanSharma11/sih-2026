@@ -1,6 +1,6 @@
 # Implementation plan — live IMD console on v2
 
-Next session: start at step 8. Do not resume the Palam / `ml/` demo as the product path. Do not commit `.env`.
+Steps 1–8 are done. Checked 2026-09-28: one live poll stored raw warming-up hours, replay story 2 was hardware with a band near 25 °C, and story 3 was weather with no band and health unchanged. The dashboard polls the product API only. Do not resume the Palam / `ml/` demo as the product path. Do not commit `.env`.
 
 ## What we are building
 
