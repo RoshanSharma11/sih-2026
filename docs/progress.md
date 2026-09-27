@@ -41,7 +41,7 @@ Next: v2 live plan step 7 (dashboard on the live 48).
 | V2-3 | `48b9be0` | IMD poller posts matched hours through ingest; `/healthz` records poll status |
 | V2-4 | `49ad285` | Fewer than 24 hours returns the raw hour and `warming_up`; the 24th hour returns the v2 label |
 | V2-5 | `0ee8d6b` | Replay `demo_windows.json` through ingest so the Mumbai stories mutate before QC and a newer live window stays put |
-| V2-6 | (this change) | `GET /stations/{id}/timing` reads the v2 cache so ingest can return before the attribution sentence is ready |
+| V2-6 | `7af74ba` | `GET /stations/{id}/timing` reads the v2 cache so ingest can return before the attribution sentence is ready |
 
 ## What works today (post-I6)
 
