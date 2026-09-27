@@ -1,6 +1,6 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-28 (v2 live plan step 8: both paths checked).
+Last updated: 2026-09-28 (Station + Control ops-console pass).
 
 **Next session:** the live plan is complete. Do not extend the Palam / `ml/` path. Credentials stay in `.env` only.
 
@@ -56,7 +56,7 @@ Next: nothing on the v2 live plan. Steps 1–8 are done.
 - TIMING: `GET /stations/{id}/timing?ts=` reads the v2 cache (`pending` / `ready` / `not_requested` / `error`). `wait_s` defaults to 0, max 10. Ingest does not call it.
 - Streamer: `--stations 42181 --with-buddies` (default true) seeds/POSTs the ingest set. CLI overrides `GET /demo/stream-filter`. Empty filter = full catalog.
 - Demo inject: `target=neighborhood` expands via the buddy graph. `target=cluster` is 400.
-- Dashboard: five-page light console. Network plots all 48 and frames Mumbai plus Safdarjung. Warming up is its own state. Station keeps the raw line solid and draws a dashed band only when `imputed_interval` is present, then reason, dew point, channel bars, neighbors, and TIMING. Control shows the IMD poll line and the replay stories. Palam is not on the map. Alerts **Open** pins that hour on Station. The client default is `http://127.0.0.1:8000`. It does not call port 8001 or `ml.engine`.
+- Dashboard: five-page light console. Network plots all 48 and frames Mumbai plus Safdarjung. Warming up is its own state. Station is an ops workstation: identity, `n/24` warmup, raw T/P/H tiles, named buddies, then temperature / pressure / humidity charts (predicted only when `imputed_interval` is present), reason, dew point, channel bars, neighbors, and TIMING. Control is select-then-observe for the Mumbai replay, plus a custom `POST /demo/inject` builder (spike / freeze / drift / comms / neighborhood weather). Alerts is a QC inbox: purpose, hardware/weather/unconfirmed counts, filters, readable cards, **Inspect this hour**. Palam is not on the map. The client default is `http://127.0.0.1:8000`. It does not call port 8001 or `ml.engine`.
 - Checked 2026-09-28 on a fresh database: one IMD poll stored 46 raw hours, each `warming_up` with a null label. Replay `hardware` scored Santa Cruz `HARDWARE_ANOMALY` with imputed temperature 25.2 °C and a band of 24.2–26.3 °C. Replay `weather` scored `GENUINE_WEATHER_EVENT` with no band and health 100. The live hour stayed the latest after both stories. Dum Dum `42809` and Hyderabad Airport `43128` were absent from that snapshot.
 - ML standalone: `ml/ml/main.py` remains eval-only. Do not point the dashboard at 8001.
 - Tests: D18 mapping is unit-tested; live ingest covers two-buddy T3, isolate/one-buddy → `UNCONFIRMED_ANOMALY`, weather does not lower health. IdentityDetector / NORTH live-path tests are skipped. Engine integration skips when artifacts are missing.

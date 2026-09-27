@@ -91,10 +91,22 @@ def init_session() -> None:
         st.session_state.flash = None
     if "alerts_station_only" not in st.session_state:
         st.session_state.alerts_station_only = False
+    if "alerts_kind" not in st.session_state:
+        st.session_state.alerts_kind = "all"
     if "alert_id" not in st.session_state:
         st.session_state.alert_id = None
     if "replay_ts" not in st.session_state:
         st.session_state.replay_ts = None
+    if "replay_last" not in st.session_state:
+        st.session_state.replay_last = None
+    if "control_story" not in st.session_state:
+        st.session_state.control_story = "hardware"
+    if "inject_kind" not in st.session_state:
+        st.session_state.inject_kind = "SPIKE"
+    if "inject_channel" not in st.session_state:
+        st.session_state.inject_channel = "temp_c"
+    if "inject_hours" not in st.session_state:
+        st.session_state.inject_hours = 1
 
 
 @st.cache_resource
@@ -118,13 +130,19 @@ def flash(message: str, kind: str = "ok") -> None:
 
 def fire_inject(body: dict[str, Any]) -> None:
     try:
-        get_client().inject(body)
-        flash(f"Armed {body['kind']}. Watch the next streamed hour.")
+        status = get_client().inject(body)
     except SkyGuardApiError as exc:
         flash(str(exc), kind="bad")
+        return
+    st.session_state.inject_last = {"body": body, "status": status}
+    station_id = body.get("station_id")
+    if station_id:
+        focus_station(str(station_id))
+    hours = body.get("duration_hours", 1)
+    flash(f"Armed {body['kind']} for {hours}h. The next ingested hour is mutated before QC.")
 
 
-def fire_replay(story: str) -> None:
+def fire_replay(story: str, *, open_station: bool = False) -> None:
     try:
         body = get_client().replay(story)
     except SkyGuardApiError as exc:
@@ -133,18 +151,23 @@ def fire_replay(story: str) -> None:
     focus_station(SANTACRUZ)
     end = body.get("end")
     st.session_state.replay_ts = None if end is None else str(end)
-    santa = next((row for row in body.get("results") or [] if row.get("station_id") == SANTACRUZ), None)
+    payload = dict(body) if isinstance(body, dict) else {}
+    payload["story"] = story
+    st.session_state.replay_last = payload
+    santa = next((row for row in payload.get("results") or [] if row.get("station_id") == SANTACRUZ), None)
     if santa and santa.get("warming_up"):
-        flash("Santa Cruz is warming up. The raw hour is on Station.")
+        flash("Santa Cruz is warming up. The raw hour is stored.")
     else:
         label = None if santa is None else santa.get("label")
         flash(f"Replay {story} · Santa Cruz {label or 'scored'}.")
-    go_page("station")
+    if open_station:
+        go_page("station")
 
 
 def fire_reset() -> None:
     try:
         get_client().reset()
+        st.session_state.inject_last = None
         flash("Overlays cleared.")
     except SkyGuardApiError as exc:
         flash(str(exc), kind="bad")

@@ -197,6 +197,20 @@ def test_telemetry_keeps_observed_and_hides_the_band_until_distrusted() -> None:
     assert marked[0].layout.shapes
 
 
+def test_sparkline_is_observed_only() -> None:
+    from charts import sparkline_figure
+
+    fig = sparkline_figure(
+        [
+            {"timestamp": "2026-09-27T17:00:00Z", "temp_observed": 25.1},
+            {"timestamp": "2026-09-27T18:00:00Z", "temp_observed": 25.7},
+        ]
+    )
+    assert fig.data[0].y[1] == 25.7
+    assert fig.layout.height <= 160
+    assert fig.layout.showlegend is False
+
+
 def test_contribution_html_uses_alert_shares() -> None:
     from charts import contribution_html
 

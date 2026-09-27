@@ -1,6 +1,6 @@
 # UI registry — SkyGuard dashboard
 
-Last updated: 2026-09-09
+Last updated: 2026-09-28
 
 Light ops console. Weather is amber, never rose. Health is a badge, not the marker fill. Status color is reserved for QC state.
 
@@ -74,10 +74,10 @@ File: `frontend/views/alerts.py`, `frontend/chrome.py`
 | Property | Class / value |
 |---|---|
 | Overlay chip | `#FFFBEB` fill, `#D97706` text, `#FDE68A` border, radius `8px` |
-| Alert row | left 3px status color, white fill, `#E2E8F0` border, radius `0 10px 10px 0` |
+| Alert row | `.sg-alert` — white card, 4px status left edge, 12px radius, soft shadow |
 | Buddy chip | canvas fill, `#E2E8F0` border, pill |
 
-**Pattern notes:** Selected station is Streamlit `type="primary"` (teal). Map marker size 20 selected / 13 otherwise; only the selected name is drawn on the map. Contribution bars are 8px pills, not status-colored.
+**Pattern notes:** Selected station is Streamlit `type="primary"` (teal). Map marker size 20 selected / 13 otherwise; only the selected name is drawn on the map. Contribution bars are 8px pills, not status-colored. Alerts is an inbox: intro card, four-count KPI strip, kind filters, then cards with a human title (not raw enums) and **Inspect this hour**.
 
 ### Sidebar nav
 
@@ -106,3 +106,30 @@ File: `frontend/map_view.py`, `frontend/views/network.py`
 | Roster selected | Streamlit primary button |
 
 **Pattern notes:** Camera fits stations within 2.5° of the selected id so NCR is readable. Santacruz stays on the roster when Palam is selected. Weather markers stay amber.
+
+### Station identity + readings
+
+File: `frontend/views/station.py`, `frontend/panels.py`
+
+| Property | Class / value |
+|---|---|
+| Identity card | `.sg-identity` — white, `#E2E8F0` border, 12px radius, soft shadow, padding `1rem 1.15rem` |
+| Name | 1.35rem / 700 / `#0F172A` |
+| Meta | IBM Plex Mono, 0.82rem, `#475569` |
+| Reading tile | `.sg-reading` — same card chrome; missing channel uses amber wash `#FFFBEB` / `#FDE68A` |
+| Value | IBM Plex Mono, 1.85rem |
+| Predicted line | `#D97706`, mono, only when `imputed_interval` is a pair |
+
+**Pattern notes:** Warm-up uses `.sg-warmup` with a slate bar and 24 hour dots (`.sg-dot-on` = `#94A3B8`). Health is a meter, not a Streamlit metric. Buddy chips stack a short name over a mono id / correlation.
+
+### Control poll + replay results
+
+File: `frontend/views/control.py`, `frontend/panels.py`
+
+| Property | Class / value |
+|---|---|
+| Poll strip | `.sg-poll` — white card, 4px left edge (`ok` teal / `bad` rose / `idle` line) |
+| Story preview | `.sg-preview` — same left-edge language as `.sg-verdict` |
+| Result row | `.sg-result` — canvas fill, 4px status edge, mono meta |
+
+**Pattern notes:** Control does not auto-navigate after Play. Results stay on the page; Inspect is the Station handoff. Weather stories stay amber. Custom events reuse `.sg-preview` and `.sg-result` for the inject builder and armed overlays.

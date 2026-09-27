@@ -1,0 +1,751 @@
+"""HTML fragments for Station and Control. Strings only — no Streamlit."""
+
+from __future__ import annotations
+
+from html import escape
+from typing import Any
+
+from chrome import fmt_value
+from status import (
+    LABEL_TEXT,
+    PIPELINE_LABEL,
+    alert_kind,
+    alert_status_label,
+    health_color,
+    pipeline_label,
+    short_name,
+    verdict_kind_from_key,
+)
+from theme import CLEAN, HARDWARE, SLATE, WARMING, WEATHER
+
+WINDOW_HOURS = 24
+
+CHANNELS = (
+    ("temp_c", "temp_observed", "temp_imputed", "Temperature", "°C"),
+    ("pres_hpa", "pres_observed", "pres_imputed", "Pressure", "hPa"),
+    ("rhum_pct", "rhum_observed", "rhum_imputed", "Humidity", "%"),
+)
+
+KIND_COLOR = {
+    "clean": CLEAN,
+    "weather": WEATHER,
+    "hardware": HARDWARE,
+    "unknown": SLATE,
+    "warming": WARMING,
+    "idle": SLATE,
+}
+
+STORIES: tuple[dict[str, str], ...] = (
+    {
+        "id": "clean",
+        "title": "Clean hour",
+        "short": "Clean",
+        "kind": "clean",
+        "claim": "A normal Mumbai hour should stay trusted.",
+        "mutation": "None. The fixture hour is ingested as recorded.",
+        "stations": "Santa Cruz, Colaba, Juhu, Alibag, Safdarjung",
+        "look_for": "CLEAN on the demo set. No dashed correction. No 90% band.",
+        "health": "Unchanged.",
+    },
+    {
+        "id": "hardware",
+        "title": "55 °C at Santa Cruz",
+        "short": "Lone 55 °C",
+        "kind": "hardware",
+        "claim": "A lone broken sensor is not a heatwave.",
+        "mutation": "Santa Cruz only → 55 °C / 95% / 980 hPa.",
+        "stations": "Mumbai four ingested. Only Santa Cruz is mutated.",
+        "look_for": "HARDWARE on Santa Cruz. Neighbors stay clean. Dashed correction and band on temperature.",
+        "health": "May drop. A weather hour would not.",
+    },
+    {
+        "id": "weather",
+        "title": "+8 °C across Mumbai",
+        "short": "Mumbai +8 °C",
+        "kind": "weather",
+        "claim": "The same heat on neighbors is genuine weather.",
+        "mutation": "+8 °C on Santa Cruz, Colaba, and Juhu. Alibag stays on the fixture hour.",
+        "stations": "Mumbai four ingested. Three stations share the rise.",
+        "look_for": "GENUINE WEATHER. No band. Neighbors agree.",
+        "health": "Unchanged. Weather never counts against the sensor.",
+    },
+    {
+        "id": "freeze",
+        "title": "12-hour freeze",
+        "short": "Freeze",
+        "kind": "hardware",
+        "claim": "A stuck temperature is a sensor fault, not still air.",
+        "mutation": "Santa Cruz temperature held for 12 hours at the fixture’s last value.",
+        "stations": "Santa Cruz only.",
+        "look_for": "HARDWARE or PHYSICAL FAULT. Correction appears if the hour is distrusted.",
+        "health": "May drop.",
+    },
+    {
+        "id": "comms",
+        "title": "Missing temperature",
+        "short": "Missing T",
+        "kind": "hardware",
+        "claim": "A dropped channel is a comms gap, not a calm hour.",
+        "mutation": "Santa Cruz temperature is null on the last hour.",
+        "stations": "Santa Cruz only.",
+        "look_for": "A missing T reading and a hardware / comms label.",
+        "health": "May drop.",
+    },
+)
+
+
+CUSTOM_EVENTS: tuple[dict[str, Any], ...] = (
+    {
+        "id": "SPIKE",
+        "title": "Spike",
+        "kind": "hardware",
+        "target": "station",
+        "needs_channel": True,
+        "default_hours": 1,
+        "claim": "One channel jumps on one station. Neighbors stay on the real hour.",
+        "look_for": "HARDWARE on the selected station if neighbors disagree. Band if distrusted.",
+        "health": "May drop.",
+    },
+    {
+        "id": "FREEZE",
+        "title": "Freeze",
+        "kind": "hardware",
+        "target": "station",
+        "needs_channel": True,
+        "default_hours": 12,
+        "claim": "A stuck channel is a sensor fault, not still air.",
+        "look_for": "HARDWARE or PHYSICAL FAULT on the selected station.",
+        "health": "May drop.",
+    },
+    {
+        "id": "DRIFT",
+        "title": "Drift",
+        "kind": "hardware",
+        "target": "station",
+        "needs_channel": True,
+        "default_hours": 48,
+        "claim": "A slow bias accumulates. The raw line stays; QC should distrust it.",
+        "look_for": "HARDWARE after the window sees the slope. Band if distrusted.",
+        "health": "May drop.",
+    },
+    {
+        "id": "COMM_ERROR",
+        "title": "Missing packet",
+        "kind": "hardware",
+        "target": "station",
+        "needs_channel": False,
+        "default_hours": 1,
+        "claim": "A dropped channel is a comms gap, not a calm hour.",
+        "look_for": "A null reading and a hardware / comms label.",
+        "health": "May drop.",
+    },
+    {
+        "id": "GENUINE_WEATHER",
+        "title": "Neighborhood weather",
+        "kind": "weather",
+        "target": "neighborhood",
+        "needs_channel": False,
+        "default_hours": 3,
+        "claim": "The same shock on a station and its buddies is weather, not a lone fault.",
+        "look_for": "GENUINE WEATHER. No band. Health unchanged.",
+        "health": "Unchanged.",
+    },
+)
+
+CHANNEL_CHOICES = (
+    ("temp_c", "Temperature"),
+    ("pres_hpa", "Pressure"),
+    ("rhum_pct", "Humidity"),
+)
+
+
+def story_spec(story_id: str) -> dict[str, str]:
+    for row in STORIES:
+        if row["id"] == story_id:
+            return row
+    return STORIES[1]
+
+
+def event_spec(kind: str) -> dict[str, Any]:
+    for row in CUSTOM_EVENTS:
+        if row["id"] == kind:
+            return row
+    return CUSTOM_EVENTS[0]
+
+
+def inject_targets(station: dict[str, Any] | None, kind: str) -> list[str]:
+    spec = event_spec(kind)
+    if not station:
+        return []
+    sid = str(station["station_id"])
+    if spec["target"] == "neighborhood":
+        buddies = [str(buddy) for buddy in (station.get("buddy_ids") or []) if buddy]
+        return [sid, *[buddy for buddy in buddies if buddy != sid]]
+    return [sid]
+
+
+def build_inject_body(
+    *,
+    kind: str,
+    station_id: str,
+    channel: str | None,
+    duration_hours: int,
+) -> dict[str, Any]:
+    spec = event_spec(kind)
+    hours = max(1, int(duration_hours))
+    body: dict[str, Any] = {
+        "target": spec["target"],
+        "station_id": station_id,
+        "kind": spec["id"],
+        "duration_hours": hours,
+    }
+    if spec["needs_channel"]:
+        allowed = {key for key, _label in CHANNEL_CHOICES}
+        body["channel"] = channel if channel in allowed else "temp_c"
+    return body
+
+
+def event_preview_html(
+    spec: dict[str, Any],
+    station: dict[str, Any] | None,
+    names: dict[str, str],
+    channel: str | None,
+    hours: int,
+) -> str:
+    color = KIND_COLOR.get(spec["kind"], SLATE)
+    sid = "" if not station else str(station["station_id"])
+    name = "—" if not station else names.get(sid, sid)
+    targets = inject_targets(station, spec["id"])
+    who = ", ".join(escape(names.get(tid, tid)) for tid in targets) or "—"
+    channel_label = dict(CHANNEL_CHOICES).get(channel or "", "Temperature")
+    mutation = (
+        f"{escape(spec['title'])} on {escape(name)} for {hours} hour{'s' if hours != 1 else ''}."
+    )
+    if spec["needs_channel"]:
+        mutation = f"{escape(channel_label)} {mutation}"
+    isolate_note = ""
+    if spec["target"] == "neighborhood" and station and station.get("isolate"):
+        isolate_note = (
+            "<div><dt>Note</dt><dd>This site is an isolate. Weather versus hardware cannot be called here.</dd></div>"
+        )
+    return (
+        f'<div class="sg-preview" style="border-left-color:{color}">'
+        f'<div class="sg-verdict-kicker">Custom event · {escape(spec["title"])}</div>'
+        f'<div class="sg-verdict-text">{escape(spec["claim"])}</div>'
+        f'<dl class="sg-preview-dl">'
+        f"<div><dt>Mutation</dt><dd>{mutation} Armed on the next ingested hour — not a replay.</dd></div>"
+        f"<div><dt>Stations</dt><dd>{who}</dd></div>"
+        f"<div><dt>Look for</dt><dd>{escape(spec['look_for'])}</dd></div>"
+        f"<div><dt>Health</dt><dd>{escape(spec['health'])}</dd></div>"
+        f"{isolate_note}</dl></div>"
+    )
+
+
+def overlay_cards_html(overlays: list[dict[str, Any]], names: dict[str, str]) -> str:
+    if not overlays:
+        return (
+            '<div class="sg-card"><div class="sg-verdict-kicker">Armed overlays</div>'
+            '<p class="sg-caption" style="margin:0.4rem 0 0 0">'
+            "None armed. A custom event waits for the next live or streamed hour. "
+            "Mumbai replay scores immediately and clears its own arm."
+            "</p></div>"
+        )
+    cards: list[str] = []
+    for row in overlays:
+        kind = str(row.get("kind") or "")
+        spec = event_spec(kind)
+        color = KIND_COLOR.get(spec["kind"], SLATE)
+        ids = [str(sid) for sid in (row.get("station_ids") or [])]
+        who = ", ".join(escape(names.get(sid, sid)) for sid in ids) or "—"
+        channel = row.get("channel")
+        extra = f" · {escape(dict(CHANNEL_CHOICES).get(str(channel), str(channel)))}" if channel else ""
+        hours = row.get("remaining_hours", "—")
+        cards.append(
+            f'<div class="sg-result" style="border-left-color:{color}">'
+            f'<div class="sg-result-top"><strong>{escape(spec["title"])}{extra}</strong>'
+            f'<span class="sg-chip" style="color:{color};border-color:{color}">{escape(str(hours))}h left</span></div>'
+            f'<div class="sg-result-meta">{who}</div></div>'
+        )
+    return (
+        '<div class="sg-card"><div class="sg-verdict-kicker">Armed overlays</div>'
+        f'<div class="sg-results">{"".join(cards)}</div></div>'
+    )
+
+
+def fmt_stamp(value: Any) -> str:
+    if value is None or value == "":
+        return "—"
+    text = str(value).replace("T", " ").replace("+00:00", "Z")
+    if text.endswith("Z"):
+        text = text[:-1] + " UTC"
+    if "." in text:
+        head, tail = text.split(".", 1)
+        tail = tail.split(" ", 1)
+        text = head + (" " + tail[1] if len(tail) == 2 else "")
+    return text
+
+
+def channel_values(row: dict[str, Any] | None) -> tuple[dict[str, Any], dict[str, Any]]:
+    if not row:
+        return {}, {}
+    observed = row.get("observed") if isinstance(row.get("observed"), dict) else None
+    imputed = row.get("imputed") if isinstance(row.get("imputed"), dict) else None
+    if observed is not None:
+        return observed, imputed or {}
+    humidity = row.get("rhum_observed")
+    if humidity is None:
+        humidity = row.get("rhum_pct")
+    return (
+        {
+            "temp_c": row.get("temp_observed"),
+            "pres_hpa": row.get("pres_observed"),
+            "rhum_pct": humidity,
+        },
+        {
+            "temp_c": row.get("temp_imputed"),
+            "pres_hpa": row.get("pres_imputed"),
+            "rhum_pct": row.get("rhum_imputed"),
+        },
+    )
+
+
+def interval_pair(row: dict[str, Any] | None, channel: str) -> tuple[float, float] | None:
+    if not row:
+        return None
+    interval = row.get("imputed_interval")
+    if not isinstance(interval, dict):
+        return None
+    pair = interval.get(channel)
+    if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+        return None
+    try:
+        return float(pair[0]), float(pair[1])
+    except (TypeError, ValueError):
+        return None
+
+
+def hour_kind(row: dict[str, Any] | None) -> str:
+    if not row:
+        return "idle"
+    if row.get("warming_up"):
+        return "warming"
+    return verdict_kind_from_key(row.get("label") or row.get("pipeline_status"), row.get("fault_type"))
+
+
+def hour_caption(row: dict[str, Any] | None) -> str:
+    if not row:
+        return "Waiting"
+    if row.get("warming_up"):
+        return "Warming up"
+    key = row.get("label") or row.get("pipeline_status")
+    if key in LABEL_TEXT:
+        return LABEL_TEXT[key]
+    if key in PIPELINE_LABEL:
+        return PIPELINE_LABEL[key]
+    return pipeline_label(key)
+
+
+def collected_hours(window: list[dict[str, Any]]) -> int:
+    return min(len(window), WINDOW_HOURS)
+
+
+def identity_html(
+    station: dict[str, Any],
+    tag: str,
+    names: dict[str, str] | None = None,
+) -> str:
+    names = names or {}
+    name = escape(short_name(station.get("name", station["station_id"])))
+    sid = escape(str(station["station_id"]))
+    aws = escape(str(station.get("aws_name") or "—"))
+    aws_id = escape(str(station.get("aws_id") or "—"))
+    elevation = station.get("elevation_m")
+    elev = f"{fmt_value(elevation, 0)} m" if isinstance(elevation, (int, float)) else "—"
+    lat = station.get("latitude")
+    lon = station.get("longitude")
+    coords = "—"
+    if isinstance(lat, (int, float)) and isinstance(lon, (int, float)):
+        coords = f"{lat:.2f}°N  {lon:.2f}°E"
+    isolate = bool(station.get("isolate"))
+    buddies = station.get("buddy_ids") or []
+    if isolate:
+        relation = "Isolate · no buddies in the live 48"
+    elif buddies:
+        labels = ", ".join(escape(names.get(bid, bid)) for bid in buddies)
+        relation = f"{len(buddies)} buddies · {labels}"
+    else:
+        relation = "No buddy list"
+    return (
+        f'<div class="sg-identity">'
+        f'<div><div class="sg-identity-name">{name}</div>'
+        f'<div class="sg-identity-meta">{sid} · AWS {aws} · {aws_id} · {elev} · {coords}</div>'
+        f'<div class="sg-identity-meta">{relation}</div></div>'
+        f'<div class="sg-identity-tag">{escape(tag)}</div>'
+        f"</div>"
+    )
+
+
+def warmup_html(collected: int, stamp: str) -> str:
+    collected = max(0, min(int(collected), WINDOW_HOURS))
+    remaining = WINDOW_HOURS - collected
+    width = (collected / WINDOW_HOURS) * 100
+    dots = "".join(
+        f'<i class="{"sg-dot-on" if index < collected else "sg-dot-off"}"></i>'
+        for index in range(WINDOW_HOURS)
+    )
+    when = f" Latest hour {escape(stamp)}." if stamp and stamp != "—" else ""
+    return (
+        f'<div class="sg-warmup">'
+        f'<div class="sg-warmup-head"><span>Collecting the 24-hour window</span>'
+        f'<span class="sg-warmup-count">{collected} / {WINDOW_HOURS}</span></div>'
+        f'<div class="sg-bar"><i style="width:{width:.1f}%;background:{WARMING}"></i></div>'
+        f'<div class="sg-window">{dots}</div>'
+        f'<p class="sg-caption" style="margin:0.55rem 0 0 0">'
+        f"Raw T / P / H are stored. v2 does not score until hour 24. "
+        f"{remaining} hour{'s' if remaining != 1 else ''} remaining.{when}"
+        f"</p></div>"
+    )
+
+
+def readings_html(
+    row: dict[str, Any] | None,
+    *,
+    warming: bool = False,
+) -> str:
+    observed, imputed = channel_values(row)
+    tiles: list[str] = []
+    for public, _obs_key, _imp_key, label, unit in CHANNELS:
+        raw = observed.get(public)
+        pred = imputed.get(public)
+        band = interval_pair(row, public)
+        show_pred = band is not None and not warming
+        value = fmt_value(raw)
+        missing = raw is None
+        if missing:
+            sub = "Channel missing this hour"
+        elif warming:
+            sub = "Stored raw · no predicted overlay until QC"
+        else:
+            sub = "Observed · raw never overwritten"
+        extra = ""
+        if show_pred:
+            delta = ""
+            if isinstance(raw, (int, float)) and isinstance(pred, (int, float)):
+                sign = "+" if pred - raw > 0 else ""
+                delta = f" · Δ {sign}{fmt_value(pred - raw)}"
+            lo_hi = ""
+            if band is not None:
+                lo_hi = f" · band {fmt_value(band[0])}–{fmt_value(band[1])}"
+            extra = (
+                f'<div class="sg-reading-pred">Predicted {fmt_value(pred)} {escape(unit)}'
+                f"{escape(delta)}{escape(lo_hi)}</div>"
+            )
+        tiles.append(
+            f'<div class="sg-reading{" sg-reading-gap" if missing else ""}">'
+            f'<div class="sg-reading-label">{escape(label)}</div>'
+            f'<div class="sg-reading-value">{escape(value)}<span>{escape(unit)}</span></div>'
+            f'<div class="sg-reading-sub">{escape(sub)}</div>{extra}</div>'
+        )
+    return f'<div class="sg-readings">{"".join(tiles)}</div>'
+
+
+def health_html(station: dict[str, Any]) -> str:
+    score = station.get("health_score")
+    status = station.get("status") or "—"
+    color = health_color(status if isinstance(score, (int, float)) else None)
+    width = 0.0
+    shown = "—"
+    if isinstance(score, (int, float)):
+        width = max(0.0, min(float(score), 100.0))
+        shown = f"{score:.0f}"
+    return (
+        f'<div class="sg-meter">'
+        f'<div class="sg-meter-head"><span>7-day health</span>'
+        f'<span style="color:{color}">{escape(shown)} · {escape(str(status))}</span></div>'
+        f'<div class="sg-bar"><i style="width:{width:.1f}%;background:{color}"></i></div>'
+        f'<p class="sg-caption" style="margin:0.45rem 0 0 0">'
+        f"Sensor flag rate over 168 hours. Genuine weather does not count."
+        f"</p></div>"
+    )
+
+
+def buddy_html(
+    station: dict[str, Any],
+    names: dict[str, str],
+    hour: dict[str, Any] | None = None,
+) -> str:
+    if station.get("isolate"):
+        return (
+            '<div class="sg-meter"><div class="sg-meter-head"><span>Buddy check</span>'
+            '<span>Isolate</span></div>'
+            '<p class="sg-caption" style="margin:0.45rem 0 0 0">'
+            "No buddies inside the live 48. Weather versus hardware cannot be called here."
+            "</p></div>"
+        )
+    buddies = station.get("buddy_ids") or []
+    corr = hour.get("tier3_corr") if hour and isinstance(hour.get("tier3_corr"), dict) else {}
+    mix = hour.get("tier3_mix") if hour and isinstance(hour.get("tier3_mix"), dict) else {}
+    method = (hour or {}).get("tier3_method")
+    chips: list[str] = []
+    for buddy_id in buddies:
+        label = escape(names.get(buddy_id, buddy_id))
+        score = corr.get(buddy_id)
+        extra = f" · r {fmt_value(score, 2)}" if score is not None else ""
+        chips.append(
+            f'<span class="sg-buddy">{label}<em>{escape(str(buddy_id))}{escape(extra)}</em></span>'
+        )
+    if not chips:
+        chips.append('<span class="sg-caption">No 1-hop buddies listed.</span>')
+    blend = ""
+    if mix:
+        blend = (
+            f' Blend T {fmt_value(mix.get("temp_c"))} °C · '
+            f'P {fmt_value(mix.get("pres_hpa"))} hPa · '
+            f'H {fmt_value(mix.get("rhum_pct"))}%.'
+        )
+    method_line = f" {escape(str(method))}." if method else ""
+    return (
+        f'<div class="sg-meter"><div class="sg-meter-head"><span>1-hop buddies</span>'
+        f"<span>{len(buddies)}</span></div>"
+        f'<div class="sg-buddy-row">{"".join(chips)}</div>'
+        f'<p class="sg-caption" style="margin:0.45rem 0 0 0">'
+        f"QC needs two usable same-hour neighbors.{method_line}{escape(blend)}"
+        f"</p></div>"
+    )
+
+
+def poll_html(imd: dict[str, Any], n_stations: int = 48) -> str:
+    matched = imd.get("matched")
+    last_success = fmt_stamp(imd.get("last_success"))
+    last_error = imd.get("last_error")
+    if last_error:
+        kind = "bad"
+        state = "Poll failed"
+    elif imd.get("last_success"):
+        kind = "ok"
+        state = "Poll ok"
+    else:
+        kind = "idle"
+        state = "Waiting for first poll"
+    count = matched if isinstance(matched, int) else "—"
+    error = f'<div class="sg-poll-error">{escape(str(last_error))}</div>' if last_error else ""
+    return (
+        f'<div class="sg-poll sg-poll-{kind}">'
+        f'<div class="sg-poll-state">{escape(state)}</div>'
+        f'<div class="sg-poll-meta">{escape(str(count))} of {n_stations} matched'
+        f" · last success {escape(last_success)}</div>{error}</div>"
+    )
+
+
+def story_preview_html(story_id: str) -> str:
+    spec = story_spec(story_id)
+    color = KIND_COLOR.get(spec["kind"], SLATE)
+    return (
+        f'<div class="sg-preview" style="border-left-color:{color}">'
+        f'<div class="sg-verdict-kicker">Selected · {escape(spec["title"])}</div>'
+        f'<div class="sg-verdict-text">{escape(spec["claim"])}</div>'
+        f'<dl class="sg-preview-dl">'
+        f"<div><dt>Mutation</dt><dd>{escape(spec['mutation'])}</dd></div>"
+        f"<div><dt>Stations</dt><dd>{escape(spec['stations'])}</dd></div>"
+        f"<div><dt>Look for</dt><dd>{escape(spec['look_for'])}</dd></div>"
+        f"<div><dt>Health</dt><dd>{escape(spec['health'])}</dd></div>"
+        f"</dl></div>"
+    )
+
+
+def result_cards_html(
+    results: list[dict[str, Any]],
+    names: dict[str, str],
+    story_id: str | None = None,
+) -> str:
+    spec = story_spec(story_id) if story_id else None
+    heading = "Last run"
+    if spec:
+        heading = f"Last run · {spec['title']}"
+    cards: list[str] = []
+    for row in results:
+        sid = str(row.get("station_id", ""))
+        name = escape(names.get(sid, sid))
+        kind = hour_kind(row)
+        color = KIND_COLOR.get(kind, SLATE)
+        observed, imputed = channel_values(row)
+        band = interval_pair(row, "temp_c")
+        label = hour_caption(row)
+        injected = row.get("demo_injected")
+        inject_bit = f" · injected {escape(str(injected))}" if injected else ""
+        pred = ""
+        if band is not None:
+            pred = (
+                f' · predicted {fmt_value(imputed.get("temp_c"))} °C'
+                f" · band {fmt_value(band[0])}–{fmt_value(band[1])}"
+            )
+        health = row.get("health_score")
+        health_bit = f" · health {fmt_value(health, 0)}" if health is not None else ""
+        reason = row.get("explainability_text") or ""
+        reason_html = f'<div class="sg-result-reason">{escape(str(reason))}</div>' if reason else ""
+        cards.append(
+            f'<div class="sg-result" style="border-left-color:{color}">'
+            f'<div class="sg-result-top"><strong>{name}</strong>'
+            f'<span class="sg-chip" style="color:{color};border-color:{color}">{escape(label)}</span></div>'
+            f'<div class="sg-result-meta">{escape(sid)} · '
+            f'T {fmt_value(observed.get("temp_c"))} °C · '
+            f'P {fmt_value(observed.get("pres_hpa"))} hPa · '
+            f'H {fmt_value(observed.get("rhum_pct"))}%'
+            f"{pred}{health_bit}{inject_bit}</div>{reason_html}</div>"
+        )
+    if not cards:
+        return (
+            f'<div class="sg-card"><div class="sg-verdict-kicker">{escape(heading)}</div>'
+            '<p class="sg-caption" style="margin:0.4rem 0 0 0">No scored rows came back.</p></div>'
+        )
+    return (
+        f'<div class="sg-card"><div class="sg-verdict-kicker">{escape(heading)}</div>'
+        f'<div class="sg-results">{"".join(cards)}</div></div>'
+    )
+
+
+def section_html(title: str, caption: str | None = None) -> str:
+    extra = f'<p class="sg-caption" style="margin:0.25rem 0 0 0">{escape(caption)}</p>' if caption else ""
+    return f'<div class="sg-section">{escape(title)}{extra}</div>'
+
+
+FAULT_LABEL = {
+    "SPIKE": "Spike",
+    "FREEZE": "Freeze",
+    "DRIFT": "Drift",
+    "COMM_ERROR": "Missing packet",
+    "COMMUNICATION": "Missing packet",
+    "GENUINE_WEATHER": "Neighborhood weather",
+    "STORM": "Neighborhood weather",
+    "UNKNOWN": "Unconfirmed",
+    "THERMO": "Thermo failure",
+}
+
+ALERT_FILTERS = (
+    ("all", "All"),
+    ("hardware", "Hardware"),
+    ("weather", "Weather"),
+    ("unknown", "Unconfirmed"),
+)
+
+
+def fault_label(fault_type: Any) -> str:
+    if not fault_type:
+        return "—"
+    key = str(fault_type)
+    return FAULT_LABEL.get(key, key.replace("_", " ").title())
+
+
+def alert_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {"hardware": 0, "weather": 0, "unknown": 0}
+    for row in rows:
+        kind = alert_kind(row)
+        if kind in counts:
+            counts[kind] += 1
+        else:
+            counts["unknown"] += 1
+    return counts
+
+
+def filter_alerts(rows: list[dict[str, Any]], kind: str) -> list[dict[str, Any]]:
+    if kind in {None, "", "all"}:
+        return list(rows)
+    return [row for row in rows if alert_kind(row) == kind]
+
+
+def alerts_intro_html() -> str:
+    return (
+        '<div class="sg-card">'
+        '<div class="sg-verdict-kicker">Why this page exists</div>'
+        '<div class="sg-verdict-text">The QC inbox. Clean hours never appear here.</div>'
+        '<p class="sg-caption" style="margin:0.45rem 0 0.75rem 0">'
+        "Each row is one scored hour that was not trusted as clean. "
+        "Inspect opens that hour on Station even if the live hour has already moved on."
+        "</p>"
+        '<div class="sg-alert-legend">'
+        f'<div><span class="sg-chip" style="color:{HARDWARE};border-color:{HARDWARE}">Hardware</span>'
+        "<p>Sensor or comms. Neighbors disagreed, or a physical rule failed. Health may drop.</p></div>"
+        f'<div><span class="sg-chip" style="color:{WEATHER};border-color:{WEATHER}">Weather</span>'
+        "<p>Extreme, but neighbors agreed. Amber, never rose. Health unchanged.</p></div>"
+        f'<div><span class="sg-chip" style="color:{SLATE};border-color:{SLATE}">Unconfirmed</span>'
+        "<p>Not enough same-hour buddies to call weather versus hardware.</p></div>"
+        "</div></div>"
+    )
+
+
+def alerts_empty_html(*, filtered: bool) -> str:
+    if filtered:
+        body = "Nothing in this filter. Switch to All, or play a Mumbai story on Control."
+    else:
+        body = (
+            "No scored exceptions yet. A live hour that fails QC will land here. "
+            "Or play a Mumbai story on Control to produce one immediately."
+        )
+    return (
+        '<div class="sg-card"><div class="sg-verdict-kicker">Inbox</div>'
+        f'<p class="sg-caption" style="margin:0.4rem 0 0 0">{escape(body)}</p></div>'
+    )
+
+
+def alert_kpis_html(counts: dict[str, int], total: int) -> str:
+    items = (
+        ("Hardware", counts.get("hardware", 0), HARDWARE),
+        ("Weather", counts.get("weather", 0), WEATHER),
+        ("Unconfirmed", counts.get("unknown", 0), SLATE),
+        ("In this feed", total, SLATE),
+    )
+    cells = "".join(
+        f'<div class="sg-kpi" style="border-top-color:{color}">'
+        f'<div class="sg-kpi-label">{label}</div>'
+        f'<div class="sg-kpi-value" style="color:{color}">{value}</div></div>'
+        for label, value, color in items
+    )
+    return f'<div class="sg-kpis sg-kpis-4">{cells}</div>'
+
+
+def _contribution_line(row: dict[str, Any]) -> str:
+    parts: list[str] = []
+    for key, label in (
+        ("contribution_temp", "T"),
+        ("contribution_pres", "P"),
+        ("contribution_rhum", "H"),
+    ):
+        raw = row.get(key)
+        if raw is None:
+            continue
+        try:
+            parts.append(f"{label} {float(raw):.0f}%")
+        except (TypeError, ValueError):
+            continue
+    if not parts:
+        return ""
+    return "Channel share · " + " · ".join(parts)
+
+
+def alert_card_html(row: dict[str, Any], names: dict[str, str]) -> str:
+    sid = str(row.get("station_id", ""))
+    name = escape(names.get(sid, sid))
+    kind = alert_kind(row)
+    color = KIND_COLOR.get(kind, SLATE)
+    title = escape(alert_status_label(row))
+    fault = escape(fault_label(row.get("fault_type")))
+    severity = escape(str(row.get("severity") or "—"))
+    confidence = fmt_value(row.get("confidence_score"), 2)
+    stamp = escape(fmt_stamp(row.get("timestamp")))
+    reason = escape(str(row.get("explainability_text") or "No reason stored for this hour."))
+    share = _contribution_line(row)
+    share_html = f'<div class="sg-alert-share">{escape(share)}</div>' if share else ""
+    health_note = ""
+    if kind == "weather":
+        health_note = '<div class="sg-alert-note">Neighbors agreed. This hour does not lower sensor health.</div>'
+    elif kind == "unknown":
+        health_note = '<div class="sg-alert-note">Honesty over a fake buddy call. Health may still drop.</div>'
+    return (
+        f'<div class="sg-alert" style="border-left-color:{color}">'
+        f'<div class="sg-alert-head"><div class="sg-alert-title">{title}</div>'
+        f'<span class="sg-chip" style="color:{color};border-color:{color}">{severity}</span></div>'
+        f'<div class="sg-alert-who">{name} · {escape(sid)}</div>'
+        f'<div class="sg-alert-meta">{stamp} · {fault} · confidence {escape(confidence)}</div>'
+        f'<div class="sg-alert-text">{reason}</div>{share_html}{health_note}</div>'
+    )
+

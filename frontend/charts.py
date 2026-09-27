@@ -185,6 +185,40 @@ def channel_figure(
     return fig
 
 
+def sparkline_figure(
+    telemetry: list[dict[str, Any]],
+    observed_key: str = "temp_observed",
+    title: str = "Temperature so far",
+) -> go.Figure:
+    stamps = [row.get("timestamp") for row in telemetry]
+    observed = [row.get(observed_key) for row in telemetry]
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=stamps,
+            y=observed,
+            mode="lines+markers",
+            name="Observed",
+            line=dict(color=OBSERVED, width=2),
+            marker=dict(size=6),
+            connectgaps=False,
+        )
+    )
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=12, color=TEXT), pad=dict(t=0, b=0)),
+        paper_bgcolor=CARD,
+        plot_bgcolor=CARD,
+        margin=dict(l=36, r=12, t=28, b=24),
+        height=140,
+        showlegend=False,
+        font=dict(color=MUTED, size=11, family="IBM Plex Sans, system-ui, sans-serif"),
+        xaxis=dict(gridcolor=GRID, zeroline=False, showline=False, color=MUTED),
+        yaxis=dict(gridcolor=GRID, zeroline=False, showline=False, color=MUTED),
+        hovermode="x unified",
+    )
+    return fig
+
+
 def telemetry_figures(
     telemetry: list[dict[str, Any]],
     mark_at: Any | None = None,
