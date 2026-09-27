@@ -17,6 +17,7 @@ from skyguard.schemas import (
     ClusterId,
     FaultType,
     Healthz,
+    ImdPoll,
     V2Artifacts,
     Label,
     PipelineStatus,
@@ -139,6 +140,7 @@ def healthz(request: Request, session: Session = Depends(get_db)) -> Healthz:
     n_isolates = session.scalar(
         select(func.count()).select_from(Station).where(Station.isolate.is_(True))
     ) or 0
+    imd = getattr(request.app.state, "imd_status", None)
     return Healthz(
         ok=True,
         model_loaded=bool(lstm is not None and lstm.loaded),
@@ -146,6 +148,11 @@ def healthz(request: Request, session: Session = Depends(get_db)) -> Healthz:
         n_stations=int(n_stations),
         n_isolates=int(n_isolates),
         v2_artifacts=_artifact_flags(engine),
+        imd=ImdPoll(
+            last_success=getattr(imd, "last_success", None),
+            last_error=getattr(imd, "last_error", None),
+            matched=int(getattr(imd, "matched", 0) or 0),
+        ),
     )
 
 

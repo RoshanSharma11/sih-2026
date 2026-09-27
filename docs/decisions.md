@@ -147,3 +147,11 @@ Buddy edges and ingest buddy payloads include only neighbors that are in this ca
 Boot replaces the SQLite catalog with this document, including dropping stations that are no longer in it.
 
 `/healthz` reports `v2_artifacts.lstm`, `v2_artifacts.overlay`, and `v2_artifacts.stgnn` (graph weights loaded). `threshold` is the v2 operating score `0.008487`. Loading the graph weights does not turn GAT on.
+
+## D20 — Live hours come from the IMD poller
+
+**Lock:** The product process polls IMD. Token URL and AWS URL come from `IMD_TOKEN_URL` and `IMD_AWS_URL`. The body is `email`, `password`, and `api_key`. Snapshots use `Authorization: Bearer` and `X-API-KEY`. Refresh the token `expires_in` seconds after issue, one minute early.
+
+`sid` is the state id. Row `ID` matches catalog `aws_id`. `CURR_TEMP`, `RH`, and `MSLP` map to `temp_c`, `rhum_pct`, and `pres_hpa`. Empty strings and JSON null are missing channels. `DATE`+`TIME` is UTC and is floored to the hour.
+
+The poller calls `ingest_observation`. `DuplicateObservation` (HTTP 409) is skipped. One bad state does not stop the others. `/healthz.imd` stores `last_success`, `last_error`, and `matched`. Wind, weather code, and forecasts are not sent to the model.

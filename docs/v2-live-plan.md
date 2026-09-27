@@ -1,6 +1,6 @@
 # Implementation plan — live IMD console on v2
 
-Next session: start at step 3. Do not resume the Palam / `ml/` demo as the product path. Do not commit `.env`.
+Next session: start at step 4. Do not resume the Palam / `ml/` demo as the product path. Do not commit `.env`.
 
 ## What we are building
 

@@ -17,6 +17,7 @@ from skyguard.db.session import create_tables, make_engine, make_session_factory
 from skyguard.engine.adapter import load_qc_engine
 from skyguard.engine.demo import DemoController, StreamFilterController
 from skyguard.engine.windows import WindowStore
+from skyguard.imd.poller import ImdPoller, ImdStatus, poll_enabled, poll_interval_seconds
 
 
 def create_app(
@@ -46,6 +47,8 @@ def create_app(
         app.state.demo = DemoController()
         app.state.stream_filter = StreamFilterController()
         app.state.qc_engine = load_qc_engine()
+        app.state.imd_status = ImdStatus()
+        app.state.imd_poller = None
         session = factory()
         try:
             if resolved_stations.exists():
@@ -60,7 +63,14 @@ def create_app(
                 app.state.windows.hydrate(session)
         finally:
             session.close()
+        if poll_enabled(db_path is not None):
+            poller = ImdPoller(app, interval_seconds=poll_interval_seconds())
+            app.state.imd_poller = poller
+            poller.start()
         yield
+        poller_running = getattr(app.state, "imd_poller", None)
+        if poller_running is not None:
+            poller_running.stop()
         engine.dispose()
 
     app = FastAPI(title="SkyGuard AI", version="0.1.0", lifespan=lifespan)

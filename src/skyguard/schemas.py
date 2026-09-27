@@ -258,6 +258,12 @@ class V2Artifacts(BaseModel):
     stgnn: bool = False
 
 
+class ImdPoll(BaseModel):
+    last_success: datetime | None = None
+    last_error: str | None = None
+    matched: int = 0
+
+
 class Healthz(BaseModel):
     ok: bool = True
     model_loaded: bool = False
@@ -265,6 +271,7 @@ class Healthz(BaseModel):
     n_stations: int = 0
     n_isolates: int = 0
     v2_artifacts: V2Artifacts = Field(default_factory=V2Artifacts)
+    imd: ImdPoll = Field(default_factory=ImdPoll)
 
 
 class DemoOverlayStatus(BaseModel):

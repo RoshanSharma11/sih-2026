@@ -1,8 +1,8 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-27 (v2 live plan step 2: catalog is the 48).
+Last updated: 2026-09-27 (v2 live plan step 3: IMD poller).
 
-**Next session:** implement [`v2-live-plan.md`](v2-live-plan.md) from step 3 (IMD poller). Do not extend the Palam / `ml/` path. Credentials are in `.env` only.
+**Next session:** implement [`v2-live-plan.md`](v2-live-plan.md) from step 4 (warm-up on the API). Do not extend the Palam / `ml/` path. Credentials are in `.env` only.
 
 Update this file when a slice lands or a lock changes. It is the handoff note for a new chat. Contracts and decisions still live in the other `docs/` files; this file only answers “where are we?”
 
@@ -12,13 +12,13 @@ Nothing product-blocking. `ml/data/raw/` is on disk (gitignored). Do not commit 
 
 Optional, not blocking: the frozen v1 threshold note in `ml/` is not the live score. Product ingest uses the v2 threshold (`0.008487`).
 
-Nothing else needs a product decision. Language and D14–D19 are locked. D19 is the live 48.
+Nothing else needs a product decision. Language and D14–D20 are locked. D19 is the live 48. D20 is the IMD poller.
 
 ## Status
 
-**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**, **V2-1** ingest on `v2.engine`, **V2-2** live catalog is the 48. Palam `42181` is not in the product catalog. Safdarjung `42182` is an isolate inside the 48. Storm inject still uses whatever neighborhood the catalog has.
+**Shipped:** slices 0–7, F0–F6, I0 docs, **I1 catalog import**, **I2 adapter**, **I3 stream filter + neighborhood inject**, **I4 query APIs**, **I5 live-path tests**, **I6 README**, **V2-1** ingest on `v2.engine`, **V2-2** live catalog is the 48, **V2-3** IMD poller. Palam `42181` is not in the product catalog. Safdarjung `42182` is an isolate inside the 48. Storm inject still uses whatever neighborhood the catalog has.
 
-Next: v2 live plan step 3 (IMD poller). No further frontend slices in this step.
+Next: v2 live plan step 4 (warm-up). No further frontend slices in this step.
 
 | Slice | Commit | Why |
 |---|---|---|
@@ -37,12 +37,14 @@ Next: v2 live plan step 3 (IMD poller). No further frontend slices in this step.
 | F10 | `dc57291` | Alerts feed + Palam storm/spike Control |
 | F11 | (this change) | Guide, empty/offline, light polish |
 | V2-1 | `3ad694d` | Ingest calls v2 (CW-IDW, TIMING queued); persist overlay fields; health from stored labels; no scaler is 400 |
-| V2-2 | (this change) | Product catalog is the judge 48, with `aws_id` and in-set buddies; `/healthz` reports v2 weights |
+| V2-2 | `22ee5c7` | Product catalog is the judge 48, with `aws_id` and in-set buddies; `/healthz` reports v2 weights |
+| V2-3 | (this change) | IMD poller posts matched hours through ingest; `/healthz` records poll status |
 
 ## What works today (post-I6)
 
 - Catalog: `data/processed/stations.json` (48) + `buddy_edges.json` (edges inside that set). Each station has `aws_id`, `aws_name`, `aws_distance_km`. Re-run with `python -m skyguard.data.import_ml_catalog`. `--legacy-151` is the old training dump.
-- API: `/healthz` reports `model_loaded`, `threshold` (`0.008487` when v2 weights load), `n_stations`, `n_isolates`, and `v2_artifacts` (`lstm`, `overlay`, `stgnn`). `GET /stations?ids=` includes `latest`, `buddy_ids`, `isolate`, `aws_id`. `GET /buddy-map`. Telemetry and alerts store `label`. `/ingest`, seed, `/demo/*`. Buddy payloads omit neighbors with no hours.
+- API: `/healthz` reports `model_loaded`, `threshold` (`0.008487` when v2 weights load), `n_stations`, `n_isolates`, `v2_artifacts` (`lstm`, `overlay`, `stgnn`), and `imd` (`last_success`, `last_error`, `matched`). `GET /stations?ids=` includes `latest`, `buddy_ids`, `isolate`, `aws_id`. `GET /buddy-map`. Telemetry and alerts store `label`. `/ingest`, seed, `/demo/*`. Buddy payloads omit neighbors with no hours.
+- IMD poller: JWT from `IMD_TOKEN_URL`, state snapshots `sid` on `IMD_AWS_URL`, `ID` → `aws_id`, hour bucket in UTC, duplicate hours skipped. Off when `SKYGUARD_IMD_POLL=0` or when tests pass their own database.
 - Live QC: `engine/adapter.py` maps public fields ↔ v2; `pipeline.py` persists raw, calls `v2.engine.process_aws_data` (`use_stgnn=False`, `timing_async=True`), writes overlay (`predicted`, `imputed_interval`, `thermo`, `tier2.score`, `tier3.method` / `mix` / `corr`, `reason`) and recomputes 7-day health from stored labels. Weather does not count. `ml.engine` and legacy `skyguard.engine.tier*` are not on this path.
 - Missing artifacts → persist anyway, `UNCONFIRMED_ANOMALY`. No 24h window → same. Catalog station with no train scaler → 400. Station not in the catalog → 404.
 - Streamer: `--stations 42181 --with-buddies` (default true) seeds/POSTs the ingest set. CLI overrides `GET /demo/stream-filter`. Empty filter = full catalog.
@@ -98,7 +100,7 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Next
 
-[`v2-live-plan.md`](v2-live-plan.md) step 3: IMD poller. Match `aws_id`, bucket to the hour, skip duplicate hours, and record poll status on `/healthz`.
+[`v2-live-plan.md`](v2-live-plan.md) step 4: if a station has fewer than 24 hourly rows, return the raw latest observation and a warming-up state. Do not invent a label.
 
 ## Open issues
 

@@ -1,6 +1,6 @@
 ---
 description: FastAPI pipeline and SQLite conventions
-globs: src/skyguard/api/**/*.py,src/skyguard/engine/**/*.py,src/skyguard/db/**/*.py,src/skyguard/ml/**/*.py
+globs: src/skyguard/api/**/*.py,src/skyguard/engine/**/*.py,src/skyguard/db/**/*.py,src/skyguard/ml/**/*.py,src/skyguard/imd/**/*.py
 alwaysApply: false
 ---
 
@@ -11,6 +11,7 @@ alwaysApply: false
 - Live QC is `v2.engine.process_aws_data` via the adapter (GAT off, TIMING queued). Do not call `ml.engine`, `tier1`/`tier2`/`tier3`/`classify` on ingest. Do not import training notebooks.
 - Lock per `station_id` around window update + the v2 call.
 - Duplicate `(station_id, timestamp)` → 409. Unknown station → 404. No train scaler → 400.
+- The IMD poller calls `ingest_observation`. It does not score hours itself. A 409 does not stop the poll.
 - Health is the 7-day rate of stored labels. Weather does not lower it.
 - `GENUINE_WEATHER_EVENT` is `is_anomaly=true` and does **not** lower health.
 

@@ -14,6 +14,7 @@ On startup:
 2. Upsert imported `data/processed/stations.json` + `buddy_edges.json` (the live 48; stations left over from the 151 are dropped). If the catalog is missing, `/healthz` is ok and `/ingest` 503s. `/healthz` includes `v2_artifacts` (`lstm`, `overlay`, `stgnn`) and the v2 threshold `0.008487` when weights load.
 3. Hydrate 24-hour windows from `telemetry_logs`
 4. Call `v2.engine.get_engine(use_stgnn=False, timing_async=True)` once (CW-IDW, TIMING queued)
+5. Start the IMD poller when `IMD_API_KEY`, `IMD_EMAIL`, and `IMD_PASSWORD` are set. It refreshes the JWT before expiry, pulls `aws_data?sid=` for the states that cover the 48, matches `ID` to `aws_id`, and calls `ingest_observation`. Set `SKYGUARD_IMD_POLL=0` to leave it off. `/healthz` `imd` reports `last_success`, `last_error`, and `matched`.
 
 Do not start `uvicorn v2.main:app` or `uvicorn ml.main:app` as the product server.
 

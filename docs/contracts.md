@@ -199,7 +199,7 @@ Empty `station_ids` means all catalog stations (view = ingest = full catalog). S
 
 | Method | Path | Returns |
 |---|---|---|
-| `GET` | `/healthz` | `{ok, model_loaded, threshold, n_stations, n_isolates, v2_artifacts}` |
+| `GET` | `/healthz` | `{ok, model_loaded, threshold, n_stations, n_isolates, v2_artifacts, imd}` |
 | `GET` | `/stations?ids=` | list of station summaries (`ids` = view set, optional) |
 | `GET` | `/stations/{id}` | summary + latest observation |
 | `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | raw + imputed series |
@@ -239,6 +239,14 @@ Station summary (list **includes** `latest` so the live map does not N+1):
 `aws_id` matches the IMD AWS/ARG `ID`. `aws_distance_km` is the WMO-to-AWS site offset from `stations_judge48.csv` (`distance_km` there). It is not a buddy-edge length. Safdarjung has no buddies inside the live 48, so `buddy_ids` is empty and `isolate` is true.
 
 `/healthz` `v2_artifacts` is `{lstm, overlay, stgnn}`: each flag is true when that weight file loaded. `threshold` is the v2 operating score (`0.008487`). Graph weights may be loaded while ingest still uses `cw_idw`.
+
+`/healthz` `imd` is the live poll:
+
+```json
+{"last_success": "2026-09-27T17:20:00Z", "last_error": null, "matched": 42}
+```
+
+`matched` is how many of the 48 catalog stations had an IMD `ID` in the last poll. Stations that share an `aws_id` all receive that hour. `last_success` is when that poll finished. `last_error` is the latest state or token failure, or null when the last poll was clean. A duplicate hour is not an error.
 
 Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, and `tier3_corr`. `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
 
