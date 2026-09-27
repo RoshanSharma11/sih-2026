@@ -43,7 +43,7 @@ Next: nothing on the v2 live plan. Steps 1–8 are done.
 | V2-5 | `0ee8d6b` | Replay `demo_windows.json` through ingest so the Mumbai stories mutate before QC and a newer live window stays put |
 | V2-6 | `7af74ba` | `GET /stations/{id}/timing` reads the v2 cache so ingest can return before the attribution sentence is ready |
 | V2-7 | `3a2b639` | Dashboard shows the 48, warming up, interval-gated bands, root cause, and Mumbai replay instead of the Palam buttons |
-| V2-8 | (this change) | One live poll stored raw warming-up hours; replay story 2 is hardware with a band near 25 °C and story 3 is weather with no band and health unchanged |
+| V2-8 | `1738cd3` | One live poll stored raw warming-up hours; replay story 2 is hardware with a band near 25 °C and story 3 is weather with no band and health unchanged |
 
 ## What works today (post-I6)
 
