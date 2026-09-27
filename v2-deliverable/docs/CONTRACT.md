@@ -3,28 +3,28 @@
 This is the **only** I/O document backend and frontend should implement against.  
 ML lives in this folder. You persist raw, build windows, call ML, map names, draw the console.
 
-Story, stats, plots, and gaps: [`SKYGUARD_V2.md`](SKYGUARD_V2.md).
+Story, stats, plots, and gaps: `[SKYGUARD_V2.md](SKYGUARD_V2.md)`.
 
-| | |
-|---|---|
-| Problem | SIH 2026 PS 26073 · MoES / IMD · **software only** |
-| Canonical call | `from v2.engine import process_aws_data` |
-| Optional HTTP | `uvicorn v2.main:app --port 8001` (same JSON, not the product API) |
-| Live map | **48** stations in `v2/data/stations_judge48.csv` |
-| Palam `42181` | **Out of the live 48.** Do not default the map to it. |
-| Demo cluster | Mumbai `43003 / 43057 / 43002 / 43058` + Safdarjung `42182` |
+|                |                                                                    |
+| -------------- | ------------------------------------------------------------------ |
+| Problem        | SIH 2026 PS 26073 · MoES / IMD · **software only**                 |
+| Canonical call | `from v2.engine import process_aws_data`                           |
+| Optional HTTP  | `uvicorn v2.main:app --port 8001` (same JSON, not the product API) |
+| Live map       | **48** stations in `v2/data/stations_judge48.csv`                  |
+| Palam `42181`  | **Out of the live 48.** Do not default the map to it.              |
+| Demo cluster   | Mumbai `43003 / 43057 / 43002 / 43058` + Safdarjung `42182`        |
 
-Worked examples (captured from this engine): [`examples/`](examples/).
+Worked examples (captured from this engine): `[examples/](examples/)`.
 
 ---
 
 ## 0. Who does what
 
-| You | You own | You do not own |
-|---|---|---|
-| **Backend** | SQLite (or equivalent); **write raw first**; build 24 h `window` + buddy `window`s; call ML; public HTTP; IMD warning chips | Weights, retraining, calling PyTorch except via `process_aws_data` |
-| **Frontend** | Five labels/colors; solid raw / dashed overlay / band; health; reason; TIMING line; map of 48 | Calling ML |
-| **ML (this package)** | Labels, overlay, interval, reason, health index, TIMING job | IMD JWT, schema, Streamlit layout |
+| You                   | You own                                                                                                                     | You do not own                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Backend**           | SQLite (or equivalent); **write raw first**; build 24 h `window` + buddy `window`s; call ML; public HTTP; IMD warning chips | Weights, retraining, calling PyTorch except via `process_aws_data` |
+| **Frontend**          | Five labels/colors; solid raw / dashed overlay / band; health; reason; TIMING line; map of 48                               | Calling ML                                                         |
+| **ML (this package)** | Labels, overlay, interval, reason, health index, TIMING job                                                                 | IMD JWT, schema, Streamlit layout                                  |
 
 V1 `ml/` is frozen. New ingest uses **this** package only.
 
@@ -58,12 +58,12 @@ cd v2-deliverable
 uvicorn v2.main:app --port 8001
 ```
 
-| Method | Path | Same as |
-|---|---|---|
-| `POST` | `/ingest` | `process_aws_data` body §2, response §3 |
-| `GET` | `/healthz` | artifacts loaded? `stgnn_on`? overlay? |
-| `GET` | `/buddy-map` | 151-station graph (filter to live 48 in your API) |
-| `GET` | `/stations/{station_id}/timing?ts=` | §6 TIMING poll |
+| Method | Path                                | Same as                                           |
+| ------ | ----------------------------------- | ------------------------------------------------- |
+| `POST` | `/ingest`                           | `process_aws_data` body §2, response §3           |
+| `GET`  | `/healthz`                          | artifacts loaded? `stgnn_on`? overlay?            |
+| `GET`  | `/buddy-map`                        | 151-station graph (filter to live 48 in your API) |
+| `GET`  | `/stations/{station_id}/timing?ts=` | §6 TIMING poll                                    |
 
 Unknown `station_id` (no train scaler) → **HTTP 400**. Do not borrow another station’s scaler.
 
@@ -71,12 +71,12 @@ Product `/ingest` on port 8000 is **yours**. Do not make the dashboard call 8001
 
 ### 1.3 What this engine is configured to do on ingest
 
-| | Product (`get_engine()` / `POST /ingest`) | `python -m v2.demo_engine` |
-|---|---|---|
-| Tier 3 | **CW-IDW** (`tier3.method = "cw_idw"`) | GAT (`"stgnn"`) for Mumbai 2 vs 3 |
-| Overlay | Gaussian last-hour if HARDWARE / PHYSICAL | same |
-| `timing` on first JSON | always `null` | always `null` |
-| TIMING job | queued when `is_anomaly` | queued; demo prints poll |
+|                        | Product (`get_engine()` / `POST /ingest`) | `python -m v2.demo_engine`        |
+| ---------------------- | ----------------------------------------- | --------------------------------- |
+| Tier 3                 | **CW-IDW** (`tier3.method = "cw_idw"`)    | GAT (`"stgnn"`) for Mumbai 2 vs 3 |
+| Overlay                | Gaussian last-hour if HARDWARE / PHYSICAL | same                              |
+| `timing` on first JSON | always `null`                             | always `null`                     |
+| TIMING job             | queued when `is_anomaly`                  | queued; demo prints poll          |
 
 Backend playback of stories 2 vs 3 **works on CW-IDW**. You do not need GAT on the product path.
 
@@ -123,7 +123,7 @@ Any of `temp` / `rhum` / `pres` may be JSON `null` (comms gap). That is **not** 
 }
 ```
 
-Full 24-row request: [`examples/ingest_request_clean.json`](examples/ingest_request_clean.json).
+Full 24-row request: `[examples/ingest_request_clean.json](examples/ingest_request_clean.json)`.
 
 ### Backend pipeline (order is mandatory)
 
@@ -131,7 +131,7 @@ Full 24-row request: [`examples/ingest_request_clean.json`](examples/ingest_requ
 2. Load last 24 hourly points for `station_id` ending at `timestamp` (you may interpolate ≤ 2 h gaps; ML also interpolates ≤ 2 h).
 3. Load buddies from `v2/data/buddy_edges.csv` whose ids are **in your ingest set**. Attach windows.
 4. Call `process_aws_data`.
-5. Persist the ML JSON in **separate** columns (`predicted_*`, `label`, `imputed_interval`, `health`, …).
+5. Persist the ML JSON in **separate** columns (`predicted_`\*, `label`, `imputed_interval`, `health`, …).
 6. Optional: attach `imd_corroboration` **after** ML. Never as a model feature.
 7. If `is_anomaly`, poll TIMING (§6) and store it on the same hour.
 
@@ -147,7 +147,7 @@ Every `process_aws_data` / `POST /ingest` returns this shape. First response alw
 
 ### 3.1 CLEAN
 
-[`examples/ingest_response_clean.json`](examples/ingest_response_clean.json)
+`[examples/ingest_response_clean.json](examples/ingest_response_clean.json)`
 
 ```json
 {
@@ -187,7 +187,7 @@ On CLEAN / WEATHER, `predicted` **copies observed**. Hide the dashed line.
 
 ### 3.2 HARDWARE (55 °C on Santa Cruz only) — overlay ON
 
-[`examples/ingest_response_hardware.json`](examples/ingest_response_hardware.json)
+`[examples/ingest_response_hardware.json](examples/ingest_response_hardware.json)`
 
 ```json
 {
@@ -199,9 +199,9 @@ On CLEAN / WEATHER, `predicted` **copies observed**. Hide the dashed line.
   "predicted": { "temp": 25.24, "rhum": 69.07, "pres": 1013.29 },
   "reconstructed": { "temp": 25.24, "rhum": 69.07, "pres": 1013.29 },
   "imputed_interval": {
-    "temp": [24.20, 26.28],
-    "rhum": [61.94, 76.20],
-    "pres": [1012.70, 1013.88]
+    "temp": [24.2, 26.28],
+    "rhum": [61.94, 76.2],
+    "pres": [1012.7, 1013.88]
   },
   "reason": "temp observed 55.00 vs predicted 25.24. Neighbor mix 24.40 (n=3). Neighbors disagree; treated as hardware anomaly.",
   "tier3": {
@@ -210,7 +210,7 @@ On CLEAN / WEATHER, `predicted` **copies observed**. Hide the dashed line.
     "neighbors_agree": false,
     "usable_count": 3,
     "buddy_ids": ["43057", "43002", "43058"],
-    "mix": { "temp": 24.40, "rhum": 77.00, "pres": 1012.80 }
+    "mix": { "temp": 24.4, "rhum": 77.0, "pres": 1012.8 }
   },
   "timing": null
 }
@@ -220,7 +220,7 @@ Solid line = 55 °C. Dashed = ~25.2 °C. Band = `imputed_interval`. Raw row in D
 
 ### 3.3 WEATHER (same +8 °C on Santa Cruz + Colaba + Juhu) — overlay OFF
 
-[`examples/ingest_response_weather.json`](examples/ingest_response_weather.json)
+`[examples/ingest_response_weather.json](examples/ingest_response_weather.json)`
 
 ```json
 {
@@ -246,27 +246,27 @@ Amber, **not** red. `imputed_interval` is `null` — **no dashed line, no band**
 
 ## 4. Name map (ML → public API / UI)
 
-| Public | ML |
-|---|---|
-| `temp_c` | `temp` |
-| `rhum_pct` | `rhum` |
-| `pres_hpa` | `pres` |
-| `explainability_text` | `reason` |
-| `imputed` | `predicted` (same object as `reconstructed`) |
-| `health_score` | `health.index_7d * 100` |
-| `station_status` | `health.state` |
-| `pipeline_status` | from the label table below |
-| `contribution_pct` | `tier2.feature_contributions` × 100 |
+| Public                | ML                                           |
+| --------------------- | -------------------------------------------- |
+| `temp_c`              | `temp`                                       |
+| `rhum_pct`            | `rhum`                                       |
+| `pres_hpa`            | `pres`                                       |
+| `explainability_text` | `reason`                                     |
+| `imputed`             | `predicted` (same object as `reconstructed`) |
+| `health_score`        | `health.index_7d * 100`                      |
+| `station_status`      | `health.state`                               |
+| `pipeline_status`     | from the label table below                   |
+| `contribution_pct`    | `tier2.feature_contributions` × 100          |
 
 ### Labels — do not invent more
 
-| ML `label` | `pipeline_status` | `is_anomaly` | Lowers 7d health? | Color | Overlay |
-|---|---|---|---|---|---|
-| `CLEAN` | `CLEAN` | false | no | teal `#0D9488` | **none** — `predicted` = observed, interval `null` |
-| `PHYSICAL_FAULT` | `HARDWARE` | true | **yes** | rose `#E11D48` | dashed + band if interval present |
-| `HARDWARE_ANOMALY` | `HARDWARE` | true | **yes** | rose `#E11D48` | dashed + band |
-| `GENUINE_WEATHER_EVENT` | `GENUINE_WEATHER` | true | **no** | amber `#D97706` | **none** |
-| `UNCONFIRMED_ANOMALY` | `UNKNOWN` | true | **yes** | slate `#64748B` | LSTM last step if present; **no band** |
+| ML `label`              | `pipeline_status` | `is_anomaly` | Lowers 7d health? | Color           | Overlay                                            |
+| ----------------------- | ----------------- | ------------ | ----------------- | --------------- | -------------------------------------------------- |
+| `CLEAN`                 | `CLEAN`           | false        | no                | teal `#0D9488`  | **none** — `predicted` = observed, interval `null` |
+| `PHYSICAL_FAULT`        | `HARDWARE`        | true         | **yes**           | rose `#E11D48`  | dashed + band if interval present                  |
+| `HARDWARE_ANOMALY`      | `HARDWARE`        | true         | **yes**           | rose `#E11D48`  | dashed + band                                      |
+| `GENUINE_WEATHER_EVENT` | `GENUINE_WEATHER` | true         | **no**            | amber `#D97706` | **none**                                           |
+| `UNCONFIRMED_ANOMALY`   | `UNKNOWN`         | true         | **yes**           | slate `#64748B` | LSTM last step if present; **no band**             |
 
 **Weather is never red.** `is_anomaly` is true for weather (it is unusual). Health ignores weather. Do not mix those two in one badge.
 
@@ -280,13 +280,13 @@ Health: `HEALTHY` if `index_7d ≥ 0.90`, `DEGRADED` if `≥ 0.70`, else `CRITIC
 
 Solid line is **always** `observed` (raw). You never overwrite it.
 
-| `label` | Dashed line (`predicted`) | Band (`imputed_interval`) |
-|---|---|---|
-| `CLEAN` | hide (equal to solid) | hide |
-| `GENUINE_WEATHER_EVENT` | hide (equal to solid) | hide |
-| `HARDWARE_ANOMALY` | show corrected last hour | show `[low, high]` per channel when non-null |
-| `PHYSICAL_FAULT` | show if values non-null | show if non-null |
-| `UNCONFIRMED_ANOMALY` | show LSTM last step if present | **hide** (interval is `null`) |
+| `label`                 | Dashed line (`predicted`)      | Band (`imputed_interval`)                    |
+| ----------------------- | ------------------------------ | -------------------------------------------- |
+| `CLEAN`                 | hide (equal to solid)          | hide                                         |
+| `GENUINE_WEATHER_EVENT` | hide (equal to solid)          | hide                                         |
+| `HARDWARE_ANOMALY`      | show corrected last hour       | show `[low, high]` per channel when non-null |
+| `PHYSICAL_FAULT`        | show if values non-null        | show if non-null                             |
+| `UNCONFIRMED_ANOMALY`   | show LSTM last step if present | **hide** (interval is `null`)                |
 
 `imputed_interval.temp` is `[p05, p95]` in °C (same for RH % and P hPa). Missing channel → that key may be absent or the predicted channel `null` (comms).
 
@@ -314,7 +314,7 @@ GET /stations/43003/timing?ts=2024-12-31T23:00:00Z
 
 Optional `wait_s` ≤ 10.
 
-[`examples/timing_response.json`](examples/timing_response.json)
+`[examples/timing_response.json](examples/timing_response.json)`
 
 ```json
 {
@@ -330,12 +330,12 @@ Optional `wait_s` ≤ 10.
 }
 ```
 
-| `status` | UI |
-|---|---|
-| `pending` | hide TIMING line; poll 1–2 s |
-| `ready` | show `timing.reason` |
+| `status`        | UI                                |
+| --------------- | --------------------------------- |
+| `pending`       | hide TIMING line; poll 1–2 s      |
+| `ready`         | show `timing.reason`              |
 | `not_requested` | CLEAN hours are not queued — hide |
-| `error` | hide; keep `reason` from ingest |
+| `error`         | hide; keep `reason` from ingest   |
 
 **Where:** root-cause page, **under** the contribution bars, not on the map.
 
@@ -343,7 +343,7 @@ Optional `wait_s` ≤ 10.
 
 1. One sentence: `timing.reason` (or “Anomaly starts at hour {start_hour_in_window} of the 24 h window”).
 2. Optional small bar chart: `timing.hour_attr` (length 24, hours 0 = oldest … 23 = ingest hour).
-3. Optional second bars: `timing.channel_attr` (already similar to `tier2.feature_contributions`; prefer ingest contributions as the main bars, TIMING as the *when*).
+3. Optional second bars: `timing.channel_attr` (already similar to `tier2.feature_contributions`; prefer ingest contributions as the main bars, TIMING as the _when_).
 
 Never run TIMING on the ingest hot path yourself. Never fail ingest if TIMING is pending.
 
@@ -359,7 +359,7 @@ Keep the five-page console. Additive only.
 - Default camera: Mumbai four + Safdarjung. **Not Palam.**
 - Marker color = latest `label` color (§4).
 - Draw 1-hop edges from `/buddy-map` ∩ stations you actually ingest.
-- Isolates (degree < 2 in the *ingested* set): slate tooltip “not enough neighbors for weather vs hardware”.
+- Isolates (degree < 2 in the _ingested_ set): slate tooltip “not enough neighbors for weather vs hardware”.
 
 ### 7.2 Station chart
 
@@ -369,14 +369,14 @@ Keep the five-page console. Additive only.
 
 One row per anomalous hour, newest first.
 
-| Column | Source |
-|---|---|
-| Color chip | §4 |
-| Station | name + id |
-| Time | timestamp `Z` |
-| Verdict | `label` |
-| Fault | `fault_type` |
-| Sentence | `reason` |
+| Column     | Source        |
+| ---------- | ------------- |
+| Color chip | §4            |
+| Station    | name + id     |
+| Time       | timestamp `Z` |
+| Verdict    | `label`       |
+| Fault      | `fault_type`  |
+| Sentence   | `reason`      |
 
 Amber weather and rose hardware must be visually distinct in the same list.
 
@@ -403,15 +403,15 @@ Must show, in this order:
 
 ML FastAPI on 8001 is optional. The **product** API you already have should keep:
 
-| Method | Path | Notes |
-|---|---|---|
-| `POST` | `/ingest` | persist raw + ML; public names |
-| `GET` | `/healthz` | include `v2_artifacts: { lstm, overlay, stgnn }` |
-| `GET` | `/stations/{id}/telemetry` | observed + overlay columns; hide band if null |
-| `GET` | `/stations/{id}/timing?ts=` | proxy ML cache or your DB |
-| `GET` | `/buddy-map` | live-48 ∩ edges |
-| `GET` | `/alerts` | newest first |
-| `POST` | `/demo/inject` | arm story overlays **in your DB**, then ingest hours |
+| Method | Path                        | Notes                                                |
+| ------ | --------------------------- | ---------------------------------------------------- |
+| `POST` | `/ingest`                   | persist raw + ML; public names                       |
+| `GET`  | `/healthz`                  | include `v2_artifacts: { lstm, overlay, stgnn }`     |
+| `GET`  | `/stations/{id}/telemetry`  | observed + overlay columns; hide band if null        |
+| `GET`  | `/stations/{id}/timing?ts=` | proxy ML cache or your DB                            |
+| `GET`  | `/buddy-map`                | live-48 ∩ edges                                      |
+| `GET`  | `/alerts`                   | newest first                                         |
+| `POST` | `/demo/inject`              | arm story overlays **in your DB**, then ingest hours |
 
 Duplicate hour → 409 (your rule). Schema fail → 422. Unknown live station you refuse to show → 404 is fine **after** you decide; ML itself returns 400 if there is no scaler.
 
@@ -423,14 +423,14 @@ Hourly playback → one ingest per hour. Inject in **backend demo**, not by edit
 
 Use `v2/data/demo_windows.json` (24 aligned hours ending `2024-12-31T23:00:00` for the five demo ids) or `python -m v2.demo_engine` from this folder.
 
-| # | Send | Expect |
-|---|---|---|
-| 1 | `43003` clean 24 h + 3 Mumbai buddies | `CLEAN`, no overlay |
-| 2 | last hour `43003` → 55 °C / 95% / 980 hPa; buddies **normal** | `HARDWARE_ANOMALY`, dashed ~25 °C, band on |
-| 3 | last hour **+8 °C** on `43003` **and** `43057` **and** `43002` (Juhu too) | `GENUINE_WEATHER_EVENT`, no overlay, health **not** down from this label |
-| 4 | temp frozen **12 h** | `PHYSICAL_FAULT` / `FREEZE`, overlay if imputable |
-| 5 | `temp: null` | `PHYSICAL_FAULT` / `COMMUNICATION` |
-| 6 | repeat story 2 across many hours | `health.state` leaves `HEALTHY` |
+| #   | Send                                                                      | Expect                                                                   |
+| --- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 1   | `43003` clean 24 h + 3 Mumbai buddies                                     | `CLEAN`, no overlay                                                      |
+| 2   | last hour `43003` → 55 °C / 95% / 980 hPa; buddies **normal**             | `HARDWARE_ANOMALY`, dashed ~25 °C, band on                               |
+| 3   | last hour **+8 °C** on `43003` **and** `43057` **and** `43002` (Juhu too) | `GENUINE_WEATHER_EVENT`, no overlay, health **not** down from this label |
+| 4   | temp frozen **12 h**                                                      | `PHYSICAL_FAULT` / `FREEZE`, overlay if imputable                        |
+| 5   | `temp: null`                                                              | `PHYSICAL_FAULT` / `COMMUNICATION`                                       |
+| 6   | repeat story 2 across many hours                                          | `health.state` leaves `HEALTHY`                                          |
 
 Story 2 vs 3 is the PS example. If 2 and 3 look the same, you dropped buddies.
 
