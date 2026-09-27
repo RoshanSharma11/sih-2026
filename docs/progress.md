@@ -38,7 +38,7 @@ Next: v2 live plan step 4 (warm-up). No further frontend slices in this step.
 | F11 | (this change) | Guide, empty/offline, light polish |
 | V2-1 | `3ad694d` | Ingest calls v2 (CW-IDW, TIMING queued); persist overlay fields; health from stored labels; no scaler is 400 |
 | V2-2 | `22ee5c7` | Product catalog is the judge 48, with `aws_id` and in-set buddies; `/healthz` reports v2 weights |
-| V2-3 | (this change) | IMD poller posts matched hours through ingest; `/healthz` records poll status |
+| V2-3 | `48b9be0` | IMD poller posts matched hours through ingest; `/healthz` records poll status |
 
 ## What works today (post-I6)
 
