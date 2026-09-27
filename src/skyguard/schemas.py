@@ -143,7 +143,8 @@ class IngestResult(BaseModel):
     station_id: str
     timestamp: datetime
     label: Label | None = None
-    pipeline_status: PipelineStatus
+    pipeline_status: PipelineStatus | None = None
+    warming_up: bool = False
     fault_type: FaultType | None = None
     confidence: float | None = None
     severity: Severity | None = None
@@ -190,7 +191,8 @@ class DemoInjectRequest(BaseModel):
 class LatestSnapshot(BaseModel):
     timestamp: datetime
     label: Label | None = None
-    pipeline_status: PipelineStatus
+    pipeline_status: PipelineStatus | None = None
+    warming_up: bool = False
     observed: ChannelValues
     imputed: ChannelValues
 
@@ -227,7 +229,8 @@ class TelemetryRow(BaseModel):
     rhum_imputed: float | None
     is_anomaly: bool
     label: Label | None = None
-    pipeline_status: PipelineStatus
+    pipeline_status: PipelineStatus | None = None
+    warming_up: bool = False
     mse: float | None = None
     explainability_text: str | None = None
     imputed_interval: ImputedInterval | None = None

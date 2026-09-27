@@ -229,7 +229,8 @@ def list_telemetry(
             rhum_imputed=row.rhum_imputed,
             is_anomaly=row.is_anomaly,
             label=_label(row.label),
-            pipeline_status=PipelineStatus(row.pipeline_status),
+            pipeline_status=PipelineStatus(row.pipeline_status) if row.pipeline_status else None,
+            warming_up=bool(row.warming_up),
             mse=row.mse,
             **telemetry_qc(row),
         )

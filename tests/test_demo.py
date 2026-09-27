@@ -62,8 +62,8 @@ def _iso(ts: datetime) -> str:
     return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _seed(client: TestClient, station_id: str, hours: int = 8, start: datetime | None = None) -> None:
-    start = start or datetime(2024, 6, 30, 16, tzinfo=timezone.utc)
+def _seed(client: TestClient, station_id: str, hours: int = 23, start: datetime | None = None) -> None:
+    start = start or datetime(2024, 6, 30, 1, tzinfo=timezone.utc)
     observations = []
     for i in range(hours):
         observations.append(

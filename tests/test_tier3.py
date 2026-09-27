@@ -61,8 +61,8 @@ def _iso(ts: datetime) -> str:
     return ts.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _seed(client: TestClient, station_id: str, hours: int = 8, start: datetime | None = None, temp: float = 32.0, vary: bool = True) -> None:
-    start = start or datetime(2024, 6, 30, 16, tzinfo=timezone.utc)
+def _seed(client: TestClient, station_id: str, hours: int = 23, start: datetime | None = None, temp: float = 32.0, vary: bool = True) -> None:
+    start = start or datetime(2024, 6, 30, 1, tzinfo=timezone.utc)
     observations = []
     for i in range(hours):
         observations.append(
@@ -166,7 +166,7 @@ def test_freeze_is_hardware(tmp_path) -> None:
     start = datetime(2024, 6, 30, 16, tzinfo=timezone.utc)
     with _client(tmp_path) as client:
         observations = []
-        for i in range(5):
+        for i in range(23):
             observations.append(
                 {
                     "timestamp": _iso(start + timedelta(hours=i)),
@@ -176,8 +176,8 @@ def test_freeze_is_hardware(tmp_path) -> None:
                 }
             )
         assert client.post("/stations/42181/seed", json={"observations": observations}).status_code == 200
-        _seed(client, "42182", hours=5, start=start, temp=32.0, vary=True)
-        hour = start + timedelta(hours=5)
+        _seed(client, "42182", hours=23, start=start, temp=32.0, vary=True)
+        hour = start + timedelta(hours=23)
         _ingest(client, "42182", hour, 32.3, 1005.4, 60.4)
         frozen = _ingest(client, "42181", hour, 31.0, 1006.0, 61.0)
         assert frozen.json()["fault_type"] == "FREEZE"
@@ -196,7 +196,7 @@ def test_health_drops_after_spikes_not_storm(tmp_path) -> None:
         assert weather.json()["fault_type"] == "GENUINE_WEATHER"
         assert weather.json()["health_score"] == 100.0
 
-        for i in range(11):
+        for i in range(15):
             hour = storm_hour + timedelta(hours=1 + i)
             baseline = 32.0 + (i % 2)
             _ingest(client, "42182", hour, baseline, 1005.0, 60.0)

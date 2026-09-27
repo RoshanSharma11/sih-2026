@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
@@ -80,10 +81,11 @@ def test_list_stations_and_ingest_roundtrip(tmp_path) -> None:
         created = client.post("/ingest", json=payload)
         assert created.status_code == 200
         body = created.json()
-        # No 24h window → ML cannot run LSTM; honesty is UNCONFIRMED, not a fake CLEAN.
-        assert body["label"] == "UNCONFIRMED_ANOMALY"
-        assert body["pipeline_status"] == "UNKNOWN"
+        assert body["warming_up"] is True
+        assert body["label"] is None
+        assert body["pipeline_status"] is None
         assert body["observed"]["temp_c"] == 34.2
+        assert body["imputed"]["temp_c"] is None
 
         duplicate = client.post("/ingest", json=payload)
         assert duplicate.status_code == 409
@@ -93,19 +95,22 @@ def test_list_stations_and_ingest_roundtrip(tmp_path) -> None:
 
         detail = client.get("/stations/42181")
         assert detail.status_code == 200
-        assert detail.json()["latest"]["observed"]["temp_c"] == 34.2
+        latest = detail.json()["latest"]
+        assert latest["observed"]["temp_c"] == 34.2
+        assert latest["warming_up"] is True
+        assert latest["label"] is None
 
         series = client.get("/stations/42181/telemetry")
         assert series.status_code == 200
         assert len(series.json()) == 1
         assert series.json()[0]["temp_observed"] == 34.2
-        assert series.json()[0]["is_anomaly"] is True
-        assert series.json()[0]["label"] == "UNCONFIRMED_ANOMALY"
+        assert series.json()[0]["is_anomaly"] is False
+        assert series.json()[0]["warming_up"] is True
+        assert series.json()[0]["label"] is None
 
         alerts = client.get("/alerts")
         assert alerts.status_code == 200
-        assert alerts.json()[0]["fault_type"] in {"UNKNOWN", "COMM_ERROR"}
-        assert alerts.json()[0]["label"] == "UNCONFIRMED_ANOMALY"
+        assert alerts.json() == []
 
         unknown = client.get("/stations/99999")
         assert unknown.status_code == 404
@@ -119,20 +124,22 @@ def test_seed_and_tier1_faults(tmp_path) -> None:
         )
         assert missing.status_code == 404
 
-        seed = client.post(
-            "/stations/42181/seed",
-            json={
-                "observations": [
-                    {"timestamp": "2024-06-30T13:00:00Z", "temp_c": 31.0, "pres_hpa": 1004.1, "rhum_pct": 68.0},
-                    {"timestamp": "2024-06-30T14:00:00Z", "temp_c": 31.2, "pres_hpa": 1004.0, "rhum_pct": 67.0},
-                ]
-            },
-        )
+        start = datetime(2024, 6, 29, 16, tzinfo=timezone.utc)
+        observations = [
+            {
+                "timestamp": (start + timedelta(hours=index)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "temp_c": round(30.0 + (index % 5) * 0.4, 1),
+                "pres_hpa": round(1000.0 + index * 0.3, 1),
+                "rhum_pct": round(55.0 + (index % 7), 1),
+            }
+            for index in range(23)
+        ]
+        seed = client.post("/stations/42181/seed", json={"observations": observations})
         assert seed.status_code == 200
-        assert seed.json() == {"station_id": "42181", "accepted": 2, "skipped": 0}
+        assert seed.json() == {"station_id": "42181", "accepted": 23, "skipped": 0}
         again = client.post(
             "/stations/42181/seed",
-            json={"observations": [{"timestamp": "2024-06-30T13:00:00Z", "temp_c": 31.0, "pres_hpa": 1004.1, "rhum_pct": 68.0}]},
+            json={"observations": [observations[0]]},
         )
         assert again.json()["skipped"] == 1
         assert client.get("/alerts").json() == []

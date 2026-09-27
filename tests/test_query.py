@@ -127,11 +127,12 @@ def test_buddy_map_and_labels(tmp_path) -> None:
             json={
                 "observations": [
                     {
-                        "timestamp": _iso(hour - timedelta(hours=1)),
-                        "temp_c": 31.0,
-                        "pres_hpa": 1004.0,
-                        "rhum_pct": 68.0,
+                        "timestamp": _iso(hour - timedelta(hours=23 - index)),
+                        "temp_c": round(30.0 + (index % 5) * 0.4, 1),
+                        "pres_hpa": round(1000.0 + index * 0.3, 1),
+                        "rhum_pct": round(55.0 + (index % 7), 1),
                     }
+                    for index in range(23)
                 ]
             },
         )

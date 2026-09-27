@@ -155,3 +155,7 @@ Boot replaces the SQLite catalog with this document, including dropping stations
 `sid` is the state id. Row `ID` matches catalog `aws_id`. `CURR_TEMP`, `RH`, and `MSLP` map to `temp_c`, `rhum_pct`, and `pres_hpa`. Empty strings and JSON null are missing channels. `DATE`+`TIME` is UTC and is floored to the hour.
 
 The poller calls `ingest_observation`. `DuplicateObservation` (HTTP 409) is skipped. One bad state does not stop the others. `/healthz.imd` stores `last_success`, `last_error`, and `matched`. Wind, weather code, and forecasts are not sent to the model.
+
+## D21 — Warm-up is not a label
+
+**Lock:** Until a station has 24 hourly rows, ingest stores the raw hour and returns `warming_up: true` with `label` and `pipeline_status` null. It does not call `process_aws_data` and it does not open an alert. The hour that fills the window is scored, and that response carries the real v2 label with `warming_up: false`. Null-label hours are left out of the 7-day health rate. Seed rows stay `CLEAN` and count toward the 24.

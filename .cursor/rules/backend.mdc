@@ -12,6 +12,7 @@ alwaysApply: false
 - Lock per `station_id` around window update + the v2 call.
 - Duplicate `(station_id, timestamp)` → 409. Unknown station → 404. No train scaler → 400.
 - The IMD poller calls `ingest_observation`. It does not score hours itself. A 409 does not stop the poll.
+- Fewer than 24 hourly rows: store the raw hour, `warming_up`, null label. Do not call v2 and do not invent a label. The 24th hour returns the real v2 label.
 - Health is the 7-day rate of stored labels. Weather does not lower it.
 - `GENUINE_WEATHER_EVENT` is `is_anomaly=true` and does **not** lower health.
 

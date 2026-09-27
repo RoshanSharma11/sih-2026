@@ -138,9 +138,10 @@ def test_short_window_keeps_imputed_null(tmp_path) -> None:
     hour = datetime(2024, 7, 1, tzinfo=timezone.utc)
     with _client(tmp_path) as client:
         body = _ingest(client, "42181", hour).json()
+        assert body["warming_up"] is True
+        assert body["label"] is None
         assert body["imputed"]["temp_c"] is None
         assert body["mse"] is None
-        assert body["pipeline_status"] == "CLEAN"
 
 
 @SKIP_IDENTITY_LIVE

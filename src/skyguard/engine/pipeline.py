@@ -95,12 +95,21 @@ def ingest_observation(
             pres_observed=observed.pres_hpa,
             rhum_observed=observed.rhum_pct,
             is_anomaly=False,
-            label=Label.CLEAN.value,
-            pipeline_status=PipelineStatus.UNKNOWN.value,
+            label=None,
+            pipeline_status=None,
+            warming_up=True,
         )
         session.add(row)
         session.flush()
         windows.append(payload.station_id, current)
+
+        if len(windows.points(payload.station_id)) < windows.size:
+            health_score, station_status = health_from_stored_labels(
+                session, payload.station_id, timestamp
+            )
+            station.health_score = health_score
+            station.status = station_status.value
+            return result_from_row(station, row, demo_injected=demo_injected)
 
         try:
             ml_out = _run_qc(
@@ -248,7 +257,8 @@ def result_from_row(
         station_id=station.station_id,
         timestamp=as_utc(row.timestamp),
         label=resolved_label,
-        pipeline_status=PipelineStatus(row.pipeline_status),
+        pipeline_status=_pipeline_status(row.pipeline_status),
+        warming_up=bool(row.warming_up),
         fault_type=fault_type,
         confidence=confidence,
         severity=severity,
@@ -288,7 +298,8 @@ def latest_snapshot_from_row(row: TelemetryLog) -> LatestSnapshot:
     return LatestSnapshot(
         timestamp=as_utc(row.timestamp),
         label=label,
-        pipeline_status=PipelineStatus(row.pipeline_status),
+        pipeline_status=_pipeline_status(row.pipeline_status),
+        warming_up=bool(row.warming_up),
         observed=ChannelValues(
             temp_c=row.temp_observed,
             pres_hpa=row.pres_observed,
@@ -326,6 +337,7 @@ def health_from_stored_labels(
             TelemetryLog.timestamp <= as_of,
         )
     ).all()
+    labels = [label for label in labels if label]
     count = len(labels)
     if count == 0:
         return 100.0, StationStatus.HEALTHY
@@ -360,6 +372,7 @@ def _apply_overlay(row: TelemetryLog, mapped: dict) -> None:
     row.is_anomaly = mapped["is_anomaly"]
     row.pipeline_status = mapped["pipeline_status"].value
     row.label = mapped["label"].value
+    row.warming_up = False
     row.mse = mapped["mse"]
     row.explainability_text = mapped["explainability_text"]
     row.imputed_interval = dump_json(mapped["imputed_interval"])
@@ -368,6 +381,12 @@ def _apply_overlay(row: TelemetryLog, mapped: dict) -> None:
     row.tier3_method = tier3.method
     row.tier3_mix = dump_json(tier3.mix)
     row.tier3_corr = dump_json(tier3.corr)
+
+
+def _pipeline_status(value: str | None) -> PipelineStatus | None:
+    if not value:
+        return None
+    return PipelineStatus(value)
 
 
 def _reject_duplicate(session: Session, station_id: str, timestamp: datetime) -> None:

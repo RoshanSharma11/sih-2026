@@ -94,6 +94,7 @@ Response:
   "timestamp": "2024-07-01T14:00:00Z",
   "label": "HARDWARE_ANOMALY",
   "pipeline_status": "HARDWARE",
+  "warming_up": false,
   "fault_type": "SPIKE",
   "confidence": 0.984,
   "severity": "HIGH",
@@ -141,7 +142,9 @@ Response:
 
 `explainability_text` is v2 `reason`. `imputed` is v2 `predicted` (public channel names). `imputed_interval` is the 90% band, or `null` when the overlay is hidden (`CLEAN`, `GENUINE_WEATHER_EVENT`, `UNCONFIRMED_ANOMALY`). `thermo` is dew point, Td−T, and whether that check passed. `tier2.score` is the last-hour-weighted reconstruction score. `tier3.method` is `cw_idw` on the product path. `tier3.mix` is the neighbor blend (not the dashed line). `tier3.corr` maps buddy id → correlation.
 
-`health_score` / `station_status` are recomputed from stored labels over the last 168 hours (seed rows count). `PHYSICAL_FAULT`, `HARDWARE_ANOMALY`, and `UNCONFIRMED_ANOMALY` lower the score. `GENUINE_WEATHER_EVENT` does not. The engine’s in-memory tracker is not the product score.
+`health_score` / `station_status` are recomputed from stored labels over the last 168 hours (seed rows count). `PHYSICAL_FAULT`, `HARDWARE_ANOMALY`, and `UNCONFIRMED_ANOMALY` lower the score. `GENUINE_WEATHER_EVENT` does not. Hours with a null label are not in that rate. The engine’s in-memory tracker is not the product score.
+
+`warming_up` is true while the station has fewer than 24 hourly rows. That response has `label` and `pipeline_status` null, the raw `observed` hour, and null `imputed`. It does not raise an alert and it does not call v2. The hour that completes the window has `warming_up` false and the real v2 label. Seed rows are `CLEAN` and count toward the 24.
 
 ## Demo inject
 
@@ -228,13 +231,14 @@ Station summary (list **includes** `latest` so the live map does not N+1):
     "timestamp": "2024-07-01T14:00:00Z",
     "label": "CLEAN",
     "pipeline_status": "CLEAN",
+    "warming_up": false,
     "observed": {"temp_c": 34.2, "pres_hpa": 1002.4, "rhum_pct": 71.0},
     "imputed": {"temp_c": 34.1, "pres_hpa": 1002.5, "rhum_pct": 70.8}
   }
 }
 ```
 
-`cluster_id` is omitted unless the imported CSV supplies a region tag. QC must not read it. List rows include `buddy_ids`, `isolate`, `aws_id`, `aws_name`, `aws_distance_km`, and `latest` (null until the first seeded or ingested hour).
+`cluster_id` is omitted unless the imported CSV supplies a region tag. QC must not read it. List rows include `buddy_ids`, `isolate`, `aws_id`, `aws_name`, `aws_distance_km`, and `latest` (null until the first seeded or ingested hour). `latest.warming_up` is true until that station has 24 hourly rows. While it is true, `latest.label` is null and `latest.observed` is the raw hour.
 
 `aws_id` matches the IMD AWS/ARG `ID`. `aws_distance_km` is the WMO-to-AWS site offset from `stations_judge48.csv` (`distance_km` there). It is not a buddy-edge length. Safdarjung has no buddies inside the live 48, so `buddy_ids` is empty and `isolate` is true.
 
@@ -248,7 +252,7 @@ Station summary (list **includes** `latest` so the live map does not N+1):
 
 `matched` is how many of the 48 catalog stations had an IMD `ID` in the last poll. Stations that share an `aws_id` all receive that hour. `last_success` is when that poll finished. `last_error` is the latest state or token failure, or null when the last poll was clean. A duplicate hour is not an error.
 
-Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, and `tier3_corr`. `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
+Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, `tier3_corr`, and `warming_up`. `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label, or null while `warming_up` is true. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
 
 `GET /buddy-map` is the ML graph for the dashboard, not a QC input:
 
