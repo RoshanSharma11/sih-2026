@@ -1,6 +1,6 @@
 # UI registry — SkyGuard dashboard
 
-Last updated: 2026-09-28
+Last updated: 2026-09-28 (Architecture page)
 
 Light ops console. Weather is amber, never rose. Health is a badge, not the marker fill. Status color is reserved for QC state.
 
@@ -45,7 +45,7 @@ File: `frontend/chrome.py` (`sg-kpis`)
 
 | Property | Class / value |
 |---|---|
-| Grid | 5 columns, `0.75rem` gap |
+| Grid | 6 columns on Network, `0.75rem` gap |
 | Card | `.sg-kpi` — white, `#E2E8F0` border, 12px radius, 3px status-colored top edge, soft shadow |
 | Label | 0.72rem / 600 / uppercase / `#475569` |
 | Value | IBM Plex Mono, 1.7rem, status color |
@@ -103,9 +103,24 @@ File: `frontend/map_view.py`, `frontend/views/network.py`
 | Height | 640px |
 | Buddy edge | `#0F766E`, 2.4px |
 | Plotly card | white, `#E2E8F0` border, 12px radius |
-| Roster selected | Streamlit primary button |
+| Roster selected | `.sg-roster-row-on` — `#F0FDFA`, 3px teal inset |
 
-**Pattern notes:** Camera fits stations within 2.5° of the selected id so NCR is readable. Santacruz stays on the roster when Palam is selected. Weather markers stay amber.
+**Pattern notes:** Camera fits stations within 2.5° of the selected id so NCR is readable. Santacruz stays on the roster when Palam is selected. Weather markers stay amber. Network is KPI → full-width dispatch board → map left / roster rail right.
+
+### Dispatch panel
+
+File: `frontend/views/network.py`, `frontend/panels.py`
+
+| Property | Class / value |
+|---|---|
+| Shell | `st.container(border=True)` wrapping `.sg-dispatch-head` |
+| Row | `.sg-dispatch-row` — 3-col grid, no card chrome, 1px `#E2E8F0` rule |
+| Name | 0.95rem / 650, 3px rose (`#E11D48`) or slate (`#64748B`) left edge |
+| Why | 0.86rem / `#0F172A` — human reason, never `COMMUNICATION:temp` |
+| Meta | IBM Plex Mono 0.74rem / `#475569` — `7-day N · STATUS` |
+| Action | Station-name buttons in a 4-across wrap under the list |
+
+**Pattern notes:** Weather never appears. Page is 7-day `DEGRADED` / `CRITICAL`. Watch is this-hour hardware while `HEALTHY`. Empty copy is teal-free slate text, not amber. Do not put dispatch cards in the narrow rail.
 
 ### Station identity + readings
 
@@ -133,3 +148,23 @@ File: `frontend/views/control.py`, `frontend/panels.py`
 | Result row | `.sg-result` — canvas fill, 4px status edge, mono meta |
 
 **Pattern notes:** Control does not auto-navigate after Play. Results stay on the page; Inspect is the Station handoff. Weather stories stay amber. Custom events reuse `.sg-preview` and `.sg-result` for the inject builder and armed overlays.
+
+### Architecture page
+
+File: `frontend/views/architecture.py`, `frontend/theme.py` (`.sg-arch*`)
+Last updated: 2026-09-28
+
+| Property | Class / value |
+|---|---|
+| Background | `#FFFFFF` cards on `#F8FAFC` |
+| Border | `1px solid #E2E8F0` |
+| Border radius | `12px` cards, `8px` check tiles, `999px` pills and step numbers |
+| Text — primary | `#0F172A`, 1rem / 600 titles |
+| Text — secondary | `#475569`, 0.86rem |
+| Text — meta | IBM Plex Mono, 0.72–0.78rem |
+| Spacing | card padding `0.85rem 1rem` to `1rem 1.1rem`; grid gap `0.75rem` |
+| Shadow | soft card shadow |
+| Accent usage | teal `#0D9488` for the traveling hour, kickers, and the ingest expansion. Status colors only on the four verdict cards (3px top edge). |
+
+**Pattern notes:** Static page. No API calls. The hour is `.sg-arch-packet` on an 18s loop; stages wake with `.sg-arch-wake`; the three checks cycle inside stage 05; TIMING is a dashed pill off the solid rail; the GET chip blinks at 1s. Buddy pills (Juhu, Colaba, Alibag) stay visible and pulse teal in order beside Santa Cruz. Metric charts reuse `.sg-kpis` / `.sg-kpi` and the white Plotly card. Channel colors match contribution bars (temperature teal, pressure blue, humidity purple). Status colors stay off the source cards. `prefers-reduced-motion` turns the motion off. Do not use weather or hardware colors on the source cards.
+

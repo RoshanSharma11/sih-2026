@@ -15,7 +15,7 @@ A judge sees: **neighborhood storm ≠ lone broken sensor**. Raw T/P/H stay on t
 
 Install: `pip install -e ".[ui]"` then `python scripts/run_dashboard.py`.
 
-## Pages (F7 lock)
+## Pages
 
 Do not invent routes or API fields. Shared session: `view_ids`, `station_id`, `include_buddies`, `alert_id` (set when Open is clicked on Alerts).
 
@@ -28,6 +28,7 @@ Demo
   Control     live poll + Mumbai replay + custom inject
 Guide
   How QC works  48 stations, 24-hour warm-up, Palam not on the map
+  Architecture  animated hour: sources → ingest → in-process v2 → poll
 ```
 
 The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43058` plus Safdarjung `42182`. Palam `42181` is not in the live catalog. Default station is Santa Cruz `43003`.
@@ -35,10 +36,11 @@ The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43
 ### Network
 
 - Header chips from `GET /healthz`: `ok`, `model_loaded`, `n_stations`.
-- KPI strip counted from `latest.label` on all 48: clean / genuine weather / hardware (`PHYSICAL_FAULT` + `HARDWARE_ANOMALY`) / unconfirmed / warming up (`warming_up`) / waiting (`latest` null).
+- Intro card states the amber/rose rule and the five-color legend. KPI strip counted from `latest.label` on all 48: clean / genuine weather / hardware (`PHYSICAL_FAULT` + `HARDWARE_ANOMALY`) / unconfirmed / warming up (`warming_up`) / waiting (`latest` null). Six equal KPI tiles.
+- Dispatch is a full-width board above the map. **Needs a technician** is `status` `DEGRADED` / `CRITICAL` (7-day health; weather already excluded). **Watch this hour** is `latest.label` hardware while `status` is still `HEALTHY`. Warming up, waiting, weather, and unconfirmed stay off the list. One `GET /alerts?limit=` attaches the newest hardware reason, shown as one plain line (`Missing packet · temperature`, not `COMMUNICATION:temp`). Open focuses Station and pins that `alert_id` when present. The map sits left; the rail is the station list only.
 - India map of `GET /stations` (no `ids`) on a light Carto basemap. Camera fits Mumbai plus Safdarjung. Marker color from `latest.label` (fallback `pipeline_status`). Warming up is its own slate, not “waiting”. Safdarjung’s hover says weather versus hardware cannot be called there. Click marker or roster row sets `station_id` and switches to Station. Only the selected marker is labeled on the map.
 - Buddy edges only among the five-station camera set (`GET /buddy-map` subset). Do not draw the full graph.
-- Roster lists the camera set first, then the rest by name.
+- Roster on the rail: Mumbai + Safdarjung first, then the rest by name. Selected row uses the teal inset, not a full-width primary button.
 
 ### Station
 
@@ -71,6 +73,19 @@ The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43
 
 Static: 48 live stations, 24-hour warm-up, Palam not on the map, three tiers, replay stories, weather does not lower health. The dashboard polls the product API only. No extra APIs.
 
+### Architecture
+
+Static explainer under Guide. No API calls. One looping hour:
+
+- Sources: IMD poller, replay / inject, clean streamer. Beads converge into the API.
+- Order inside the API: `POST /ingest` → overlay only when armed → persist raw → warm-up gate (under 24 hours skips v2) → in-process `v2.engine.process_aws_data` (graph model off, TIMING queued) → overlay, alert, 7-day health → console poll about once a second.
+- Scored labels use the console colors. Weather stays amber. Warming up leaves before the model.
+- View versus ingest: Santa Cruz on screen still posts Juhu, Colaba, and Alibag.
+
+The moving dot is one hour. It loops.
+
+Below the diagram, two charts read `v2-deliverable/v2/artifacts`: the 2023 reconstruction percentiles (`val_error_percentiles.json`) and overlay MAE against its gates (`overlay_metadata.json`). The block is omitted when those files are absent. The ingest score on the tiles is `operating_score` from that same percentiles file. Window p99 stays a separate line.
+
 ## Light tokens
 
 | Role | Value |
@@ -87,7 +102,7 @@ Static: 48 live stations, 24-hour warm-up, Palam not on the map, three tiers, re
 | Font | IBM Plex Sans / IBM Plex Mono |
 | Plotly | white paper, light grid, observed solid, predicted dashed |
 
-Hide Streamlit toolbar, menu, footer, deploy. Sidebar ~268px with custom `st.page_link` nav (do not restyle sidebar `*` to IBM Plex — that breaks Material icons). Layout: KPI strip, then map + roster / charts, then tables. Map height ~640px.
+Hide Streamlit toolbar, menu, footer, deploy. Sidebar ~268px with custom `st.page_link` nav (do not restyle sidebar `*` to IBM Plex — that breaks Material icons). Layout: KPI strip, dispatch board, then map + roster rail / charts, then tables. Map height ~640px. Custom HTML goes through `st.html` so Markdown does not eat spaces.
 
 ## Marker / verdict encoding
 
@@ -108,10 +123,11 @@ Never N+1 the catalog. Map and KPIs use list `latest` only. Do not call port 800
 
 1. `GET /healthz`
 2. `GET /stations` for all 48
-3. Selected station: `GET /stations/{id}/telemetry?limit=`, `GET /alerts?station_id=`, and `GET /stations/{id}/timing?ts=&wait_s=0`
-4. Alerts page: `GET /alerts?limit=`
-5. Control: `GET /healthz` for the poll line, `POST /demo/replay`, `POST /demo/reset`
-6. `GET /buddy-map` only to draw edges among the camera set
+3. Network dispatch: one `GET /alerts?limit=` (not N+1)
+4. Selected station: `GET /stations/{id}/telemetry?limit=`, `GET /alerts?station_id=`, and `GET /stations/{id}/timing?ts=&wait_s=0`
+5. Alerts page: `GET /alerts?limit=`
+6. Control: `GET /healthz` for the poll line, `POST /demo/replay`, `POST /demo/reset`
+7. `GET /buddy-map` only to draw edges among the camera set
 
 If `latest` is null, the station is waiting. If `warming_up` is true, it is warming up.
 
@@ -129,6 +145,6 @@ If `latest` is null, the station is waiting. If `warming_up` is true, it is warm
 API must already be running. The dashboard does not start a Palam streamer and does not call port 8001.
 
 1. Open **Network**. 48 markers. Camera frames Mumbai and Safdarjung. Warming-up stations are their own color. Safdarjung’s tooltip says weather versus hardware cannot be called there.
-2. **Control → Lone 55 °C → Play**. The last-run panel shows Santa Cruz as hardware, observed 55 °C, a predicted overlay and band. **Inspect Santa Cruz on Station** opens the 2024 hour with a solid raw line, a dashed correction, and a band. The root-cause block ends with the TIMING sentence once it is ready.
-3. **+8 °C across Mumbai**. Amber weather. No band. Health unchanged.
+2. **Control → Lone 55 °C → Play**. The last-run panel shows Santa Cruz as hardware, observed 55 °C, a predicted overlay and band. Network lists Santa Cruz under **Watch this hour** (health still HEALTHY). **Inspect Santa Cruz on Station** opens the 2024 hour with a solid raw line, a dashed correction, and a band. The root-cause block ends with the TIMING sentence once it is ready.
+3. **+8 °C across Mumbai**. Amber weather. No band. Health unchanged. Dispatch does not list those stations for weather.
 4. **Guide**: 48 live stations, 24-hour warm-up, Palam is not on the map.

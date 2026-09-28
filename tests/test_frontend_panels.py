@@ -7,6 +7,10 @@ from panels import (
     build_inject_body,
     channel_values,
     collected_hours,
+    dispatch_lists,
+    dispatch_panel_html,
+    dispatch_reason,
+    dispatch_row_html,
     event_preview_html,
     event_spec,
     fault_label,
@@ -16,6 +20,9 @@ from panels import (
     hour_kind,
     identity_html,
     inject_targets,
+    map_head_html,
+    network_intro_html,
+    roster_row_html,
     interval_pair,
     overlay_cards_html,
     poll_html,
@@ -240,6 +247,127 @@ def test_alerts_inbox_is_readable() -> None:
     intro = alerts_intro_html()
     assert "Clean hours never appear" in intro
     assert "Hardware" in intro
+
+
+def test_dispatch_pages_health_and_watches_a_healthy_spike() -> None:
+    weather = {
+        "station_id": "43057",
+        "name": "Bombay / Colaba",
+        "health_score": 100.0,
+        "status": "HEALTHY",
+        "latest": {"label": "GENUINE_WEATHER_EVENT", "warming_up": False},
+    }
+    spike = {
+        "station_id": "43003",
+        "name": "Bombay / Santacruz",
+        "health_score": 95.8,
+        "status": "HEALTHY",
+        "latest": {"label": "HARDWARE_ANOMALY", "warming_up": False},
+    }
+    broken = {
+        "station_id": "42182",
+        "name": "New Delhi / Safdarjung",
+        "health_score": 62.0,
+        "status": "CRITICAL",
+        "latest": {"label": "PHYSICAL_FAULT", "warming_up": False},
+    }
+    warming = {
+        "station_id": "43002",
+        "name": "Bombay / Juhu",
+        "health_score": 40.0,
+        "status": "CRITICAL",
+        "latest": {"warming_up": True, "label": None},
+    }
+    unconfirmed = {
+        "station_id": "42807",
+        "name": "Dummy",
+        "health_score": 100.0,
+        "status": "HEALTHY",
+        "latest": {"label": "UNCONFIRMED_ANOMALY", "warming_up": False},
+    }
+    weather_but_hurt = {
+        "station_id": "43058",
+        "name": "Alibag",
+        "health_score": 80.0,
+        "status": "DEGRADED",
+        "latest": {"label": "GENUINE_WEATHER_EVENT", "warming_up": False},
+    }
+    lists = dispatch_lists(
+        [weather, spike, broken, warming, unconfirmed, weather_but_hurt],
+        [
+            {
+                "alert_id": 130,
+                "station_id": "43003",
+                "label": "HARDWARE_ANOMALY",
+                "fault_type": "SPIKE",
+                "explainability_text": "Neighbors disagree; treated as hardware anomaly.",
+            }
+        ],
+    )
+    assert [row["station_id"] for row in lists["page"]] == ["42182", "43058"]
+    assert [row["station_id"] for row in lists["watch"]] == ["43003"]
+    assert lists["watch"][0]["alert_id"] == 130
+    empty = dispatch_lists([weather, warming, unconfirmed])
+    assert empty["page"] == []
+    assert empty["watch"] == []
+    assert "No station needs a technician" in dispatch_panel_html(empty)
+    assert "never appear" in dispatch_panel_html(empty)
+    assert lists["page"][0]["reason"] == "Physical fault"
+    assert lists["watch"][0]["reason"] == "Neighbors disagree; treated as hardware anomaly"
+    filled = dispatch_panel_html(lists)
+    assert "need a technician" in filled
+    assert "on watch" in filled
+
+
+def test_dispatch_reason_hides_engine_tokens() -> None:
+    assert (
+        dispatch_reason(
+            "Tier 1 physical rule failed: COMMUNICATION:temp,rhum,pres",
+            "COMMUNICATION",
+            "Physical fault",
+        )
+        == "Missing packet · temperature, humidity, pressure"
+    )
+    assert (
+        dispatch_reason("Neighbors disagree; treated as hardware anomaly.")
+        == "Neighbors disagree; treated as hardware anomaly"
+    )
+    assert dispatch_reason(None, "COMM_ERROR", "Physical fault") == "Missing packet"
+    html = dispatch_row_html(
+        {
+            "station_id": "42182",
+            "name": "Safdarjung",
+            "health_score": 0,
+            "status": "CRITICAL",
+            "rank": "page",
+            "reason": "Missing packet · temperature, humidity, pressure",
+        }
+    )
+    assert "Safdarjung" in html
+    assert "7-day 0" in html
+    assert "COMMUNICATION" not in html
+    assert "sg-chip" not in html
+    assert "sg-dispatch-page" in html
+
+
+def test_network_intro_and_roster_name_the_hour() -> None:
+    intro = network_intro_html()
+    assert "amber" in intro.lower()
+    assert "Warming up" in intro
+    assert "Safdarjung" in intro
+    row = roster_row_html(
+        {
+            "station_id": "43003",
+            "name": "Bombay / Santacruz",
+            "health_score": 96.0,
+            "latest": {"label": "HARDWARE_ANOMALY", "warming_up": False},
+        },
+        selected=True,
+    )
+    assert "Santacruz" in row
+    assert "sg-roster-row-on" in row
+    assert "Hardware anomaly" in row
+    assert "India · this hour" in map_head_html(48, "Santacruz")
 
 
 def test_hour_helpers() -> None:

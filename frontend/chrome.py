@@ -25,6 +25,11 @@ DEMO_FOCUS = [SANTACRUZ, COLABA, JUHU, ALIBAG, SAFDARJUNG]
 DEFAULT_VIEW = list(DEMO_FOCUS)
 
 
+def render_html(html: str) -> None:
+    """Insert HTML without Markdown collapsing spaces between words."""
+    st.html(html)
+
+
 def inject_theme() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     if _WORDMARK.exists():
@@ -184,7 +189,18 @@ def show_flash() -> None:
     st.session_state.flash = None
 
 
-def page_header(title: str, subtitle: str, health: dict[str, Any] | None = None) -> None:
+def page_header(
+    title: str,
+    subtitle: str,
+    health: dict[str, Any] | None = None,
+    *,
+    show_status: bool = True,
+) -> None:
+    if not show_status:
+        st.markdown('<div class="sg-kicker">SkyGuard · live QC</div>', unsafe_allow_html=True)
+        st.title(title)
+        st.markdown(f'<p class="sg-sub">{subtitle}</p>', unsafe_allow_html=True)
+        return
     left, right = st.columns([3, 2])
     with left:
         st.markdown('<div class="sg-kicker">SkyGuard · live QC</div>', unsafe_allow_html=True)

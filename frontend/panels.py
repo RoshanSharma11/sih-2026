@@ -12,8 +12,13 @@ from status import (
     alert_kind,
     alert_status_label,
     health_color,
+    is_warming,
+    latest_payload,
+    marker_color,
     pipeline_label,
     short_name,
+    status_label,
+    verdict_kind,
     verdict_kind_from_key,
 )
 from theme import CLEAN, HARDWARE, SLATE, WARMING, WEATHER
@@ -747,5 +752,204 @@ def alert_card_html(row: dict[str, Any], names: dict[str, str]) -> str:
         f'<div class="sg-alert-who">{name} · {escape(sid)}</div>'
         f'<div class="sg-alert-meta">{stamp} · {fault} · confidence {escape(confidence)}</div>'
         f'<div class="sg-alert-text">{reason}</div>{share_html}{health_note}</div>'
+    )
+
+
+PAGE_STATUSES = {"DEGRADED", "CRITICAL"}
+
+
+def _health_score(station: dict[str, Any]) -> float:
+    score = station.get("health_score")
+    try:
+        return float(score)
+    except (TypeError, ValueError):
+        return 100.0
+
+
+def _latest_hardware_alert(
+    alerts: list[dict[str, Any]], station_id: str
+) -> dict[str, Any] | None:
+    for row in alerts:
+        if str(row.get("station_id")) != station_id:
+            continue
+        if alert_kind(row) == "hardware":
+            return row
+    return None
+
+
+_CHANNEL_WORDS = (
+    ("temp", "temperature"),
+    ("rhum", "humidity"),
+    ("pres", "pressure"),
+)
+
+_TIER_PREFIXES = (
+    "tier 1 physical rule failed:",
+    "tier 2 physical rule failed:",
+    "tier 3 physical rule failed:",
+)
+
+
+def _reason_channels(text: str) -> list[str]:
+    lower = text.lower()
+    if "communication:" in lower:
+        blob = lower.split("communication:", 1)[1]
+        tokens = {part.strip() for part in blob.replace(";", ",").split(",") if part.strip()}
+        return [label for key, label in _CHANNEL_WORDS if key in tokens]
+    return [label for key, label in _CHANNEL_WORDS if key in lower]
+
+
+def dispatch_reason(
+    text: Any = None,
+    fault_type: Any = None,
+    hour_label: Any = None,
+) -> str:
+    """One line for the dispatch board. Never dump COMMUNICATION:temp,rhum."""
+    raw = str(text or "").strip()
+    fault = str(fault_type or "").strip()
+    hour = str(hour_label or "").strip()
+    blob = f"{raw} {fault}".upper()
+    if "COMMUNICATION" in blob or "COMM_ERROR" in blob:
+        channels = _reason_channels(raw)
+        if channels:
+            return "Missing packet · " + ", ".join(channels)
+        return "Missing packet"
+    if raw:
+        cleaned = raw
+        lowered = cleaned.lower()
+        for prefix in _TIER_PREFIXES:
+            if lowered.startswith(prefix):
+                cleaned = cleaned[len(prefix) :].strip()
+                break
+        sentence = cleaned.split(".")[0].strip()
+        if sentence:
+            return sentence if len(sentence) <= 88 else sentence[:85].rstrip() + "…"
+    return hour or "Needs a look"
+
+
+def _dispatch_item(
+    station: dict[str, Any],
+    alerts: list[dict[str, Any]],
+    rank: str,
+) -> dict[str, Any]:
+    sid = str(station["station_id"])
+    matched = _latest_hardware_alert(alerts, sid)
+    hour_label = status_label(station)
+    raw = (matched or {}).get("explainability_text") or ""
+    fault = (matched or {}).get("fault_type")
+    return {
+        "station_id": sid,
+        "name": short_name(station.get("name", sid)),
+        "health_score": _health_score(station),
+        "status": station.get("status") or "HEALTHY",
+        "hour_label": hour_label,
+        "rank": rank,
+        "fault_type": fault,
+        "reason": dispatch_reason(raw, fault, hour_label),
+        "alert_id": None if matched is None else matched.get("alert_id"),
+    }
+
+
+def dispatch_lists(
+    stations: list[dict[str, Any]],
+    alerts: list[dict[str, Any]] | None = None,
+) -> dict[str, list[dict[str, Any]]]:
+    """Page = 7-day DEGRADED/CRITICAL. Watch = rose this hour while still HEALTHY."""
+    feed = alerts or []
+    page: list[dict[str, Any]] = []
+    watch: list[dict[str, Any]] = []
+    for station in stations:
+        if is_warming(station) or not latest_payload(station):
+            continue
+        status = str(station.get("status") or "HEALTHY")
+        if status in PAGE_STATUSES:
+            page.append(_dispatch_item(station, feed, "page"))
+            continue
+        if verdict_kind(station) == "hardware" and status == "HEALTHY":
+            watch.append(_dispatch_item(station, feed, "watch"))
+    page.sort(key=lambda row: (0 if row["status"] == "CRITICAL" else 1, row["health_score"]))
+    watch.sort(key=lambda row: row["health_score"])
+    return {"page": page, "watch": watch}
+
+
+def dispatch_row_html(row: dict[str, Any]) -> str:
+    tone = "sg-dispatch-page" if row.get("rank") == "page" else "sg-dispatch-watch"
+    name = escape(str(row.get("name") or row["station_id"]))
+    reason = escape(str(row.get("reason") or dispatch_reason(hour_label=row.get("hour_label"))))
+    health = fmt_value(row.get("health_score"), 0)
+    status = escape(str(row.get("status") or "—"))
+    return (
+        f'<div class="sg-dispatch-row">'
+        f'<div class="sg-dispatch-name {tone}">{name}</div>'
+        f'<div class="sg-dispatch-why">{reason}</div>'
+        f'<div class="sg-dispatch-meta">7-day {escape(health)} · {status}</div>'
+        "</div>"
+    )
+
+
+def dispatch_panel_html(lists: dict[str, list[dict[str, Any]]]) -> str:
+    page = lists.get("page") or []
+    watch = lists.get("watch") or []
+    if not page and not watch:
+        return (
+            '<div class="sg-dispatch-head">'
+            '<div class="sg-verdict-kicker">Dispatch</div>'
+            '<div class="sg-verdict-text">No station needs a technician.</div>'
+            '<p class="sg-caption" style="margin:0.4rem 0 0 0">'
+            "Weather hours never appear here. A lone spike stays on Watch until 7-day health drops."
+            "</p></div>"
+        )
+    watch_bit = f" · {len(watch)} on watch" if watch else ""
+    return (
+        '<div class="sg-dispatch-head">'
+        '<div class="sg-verdict-kicker">Dispatch</div>'
+        f'<div class="sg-verdict-text">{len(page)} need a technician{watch_bit}</div>'
+        '<p class="sg-caption" style="margin:0.4rem 0 0 0">'
+        "Page follows the 7-day index. Watch is a hardware hour on a station that is still HEALTHY. "
+        "Weather never appears here."
+        "</p></div>"
+    )
+
+
+def network_intro_html() -> str:
+    return (
+        '<div class="sg-card sg-network-intro">'
+        '<div class="sg-verdict-kicker">This hour on the live 48</div>'
+        '<div class="sg-verdict-text">Neighbors that agree stay amber. A sensor that disagrees goes rose.</div>'
+        '<p class="sg-caption" style="margin:0.4rem 0 0 0">'
+        "Marker color is this hour’s label, not 7-day health. Warming up is not a fault. "
+        "Safdarjung has no buddies in this set, so weather versus hardware cannot be called there."
+        "</p>"
+        f'<div class="sg-legend">'
+        f'<span><i class="sg-dot" style="background:{CLEAN}"></i> Clean</span>'
+        f'<span><i class="sg-dot" style="background:{WEATHER}"></i> Genuine weather</span>'
+        f'<span><i class="sg-dot" style="background:{HARDWARE}"></i> Hardware</span>'
+        f'<span><i class="sg-dot" style="background:{SLATE}"></i> Unconfirmed</span>'
+        f'<span><i class="sg-dot" style="background:{WARMING}"></i> Warming up</span>'
+        f"</div></div>"
+    )
+
+
+def map_head_html(count: int, selected_name: str | None) -> str:
+    focus = escape(selected_name) if selected_name else "Mumbai + Safdarjung"
+    return (
+        f'<div class="sg-map-head"><strong>India · this hour</strong>'
+        f"<span>{count} stations · selected {focus}</span></div>"
+    )
+
+
+def roster_row_html(station: dict[str, Any], *, selected: bool = False) -> str:
+    sid = str(station["station_id"])
+    name = escape(short_name(station.get("name", sid)))
+    label = escape(status_label(station))
+    color = marker_color(station)
+    health = fmt_value(station.get("health_score"), 0)
+    klass = "sg-roster-row sg-roster-row-on" if selected else "sg-roster-row"
+    return (
+        f'<div class="{klass}">'
+        f'<i class="sg-dot" style="background:{color};width:0.7rem;height:0.7rem"></i>'
+        f"<div><div class=\"sg-roster-name\">{name}</div>"
+        f'<div class="sg-roster-meta">{escape(sid)} · health {escape(health)}</div></div>'
+        f'<span class="sg-roster-label" style="color:{color}">{label}</span></div>'
     )
 

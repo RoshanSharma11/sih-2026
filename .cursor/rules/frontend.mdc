@@ -8,7 +8,7 @@ alwaysApply: false
 
 - Poll frozen REST only. Do not invent API fields. No SSE.
 - Prefer five-way `latest.label` on `GET /stations` for marker color (do not N+1 the 48). Weather is amber, never rose. Warming up is its own idle color.
-- Five-page light console: Network (all 48, camera on Mumbai plus Safdarjung), Station, Alerts, Control (replay + custom inject), Guide.
+- Light console: Network (all 48, camera on Mumbai plus Safdarjung), Station, Alerts, Control (replay + custom inject), Guide, Architecture. Architecture is a static animated explainer. It does not poll.
 - Demo faults on the console go through `POST /demo/replay` (Mumbai stories) or `POST /demo/inject` (custom overlay). Do not import `inject.py` from Streamlit. Do not call port 8001.
 - Raw observed series stay solid. Dashed correction and the 90% band appear only when `imputed_interval` is present.
 

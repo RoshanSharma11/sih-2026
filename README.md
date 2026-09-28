@@ -53,7 +53,7 @@ Seeds 24 clean hours for the **ingest set** (view ∪ 1-hop buddies), then POSTs
 python scripts/run_dashboard.py
 ```
 
-[http://127.0.0.1:8501](http://127.0.0.1:8501) · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`. Pages: Network, Station, Alerts, Control, How QC works. Light theme. Polls the product API only.
+[http://127.0.0.1:8501](http://127.0.0.1:8501) · `SKYGUARD_API` defaults to `http://127.0.0.1:8000`. Pages: Network, Station, Alerts, Control, How QC works, Architecture. Light theme. Polls the product API only. Architecture is a static explainer.
 
 Tests: `pytest -q`. Engine integration skips when artifacts are missing; adapter unit tests still run.
 

@@ -91,7 +91,7 @@ sih-2026/
       artifacts/           # weights, scalers, threshold
     scripts/
     test/
-  frontend/                 # five-page light ops console (Network / Station / Alerts / Control / Guide)
+  frontend/                 # light ops console (Network / Station / Alerts / Control / Guide / Architecture)
   tests/
   scripts/
 ```

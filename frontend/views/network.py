@@ -1,4 +1,4 @@
-"""Network page: 48 markers, KPI strip, India map."""
+"""Network page: 48 markers, KPI strip, dispatch board, India map."""
 
 from __future__ import annotations
 
@@ -11,38 +11,33 @@ from chrome import (
     DEMO_FOCUS,
     cached_buddy_map,
     focus_station,
-    fmt_value,
     get_client,
     go_page,
     kpi_strip,
-    legend,
     offline_help,
     page_header,
+    render_html,
     show_flash,
 )
 from map_view import india_map
-from status import kpi_counts, marker_color, short_name, status_label
+from panels import (
+    dispatch_lists,
+    dispatch_panel_html,
+    dispatch_row_html,
+    map_head_html,
+    network_intro_html,
+)
+from status import kpi_counts, short_name, status_label
 
 
 def render_network() -> None:
     show_flash()
     page_header(
         "Network",
-        "48 live stations. Neighbors that agree stay amber. A sensor that disagrees goes rose.",
+        "This hour across the live 48. Amber is weather. Rose is a sensor. Health is the 7-day index.",
         get_client().health(),
     )
-    st.markdown(
-        """<div class="sg-card">
-        <div class="sg-kicker">How to read this map</div>
-        <p class="sg-caption" style="margin:0.4rem 0 0 0">
-        The camera starts on Mumbai and Safdarjung. Color is this hour’s label.
-        Warming up means fewer than 24 hours — not a fault. Safdarjung has no buddies
-        in this set, so weather versus hardware cannot be called there.
-        Click a marker or a row to open Station.
-        </p>
-        </div>""",
-        unsafe_allow_html=True,
-    )
+    render_html(network_intro_html())
     network_live()
 
 
@@ -60,18 +55,26 @@ def network_live() -> None:
     except SkyGuardApiError as exc:
         offline_help(str(exc))
         return
+    try:
+        alerts = client.alerts(limit=80)
+    except SkyGuardApiError:
+        alerts = []
 
     kpi_strip(kpi_counts(stations))
     if not stations:
         st.info("Catalog is empty. Import the 48-station catalog and restart the API.")
         return
-    st.caption(f"{len(stations)} live stations. Scroll the map for sites outside Mumbai and Delhi.")
-    legend()
+
+    _dispatch_board(stations, alerts)
 
     buddies = _view_buddies(DEMO_FOCUS, graph)
-    roster = _roster_order(stations)
-    map_col, list_col = st.columns([2.35, 1], gap="large")
+    focus, rest = _roster_groups(stations)
+    selected = next((row for row in stations if row["station_id"] == st.session_state.get("station_id")), None)
+    selected_name = short_name(selected["name"]) if selected else None
+
+    map_col, rail_col = st.columns([2.2, 1], gap="large")
     with map_col:
+        render_html(map_head_html(len(stations), selected_name))
         event = st.plotly_chart(
             india_map(
                 stations,
@@ -86,44 +89,66 @@ def network_live() -> None:
             key="india_map",
             config={"scrollZoom": True, "displayModeBar": False, "doubleClick": "reset"},
         )
-        st.caption("Camera starts on Mumbai and Safdarjung. Double-click the map to reset.")
-    with list_col:
-        _station_roster(roster)
+        st.caption("Camera starts on Mumbai and Safdarjung. Double-click the map to reset. Click a marker to open Station.")
+    with rail_col:
+        _station_roster("Mumbai + Safdarjung", focus)
+        _station_roster("All other stations", rest)
     if _apply_map_selection(event):
         go_page("station")
 
 
-def _roster_order(stations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _dispatch_board(stations: list[dict[str, Any]], alerts: list[dict[str, Any]]) -> None:
+    lists = dispatch_lists(stations, alerts)
+    with st.container(border=True):
+        render_html(dispatch_panel_html(lists))
+        _dispatch_group("Needs a technician", "page", lists.get("page") or [])
+        _dispatch_group("Watch this hour", "watch", lists.get("watch") or [])
+
+
+def _dispatch_group(title: str, rank: str, rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        return
+    st.caption(f"{title} · {len(rows)}")
+    render_html('<div class="sg-dispatch-list">' + "".join(dispatch_row_html(row) for row in rows) + "</div>")
+    for start in range(0, len(rows), 4):
+        chunk = rows[start : start + 4]
+        cols = st.columns(len(chunk), gap="small")
+        for col, row in zip(cols, chunk):
+            with col:
+                if st.button(
+                    row["name"],
+                    key=f"dispatch_{rank}_{row['station_id']}",
+                    width="stretch",
+                    help="Open this station. Pins the newest hardware hour when the feed has one.",
+                ):
+                    focus_station(row["station_id"], alert_id=row.get("alert_id"))
+                    go_page("station")
+
+
+def _roster_groups(stations: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     rank = {station_id: index for index, station_id in enumerate(DEMO_FOCUS)}
-    return sorted(stations, key=lambda row: (rank.get(row["station_id"], 99), row.get("name") or ""))
+    focus = [row for row in stations if row["station_id"] in rank]
+    focus.sort(key=lambda row: rank[row["station_id"]])
+    rest = [row for row in stations if row["station_id"] not in rank]
+    rest.sort(key=lambda row: row.get("name") or "")
+    return focus, rest
 
 
-def _station_roster(stations: list[dict[str, Any]]) -> None:
-    st.markdown("##### Stations")
-    st.caption("Names live here so nearby markers do not stack.")
+def _station_roster(title: str, stations: list[dict[str, Any]]) -> None:
+    if not stations:
+        return
+    st.caption(title)
     selected = st.session_state.get("station_id")
     for row in stations:
         sid = row["station_id"]
-        name = short_name(row["name"])
-        color = marker_color(row)
-        health = fmt_value(row.get("health_score"), 0)
-        label = status_label(row)
-        cols = st.columns([0.18, 1], gap="small")
-        with cols[0]:
-            st.markdown(
-                f'<div class="sg-dot" style="width:0.85rem;height:0.85rem;margin-top:0.7rem;background:{color}"></div>',
-                unsafe_allow_html=True,
-            )
-        with cols[1]:
-            clicked = st.button(
-                f"{name} · {label}",
-                key=f"roster_{sid}",
-                width="stretch",
-                type="primary" if sid == selected else "secondary",
-                help=f"{sid} · health {health}",
-            )
-            st.caption(f"{sid} · health {health}")
-        if clicked:
+        name = short_name(row.get("name", sid))
+        if st.button(
+            name,
+            key=f"roster_{sid}",
+            width="stretch",
+            type="primary" if sid == selected else "secondary",
+            help=f"{sid} · {status_label(row)} · 7-day {row.get('health_score', '—')}",
+        ):
             focus_station(sid)
             go_page("station")
 

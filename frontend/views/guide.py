@@ -18,7 +18,8 @@ def render_guide() -> None:
 <div class="sg-guide">
 <h3>The 10-second story</h3>
 <p>A lone 55 °C at Santa Cruz is hardware. The same heat on Santa Cruz, Colaba, and Juhu is weather.
-The raw line stays solid. A dashed correction and band appear only when the sensor is distrusted.</p>
+The raw line stays solid. A dashed correction and band appear only when the sensor is distrusted.
+Network pages a technician from 7-day health. Weather never appears on that list.</p>
 
 <h3>Live 48</h3>
 <p>The map is the 48 stations the model was judged on. The camera starts on Mumbai and Safdarjung.
@@ -49,7 +50,8 @@ Live hours and replay hours are separate timelines.</p>
 <span class="sg-chip" style="border-color:{WARMING};color:{WARMING}">Warming up</span>
 </p>
 <p>Weather is never red. The health line is a 7-day sensor flag rate. Genuine weather does not count.
-Alerts treat a storm as amber and hardware — including a thermo failure or a missing packet — as rose.</p>
+Alerts treat a storm as amber and hardware — including a thermo failure or a missing packet — as rose.
+A lone spike is Watch until health drops; repeated hardware is Page.</p>
 
 <h3>How to run</h3>
 </div>

@@ -165,12 +165,15 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
 
 .sg-kpis {{
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.75rem;
   margin: 0.35rem 0 0.85rem 0;
 }}
 .sg-kpis-4 {{
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}}
+.sg-kpis-5 {{
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }}
 .sg-kpi {{
   background: {CARD};
@@ -252,6 +255,71 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
   font-weight: 600;
 }}
 
+.sg-network-intro .sg-verdict-text {{
+  font-size: 1.05rem;
+  margin-top: 0.15rem;
+}}
+.sg-network-intro .sg-legend {{
+  margin: 0.75rem 0 0 0;
+}}
+.sg-map-head {{
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin: 0 0 0.45rem 0;
+}}
+.sg-map-head strong {{
+  font-size: 0.92rem;
+  color: {TEXT};
+}}
+.sg-map-head span {{
+  color: {MUTED};
+  font-size: 0.78rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}}
+.sg-roster-group {{
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  color: {SLATE};
+  margin: 0.85rem 0 0.4rem 0;
+}}
+.sg-roster-row {{
+  display: grid;
+  grid-template-columns: 0.7rem 1fr auto;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid {LINE};
+  border-radius: 10px;
+  background: {CARD};
+  margin-bottom: 0.35rem;
+}}
+.sg-roster-row-on {{
+  background: #F0FDFA;
+  border-color: #99F6E4;
+  box-shadow: inset 3px 0 0 {ACCENT};
+}}
+.sg-roster-name {{
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: {TEXT};
+  line-height: 1.25;
+}}
+.sg-roster-meta {{
+  color: {MUTED};
+  font-size: 0.72rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  margin-top: 0.12rem;
+}}
+.sg-roster-label {{
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}}
 .sg-legend {{
   display: flex;
   flex-wrap: wrap;
@@ -335,6 +403,53 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
   color: {MUTED};
   font-size: 0.82rem;
   line-height: 1.45;
+}}
+.sg-dispatch-head {{
+  margin-bottom: 0.15rem;
+}}
+.sg-dispatch-list {{
+  margin: 0.15rem 0 0.35rem 0;
+}}
+.sg-dispatch-list .sg-dispatch-row:last-child {{
+  border-bottom: none;
+  padding-bottom: 0.15rem;
+}}
+.sg-dispatch-row {{
+  display: grid;
+  grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr) auto;
+  gap: 0.55rem 1rem;
+  align-items: baseline;
+  padding: 0.55rem 0.1rem 0.6rem 0;
+  border: none;
+  border-bottom: 1px solid {LINE};
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}}
+.sg-dispatch-name {{
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: {TEXT};
+  line-height: 1.3;
+  border-left: 3px solid {SLATE};
+  padding-left: 0.55rem;
+}}
+.sg-dispatch-page {{
+  border-left-color: {HARDWARE};
+}}
+.sg-dispatch-watch {{
+  border-left-color: {SLATE};
+}}
+.sg-dispatch-why {{
+  font-size: 0.86rem;
+  color: {TEXT};
+  line-height: 1.4;
+}}
+.sg-dispatch-meta {{
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.74rem;
+  color: {MUTED};
+  white-space: nowrap;
 }}
 
 .sg-identity {{
@@ -627,6 +742,308 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
   text-align: right;
 }}
 
+.sg-arch {{
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}}
+.sg-arch .sg-kpi-value {{
+  font-size: 1.35rem;
+}}
+.sg-arch-band {{
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: {SLATE};
+  margin: 0.85rem 0 0;
+}}
+.sg-arch-sources {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}}
+.sg-arch-node,
+.sg-arch-step,
+.sg-arch-out,
+.sg-arch-set,
+.sg-arch-note {{
+  background: {CARD};
+  border: 1px solid {LINE};
+  border-radius: 12px;
+  box-shadow: {SHADOW};
+}}
+.sg-arch-node {{
+  padding: 0.95rem 1.05rem 1rem;
+}}
+.sg-arch-kicker {{
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: {ACCENT};
+}}
+.sg-arch-node strong,
+.sg-arch-step strong,
+.sg-arch-out strong,
+.sg-arch-set strong,
+.sg-arch-note strong {{
+  display: block;
+  color: {TEXT};
+  font-size: 1rem;
+  margin: 0.28rem 0 0.35rem;
+}}
+.sg-arch-node p,
+.sg-arch-step p,
+.sg-arch-out p,
+.sg-arch-set p,
+.sg-arch-note p {{
+  margin: 0;
+  color: {MUTED};
+  font-size: 0.86rem;
+  line-height: 1.45;
+}}
+.sg-arch-merge {{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: 46px;
+  margin-top: -0.2rem;
+}}
+.sg-arch-merge span {{
+  display: block;
+  width: 2px;
+  height: 100%;
+  margin: 0 auto;
+  position: relative;
+  background: linear-gradient({LINE}, {ACCENT});
+  border-radius: 999px;
+}}
+.sg-arch-merge span::after {{
+  content: "";
+  position: absolute;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: {ACCENT};
+  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.16);
+  animation: sg-arch-drop 2.8s ease-in-out infinite;
+}}
+.sg-arch-merge span:nth-child(2)::after {{ animation-delay: 0.2s; }}
+.sg-arch-merge span:nth-child(3)::after {{ animation-delay: 0.4s; }}
+@keyframes sg-arch-drop {{
+  0% {{ top: -8px; opacity: 0; }}
+  16% {{ opacity: 1; }}
+  100% {{ top: 34px; opacity: 0; }}
+}}
+.sg-arch-flow {{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-left: 1.85rem;
+}}
+.sg-arch-flow::before {{
+  content: "";
+  position: absolute;
+  left: 0.42rem;
+  top: 0.7rem;
+  bottom: 0.7rem;
+  width: 2px;
+  background: {LINE};
+  border-radius: 999px;
+}}
+.sg-arch-packet {{
+  position: absolute;
+  left: 0.02rem;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: {ACCENT};
+  box-shadow: 0 0 0 5px rgba(13, 148, 136, 0.16);
+  z-index: 1;
+  animation: sg-arch-travel 18s linear infinite;
+}}
+@keyframes sg-arch-travel {{
+  0% {{ top: 0.2rem; opacity: 0; }}
+  4% {{ opacity: 1; }}
+  96% {{ opacity: 1; }}
+  100% {{ top: calc(100% - 1.3rem); opacity: 0; }}
+}}
+.sg-arch-step {{
+  padding: 0.85rem 1rem 0.95rem;
+  animation: sg-arch-wake 18s ease-in-out infinite;
+}}
+.sg-arch-step:nth-child(2) {{ animation-delay: 0s; }}
+.sg-arch-step:nth-child(3) {{ animation-delay: 2.7s; }}
+.sg-arch-step:nth-child(4) {{ animation-delay: 5.4s; }}
+.sg-arch-step:nth-child(5) {{ animation-delay: 8.1s; }}
+.sg-arch-step:nth-child(6) {{ animation-delay: 10.8s; }}
+.sg-arch-step:nth-child(7) {{ animation-delay: 13.5s; }}
+@keyframes sg-arch-wake {{
+  0%, 7% {{
+    border-color: {ACCENT};
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12), {SHADOW};
+  }}
+  16%, 100% {{
+    border-color: {LINE};
+    box-shadow: {SHADOW};
+  }}
+}}
+.sg-arch-step-h {{
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
+}}
+.sg-arch-step-h strong {{ margin: 0; }}
+.sg-arch-n {{
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: {OBSERVED};
+  background: #F0FDFA;
+  border-radius: 999px;
+  padding: 0.14rem 0.48rem;
+}}
+.sg-arch-mono {{
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+  color: {TEXT};
+}}
+.sg-arch-checks {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}}
+.sg-arch-check {{
+  border: 1px solid {LINE};
+  border-radius: 8px;
+  background: {CANVAS};
+  padding: 0.55rem 0.7rem;
+  animation: sg-arch-check 4.8s ease-in-out infinite;
+}}
+.sg-arch-check:nth-child(2) {{ animation-delay: 1.6s; }}
+.sg-arch-check:nth-child(3) {{ animation-delay: 3.2s; }}
+.sg-arch-check b {{
+  display: block;
+  color: {TEXT};
+  font-size: 0.82rem;
+  margin-bottom: 0.15rem;
+}}
+.sg-arch-check span {{
+  color: {MUTED};
+  font-size: 0.75rem;
+  line-height: 1.35;
+}}
+@keyframes sg-arch-check {{
+  0%, 100% {{ border-color: {LINE}; background: {CANVAS}; }}
+  16%, 42% {{ border-color: {ACCENT}; background: #F0FDFA; }}
+}}
+.sg-arch-queue {{
+  margin: 0.7rem 0 0;
+  color: {MUTED};
+  font-size: 0.8rem;
+}}
+.sg-arch-queue span {{
+  display: inline-block;
+  margin-right: 0.4rem;
+  padding: 0.08rem 0.48rem;
+  border: 1px dashed {SLATE};
+  border-radius: 999px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: {SLATE};
+  animation: sg-arch-queue 2.4s ease-in-out infinite;
+}}
+@keyframes sg-arch-queue {{
+  0%, 100% {{ opacity: 0.4; }}
+  50% {{ opacity: 1; }}
+}}
+.sg-arch-poll {{
+  display: inline-block;
+  margin-right: 0.35rem;
+  padding: 0.08rem 0.42rem;
+  border-radius: 999px;
+  background: #F0FDFA;
+  color: {OBSERVED};
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  animation: sg-arch-poll 1s steps(2, end) infinite;
+}}
+@keyframes sg-arch-poll {{
+  0%, 100% {{ opacity: 1; }}
+  50% {{ opacity: 0.35; }}
+}}
+.sg-arch-outs {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}}
+.sg-arch-out {{
+  border-top: 3px solid var(--c);
+  padding: 0.9rem 1rem 1rem;
+  animation: sg-arch-float 5.6s ease-in-out infinite;
+}}
+.sg-arch-out:nth-child(2) {{ animation-delay: 0.35s; }}
+.sg-arch-out:nth-child(3) {{ animation-delay: 0.7s; }}
+.sg-arch-out:nth-child(4) {{ animation-delay: 1.05s; }}
+@keyframes sg-arch-float {{
+  0%, 100% {{ transform: translateY(0); }}
+  50% {{ transform: translateY(-4px); }}
+}}
+.sg-arch-pair {{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
+  align-items: stretch;
+}}
+.sg-arch-set {{ padding: 1rem 1.1rem 1.05rem; }}
+.sg-arch-join-mark {{
+  align-self: center;
+  color: {ACCENT};
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1;
+}}
+.sg-arch-pills {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}}
+.sg-arch-pill {{
+  border: 1px solid {LINE};
+  background: {CANVAS};
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: {TEXT};
+}}
+.sg-arch-pill-in {{
+  background: #F0FDFA;
+  border-color: #99F6E4;
+  animation: sg-arch-arrive 2.8s ease-in-out infinite;
+}}
+.sg-arch-pill-in:nth-child(2) {{ animation-delay: 0.25s; }}
+.sg-arch-pill-in:nth-child(3) {{ animation-delay: 0.5s; }}
+.sg-arch-pill-in:nth-child(4) {{ animation-delay: 0.75s; }}
+@keyframes sg-arch-arrive {{
+  0%, 100% {{ box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }}
+  35% {{ box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18); }}
+}}
+.sg-arch-foot {{
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 0.75rem;
+}}
+.sg-arch-note {{ padding: 1rem 1.1rem 1.05rem; }}
+.sg-arch-note strong {{ font-size: 1rem; }}
+
 .sg-guide h3 {{ margin-top: 1.1rem; }}
 .sg-guide p, .sg-guide li {{ color: {MUTED}; line-height: 1.55; }}
 .sg-tier {{
@@ -675,11 +1092,28 @@ div[data-testid="stPlotlyChart"] {{
 }}
 
 @media (max-width: 900px) {{
-  .sg-kpis, .sg-kpis-4 {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+  .sg-kpis, .sg-kpis-4, .sg-kpis-5 {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
   .sg-readings {{ grid-template-columns: 1fr; }}
   .sg-identity {{ flex-direction: column; }}
   .sg-preview-dl div {{ grid-template-columns: 1fr; gap: 0.15rem; }}
   .sg-alert-legend {{ grid-template-columns: 1fr; }}
+  .sg-arch-sources, .sg-arch-outs, .sg-arch-checks, .sg-arch-foot {{
+    grid-template-columns: 1fr;
+  }}
+  .sg-arch-pair {{ grid-template-columns: 1fr; }}
+  .sg-arch-join-mark {{ display: none; }}
+}}
+@media (prefers-reduced-motion: reduce) {{
+  .sg-arch-packet,
+  .sg-arch-step,
+  .sg-arch-check,
+  .sg-arch-out,
+  .sg-arch-pill-in,
+  .sg-arch-merge span::after,
+  .sg-arch-queue span,
+  .sg-arch-poll {{
+    animation: none;
+  }}
 }}
 </style>
 """
