@@ -58,10 +58,12 @@ def india_map(
         health_txt = f"{health:.0f}" if isinstance(health, (int, float)) else "—"
         note = hover_note(row)
         extra = f"<br>{note}" if note else ""
+        reading = _hover_reading(row)
         hovers.append(
             f"<b>{label}</b> ({row['station_id']})<br>"
             f"{status_label(row)}<br>"
-            f"Health {health_txt}{extra}<br>"
+            f"{reading}"
+            f"7-day health {health_txt}{extra}<br>"
             "Click to open Station"
         )
 
@@ -97,6 +99,26 @@ def india_map(
         hovermode="closest",
     )
     return fig
+
+
+def _hover_reading(row: dict[str, Any]) -> str:
+    """Latest raw T / P / H and its hour, or nothing when the station is still waiting."""
+    latest = row.get("latest") if isinstance(row.get("latest"), dict) else None
+    if not latest:
+        return ""
+    observed = latest.get("observed") if isinstance(latest.get("observed"), dict) else {}
+
+    def _fmt(value: Any, unit: str) -> str:
+        return f"{float(value):.1f}{unit}" if isinstance(value, (int, float)) else "—"
+
+    stamp = str(latest.get("timestamp") or "").replace("T", " ").replace("+00:00", "Z")
+    stamp = stamp[:16] + " UTC" if len(stamp) >= 16 else stamp
+    return (
+        f"T {_fmt(observed.get('temp_c'), ' °C')} · "
+        f"P {_fmt(observed.get('pres_hpa'), ' hPa')} · "
+        f"H {_fmt(observed.get('rhum_pct'), ' %')}<br>"
+        f"{stamp}<br>"
+    )
 
 
 def map_camera(

@@ -293,6 +293,123 @@ def telemetry_figures(
     ]
 
 
+def timing_figure(timing: dict[str, Any] | None) -> go.Figure | None:
+    """24 bars: how much each hour of the window carried the reconstruction error.
+
+    Hours before `start_hour_in_window` stay slate; the attributed run is drawn in the
+    overlay color so the eye lands on when the anomaly began.
+    """
+    body = (timing or {}).get("timing") if isinstance((timing or {}).get("timing"), dict) else None
+    if not body:
+        return None
+    attr = body.get("hour_attr")
+    if not isinstance(attr, (list, tuple)) or not attr:
+        return None
+    values: list[float] = []
+    for value in attr:
+        try:
+            values.append(float(value))
+        except (TypeError, ValueError):
+            values.append(0.0)
+    n = len(values)
+    start = body.get("start_hour_in_window")
+    start_idx = int(start) if isinstance(start, (int, float)) else None
+    labels = [f"−{n - 1 - i} h" if i < n - 1 else "this hour" for i in range(n)]
+    colors = [
+        IMPUTED if (start_idx is not None and i >= start_idx) else "#CBD5E1" for i in range(n)
+    ]
+    fig = go.Figure(
+        go.Bar(
+            x=labels,
+            y=values,
+            marker=dict(color=colors, line=dict(width=0)),
+            hovertemplate="%{x}<br>share %{y:.1%}<extra></extra>",
+        )
+    )
+    if start_idx is not None and 0 <= start_idx < n:
+        fig.add_vline(
+            x=start_idx - 0.5,
+            line_dash="dot",
+            line_color=MUTED,
+            line_width=1,
+            annotation_text="attribution starts",
+            annotation_position="top left",
+            annotation_font=dict(size=10, color=MUTED),
+        )
+    fig.update_layout(
+        title=dict(text="When the error entered the window", font=dict(size=13, color=TEXT), pad=dict(t=0, b=0)),
+        paper_bgcolor=CARD,
+        plot_bgcolor=CARD,
+        margin=dict(l=40, r=16, t=36, b=32),
+        height=200,
+        showlegend=False,
+        font=dict(color=MUTED, size=11, family="IBM Plex Sans, system-ui, sans-serif"),
+        xaxis=dict(gridcolor=GRID, zeroline=False, showline=False, color=MUTED, tickangle=0, nticks=8),
+        yaxis=dict(gridcolor=GRID, zeroline=False, showline=False, color=MUTED, tickformat=".0%"),
+        bargap=0.25,
+    )
+    return fig
+
+
+ALERT_KIND_COLOR = {
+    "hardware": "#E11D48",
+    "weather": "#D97706",
+    "unknown": "#64748B",
+}
+
+ALERT_KIND_TEXT = {"hardware": "Hardware", "weather": "Weather", "unknown": "Unconfirmed"}
+
+
+def alerts_timeline_figure(
+    rows: list[dict[str, Any]],
+    kind_of: Any,
+) -> go.Figure | None:
+    """Stacked bars per hour: how many hardware / weather / unconfirmed hours landed when."""
+    if not rows:
+        return None
+    buckets: dict[str, dict[str, int]] = {}
+    for row in rows:
+        stamp = _as_dt(row.get("timestamp"))
+        if stamp is None:
+            continue
+        key = stamp.strftime("%Y-%m-%dT%H:00Z")
+        kind = kind_of(row)
+        if kind not in ALERT_KIND_COLOR:
+            kind = "unknown"
+        buckets.setdefault(key, {"hardware": 0, "weather": 0, "unknown": 0})[kind] += 1
+    if not buckets:
+        return None
+    keys = sorted(buckets)
+    fig = go.Figure()
+    for kind in ("hardware", "weather", "unknown"):
+        ys = [buckets[k][kind] for k in keys]
+        if not any(ys):
+            continue
+        fig.add_trace(
+            go.Bar(
+                x=keys,
+                y=ys,
+                name=ALERT_KIND_TEXT[kind],
+                marker=dict(color=ALERT_KIND_COLOR[kind], line=dict(width=0)),
+                hovertemplate="%{x}<br>" + ALERT_KIND_TEXT[kind] + " %{y}<extra></extra>",
+            )
+        )
+    fig.update_layout(
+        barmode="stack",
+        title=dict(text="Exceptions per hour", font=dict(size=13, color=TEXT), pad=dict(t=0, b=0)),
+        paper_bgcolor=CARD,
+        plot_bgcolor=CARD,
+        margin=dict(l=40, r=16, t=36, b=32),
+        height=190,
+        legend=dict(orientation="h", y=1.22, x=0, font=dict(size=11, color=MUTED)),
+        font=dict(color=MUTED, size=11, family="IBM Plex Sans, system-ui, sans-serif"),
+        xaxis=dict(gridcolor=GRID, zeroline=False, showline=False, color=MUTED, type="category", nticks=10),
+        yaxis=dict(gridcolor=GRID, zeroline=False, showline=False, color=MUTED, dtick=1),
+        bargap=0.2,
+    )
+    return fig
+
+
 def contribution_html(alert: dict[str, Any] | None) -> str:
     if not alert:
         return ""

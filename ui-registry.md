@@ -1,6 +1,6 @@
 # UI registry — SkyGuard dashboard
 
-Last updated: 2026-09-28 (Architecture page)
+Last updated: 2026-09-28 (Station evidence block, Alerts timeline)
 
 Light ops console. Weather is amber, never rose. Health is a badge, not the marker fill. Status color is reserved for QC state.
 
@@ -136,6 +136,36 @@ File: `frontend/views/station.py`, `frontend/panels.py`
 | Predicted line | `#D97706`, mono, only when `imputed_interval` is a pair |
 
 **Pattern notes:** Warm-up uses `.sg-warmup` with a slate bar and 24 hour dots (`.sg-dot-on` = `#94A3B8`). Health is a meter, not a Streamlit metric. Buddy chips stack a short name over a mono id / correlation. Charts keep observed solid (`#0F766E`). The dashed correction (`#D97706`) is drawn over it: it follows the raw reading until an hour with an interval, then uses the prediction. The 90% band is a fill across that hour (`rgba(217, 119, 6, 0.22)`).
+
+### Station evidence block (decision trace, neighbor table, ribbon)
+
+File: `frontend/evidence.py`, `frontend/charts.py` (`timing_figure`), `frontend/theme.py` (`.sg-trace*`, `.sg-table`, `.sg-ribbon*`)
+Last updated: 2026-09-28
+
+| Property | Class / value |
+|---|---|
+| Trace step | `.sg-trace-step` — white card, `#E2E8F0` border, 12px radius, soft shadow, 2-col grid `2.2rem 1fr` |
+| Step number | `.sg-trace-n` — 2rem ring, 2px border in the step's state color, IBM Plex Mono |
+| Step title | `.sg-trace-title` — 0.72rem / 700 / uppercase / `#475569` |
+| Step headline | `.sg-trace-line` — 0.95rem / 600 / `#0F172A` |
+| State chip | `.sg-chip` in state color: passed teal, flagged / agree amber, failed / disagree rose, skipped / not run slate |
+| Table | `.sg-table` — full width, uppercase 0.7rem headers, 1px `#E2E8F0` row rules, `.sg-mono` numeric cells |
+| Band verdict | `.sg-chip` — `inside band` amber, `outside band` rose |
+| Ribbon | `.sg-ribbon` card; `.sg-ribbon-row` 24-col grid, 0.22rem gap; `.sg-ribbon-cell` 0.9rem tall, 4px radius, label color; `.sg-ribbon-focus` 2px `#0F172A` outline |
+| TIMING bars | Plotly bar, attributed hours `#D97706`, earlier hours `#CBD5E1`, dotted start line, 200px |
+
+**Pattern notes:** The trace reuses the verdict color language — a hardware hour reads teal → amber → rose down the page, a weather hour ends amber and never shows rose. Agree bands are display constants (`±3 °C / ±8 % / ±2 hPa`), not API fields. The ribbon pads missing hours with dashed empty cells so it is always 24 wide. Exports are two `st.download_button`s side by side under **Take it with you**; the CSV keeps raw columns first.
+
+### Alerts timeline
+
+File: `frontend/charts.py` (`alerts_timeline_figure`), `frontend/views/alerts.py`
+
+| Property | Class / value |
+|---|---|
+| Chart | Plotly stacked bar per hour, 190px, categorical x, integer y |
+| Series | Hardware `#E11D48`, Weather `#D97706`, Unconfirmed `#64748B` — status colors, same order as the KPI strip |
+
+**Pattern notes:** Sits between the four-count KPI strip and the feed. Hidden when the feed is empty. Caption reads the shape for the judge (wide amber = shared weather hour, lone rose = one sensor).
 
 ### Control poll + replay results
 

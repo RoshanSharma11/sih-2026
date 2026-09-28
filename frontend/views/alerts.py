@@ -7,6 +7,7 @@ from typing import Any
 import streamlit as st
 
 from api import SkyGuardApiError
+from charts import alerts_timeline_figure
 from chrome import (
     catalog_stations,
     focus_station,
@@ -26,7 +27,7 @@ from panels import (
     filter_alerts,
     section_html,
 )
-from status import short_name
+from status import alert_kind, short_name
 
 
 def render_alerts() -> None:
@@ -86,6 +87,12 @@ def alerts_live() -> None:
     counts = alert_counts(rows)
     visible = filter_alerts(rows, kind)
     st.markdown(alert_kpis_html(counts, len(rows)), unsafe_allow_html=True)
+    timeline = alerts_timeline_figure(rows, alert_kind)
+    if timeline is not None:
+        st.plotly_chart(timeline, theme=None, width="stretch")
+        st.caption(
+            "One bar per hour in this feed. A wide amber bar is a shared weather hour; a lone rose bar is one sensor."
+        )
     st.markdown(
         section_html(
             "Newest first",

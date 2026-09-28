@@ -1070,6 +1070,114 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
 }}
 .sg-tier strong {{ color: {TEXT}; }}
 
+/* Decision trace — three tiers, one scored hour */
+.sg-trace {{
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0.25rem 0 0.85rem 0;
+}}
+.sg-trace-step {{
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: 0.75rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid {LINE};
+  border-radius: 12px;
+  background: {CARD};
+  box-shadow: {SHADOW};
+}}
+.sg-trace-n {{
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 2px solid {LINE};
+  font-weight: 700;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: {CANVAS};
+}}
+.sg-trace-body {{ min-width: 0; }}
+.sg-trace-head {{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}}
+.sg-trace-title {{
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: {MUTED};
+}}
+.sg-trace-line {{
+  color: {TEXT};
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-top: 0.3rem;
+}}
+.sg-trace-detail {{
+  color: {MUTED};
+  font-size: 0.84rem;
+  line-height: 1.45;
+  margin-top: 0.2rem;
+}}
+
+/* Neighbor agreement table */
+.sg-neighbor {{ margin: 0 0 0.85rem 0; }}
+.sg-table {{
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.55rem;
+  font-size: 0.86rem;
+}}
+.sg-table th {{
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: {MUTED};
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid {LINE};
+}}
+.sg-table td {{
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid {LINE};
+  color: {TEXT};
+  vertical-align: middle;
+}}
+.sg-table tr:last-child td {{ border-bottom: none; }}
+.sg-mono {{ font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.82rem; }}
+
+/* Verdict ribbon under the charts */
+.sg-ribbon {{
+  background: {CARD};
+  border: 1px solid {LINE};
+  border-radius: 12px;
+  box-shadow: {SHADOW};
+  padding: 0.85rem 1.1rem;
+  margin: 0.25rem 0 0.85rem 0;
+}}
+.sg-ribbon-row {{
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+  gap: 0.22rem;
+}}
+.sg-ribbon-cell {{
+  display: block;
+  height: 0.9rem;
+  border-radius: 4px;
+  box-sizing: border-box;
+}}
+.sg-ribbon-focus {{
+  outline: 2px solid {TEXT};
+  outline-offset: 1px;
+}}
+
 div[data-testid="stMetric"] {{
   background: {CARD};
   border: 1px solid {LINE};

@@ -8,7 +8,15 @@ from typing import Any
 import streamlit as st
 
 from api import SkyGuardApiError, merge_station
-from charts import cluster_around, contribution_html, telemetry_figures
+from charts import cluster_around, contribution_html, telemetry_figures, timing_figure
+from evidence import (
+    decision_trace_html,
+    neighbor_table_html,
+    run_csv,
+    technician_note,
+    timing_channels_line,
+    verdict_ribbon_html,
+)
 from chrome import (
     catalog_stations,
     fmt_value,
@@ -98,6 +106,8 @@ def station_live() -> None:
     except SkyGuardApiError as exc:
         offline_help(str(exc))
         return
+    health = client.health() or {}
+    threshold = health.get("threshold") if isinstance(health.get("threshold"), (int, float)) else None
 
     names = {row["station_id"]: short_name(row.get("name", row["station_id"])) for row in catalog}
     pinned = pick_alert(alerts, st.session_state.get("alert_id"))
@@ -135,10 +145,11 @@ def station_live() -> None:
         mark_at, mark_label = focus.get("timestamp"), "Replay hour"
     else:
         mark_at, mark_label = latest.get("timestamp"), None
-    _charts(telemetry, mark_at, mark_label, warming=warming)
+    window = _charts(telemetry, mark_at, mark_label, warming=warming)
     if not warming:
         timing = _timing_for(client, station_id, hour or latest)
-        _root_cause(hour, alert, timing)
+        _root_cause(hour, alert, timing, threshold=threshold, names=names)
+        _exports(station, window, hour, alert, names)
     else:
         st.markdown(
             section_html(
@@ -317,7 +328,7 @@ def _charts(
     mark_label: str | None,
     *,
     warming: bool,
-) -> None:
+) -> list[dict[str, Any]]:
     window = cluster_around(telemetry, mark_at)
     if warming:
         caption = (
@@ -333,7 +344,7 @@ def _charts(
         st.caption("This chart is that continuous run, not the gap to a later live hour.")
     if not window:
         st.info("No telemetry yet for this station.")
-        return
+        return []
     figures = telemetry_figures(window, mark_at=mark_at if mark_label else None, mark_label=mark_label)
     st.plotly_chart(figures[0], theme=None, width="stretch")
     left, right = st.columns(2, gap="medium")
@@ -341,6 +352,11 @@ def _charts(
         st.plotly_chart(figures[1], theme=None, width="stretch")
     with right:
         st.plotly_chart(figures[2], theme=None, width="stretch")
+    if not warming:
+        ribbon = verdict_ribbon_html(window, mark_at)
+        if ribbon:
+            st.html(ribbon)
+    return window
 
 
 def _focus_hour(
@@ -373,8 +389,17 @@ def _root_cause(
     hour: dict[str, Any] | None,
     alert: dict[str, Any] | None,
     timing: dict[str, Any] | None,
+    *,
+    threshold: float | None = None,
+    names: dict[str, str] | None = None,
 ) -> None:
-    st.markdown(section_html("Why this hour"), unsafe_allow_html=True)
+    st.markdown(
+        section_html(
+            "Why this hour",
+            "The verdict sentence, then the three checks in the order QC ran them, then what the neighbors said and when the error entered the window.",
+        ),
+        unsafe_allow_html=True,
+    )
     if hour and hour.get("warming_up"):
         st.caption("Warming up. The raw hour is stored. There is no verdict until 24 hourly values exist.")
         return
@@ -383,31 +408,31 @@ def _root_cause(
         return
 
     reason = (hour or {}).get("explainability_text") or (alert or {}).get("explainability_text")
-    st.markdown(reason or "No reason stored for this hour.")
+    st.markdown(f"**{reason}**" if reason else "No reason stored for this hour.")
 
-    thermo = (hour or {}).get("thermo") if isinstance((hour or {}).get("thermo"), dict) else None
-    if thermo:
-        st.markdown(
-            f"Dew point **{fmt_value(thermo.get('dewpoint_c'))} °C** · "
-            f"Td−T **{fmt_value(thermo.get('td_minus_t'))} °C**"
-        )
+    st.html(decision_trace_html(hour, alert, threshold))
 
     bars = contribution_html(alert)
     if bars:
-        st.caption("Channel share of this hour. Not SHAP.")
+        st.caption("Channel share of the reconstruction error on this hour. Not SHAP.")
         st.markdown(bars, unsafe_allow_html=True)
         if alert and is_weather(alert.get("label"), alert.get("fault_type")):
             st.caption("Neighbors agreed. This hour does not lower sensor health.")
 
-    _timing_line(timing)
+    label = (hour or {}).get("label") or (alert or {}).get("label")
+    table = neighbor_table_html(hour, names or {}, label)
+    if table:
+        st.html(table)
+
+    _timing_block(timing)
 
 
-def _timing_line(timing: dict[str, Any] | None) -> None:
+def _timing_block(timing: dict[str, Any] | None) -> None:
     if not timing:
         return
     status = timing.get("status")
     if status == "pending":
-        st.caption("TIMING is still running for this hour.")
+        st.caption("TIMING is still running for this hour. The attribution chart appears when it is ready.")
         return
     if status != "ready":
         return
@@ -415,3 +440,50 @@ def _timing_line(timing: dict[str, Any] | None) -> None:
     reason = body.get("reason")
     if reason:
         st.markdown(reason)
+    figure = timing_figure(timing)
+    if figure is not None:
+        st.plotly_chart(figure, theme=None, width="stretch")
+    line = timing_channels_line(timing)
+    if line:
+        st.caption(line + ". Integrated-gradients share of the LSTM score, computed off the ingest path.")
+
+
+def _exports(
+    station: dict[str, Any],
+    window: list[dict[str, Any]],
+    hour: dict[str, Any] | None,
+    alert: dict[str, Any] | None,
+    names: dict[str, str],
+) -> None:
+    if not window and not hour:
+        return
+    sid = str(station.get("station_id") or "station")
+    stamp = stamp_key((hour or {}).get("timestamp")).replace(":", "") or "hour"
+    st.markdown(
+        section_html(
+            "Take it with you",
+            "Raw rows stay raw in the file. Predicted columns are filled only on hours QC corrected.",
+        ),
+        unsafe_allow_html=True,
+    )
+    left, right = st.columns(2, gap="medium")
+    with left:
+        st.download_button(
+            "Download this run (CSV)",
+            data=run_csv(station, window),
+            file_name=f"skyguard_{sid}_{stamp}.csv",
+            mime="text/csv",
+            width="stretch",
+            disabled=not window,
+            help="Every stored hour in the run shown above, observed and overlay columns side by side.",
+        )
+    with right:
+        st.download_button(
+            "Technician note (TXT)",
+            data=technician_note(station, hour, alert, names),
+            file_name=f"skyguard_{sid}_{stamp}_note.txt",
+            mime="text/plain",
+            width="stretch",
+            disabled=hour is None,
+            help="Plain-text summary of this hour for a maintenance ticket.",
+        )

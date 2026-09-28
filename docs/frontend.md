@@ -38,7 +38,7 @@ The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43
 - Header chips from `GET /healthz`: `ok`, `model_loaded`, `n_stations`.
 - Intro card states the amber/rose rule and the five-color legend. KPI strip counted from `latest.label` on all 48: clean / genuine weather / hardware (`PHYSICAL_FAULT` + `HARDWARE_ANOMALY`) / unconfirmed / warming up (`warming_up`) / waiting (`latest` null). Six equal KPI tiles.
 - Dispatch is a full-width board above the map. **Needs a technician** is `status` `DEGRADED` / `CRITICAL` (7-day health; weather already excluded). **Watch this hour** is `latest.label` hardware while `status` is still `HEALTHY`. Warming up, waiting, weather, and unconfirmed stay off the list. One `GET /alerts?limit=` attaches the newest hardware reason, shown as one plain line (`Missing packet · temperature`, not `COMMUNICATION:temp`). Open focuses Station and pins that `alert_id` when present. The map sits left; the rail is the station list only.
-- India map of `GET /stations` (no `ids`) on a light Carto basemap. Camera fits Mumbai plus Safdarjung. Marker color from `latest.label` (fallback `pipeline_status`). Warming up is its own slate, not “waiting”. Safdarjung’s hover says weather versus hardware cannot be called there. Click marker or roster row sets `station_id` and switches to Station. Only the selected marker is labeled on the map.
+- India map of `GET /stations` (no `ids`) on a light Carto basemap. Camera fits Mumbai plus Safdarjung. Marker color from `latest.label` (fallback `pipeline_status`). Warming up is its own slate, not “waiting”. Hover shows the label, the latest raw T / P / H from `latest.observed` with its hour, and 7-day health. Safdarjung’s hover says weather versus hardware cannot be called there. Click marker or roster row sets `station_id` and switches to Station. Only the selected marker is labeled on the map.
 - Buddy edges only among the five-station camera set (`GET /buddy-map` subset). Do not draw the full graph.
 - Roster on the rail: Mumbai + Safdarjung first, then the rest by name. Selected row uses the teal inset, not a full-width primary button.
 
@@ -51,7 +51,14 @@ The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43
 - Open on Alerts pins `alert_id`. A replay pins that story’s end hour, even when a newer live hour exists. Station then shows that hour’s label, explainability, contribution, and a dotted marker on the chart, with a **Show live hour** control. The chart is the continuous run around that hour, so a year-long gap does not draw a line to the live point. Health stays the 7-day index.
 - Reading tiles always show observed. Predicted, Δ, and the 90% band appear on a tile only when that row’s `imputed_interval` is a pair.
 - Charts: observed solid always. Temperature is the lead chart; pressure and humidity sit beside it. The dashed correction is drawn for a run that contains an `imputed_interval`: it stays on the raw reading for trusted hours and uses `predicted` on the distrusted hour, so one corrected hour still reads as a line that leaves the spike. The 90% band is a fill across that hour. Raw series never replaced.
-- Root cause, in order: `explainability_text`, dew point and Td−T from `thermo`, channel bars from the matching alert, named neighbors from `tier3_corr` / `tier3_mix` / `tier3_method`, then `GET /stations/{id}/timing?ts=&wait_s=0` polled until `ready`.
+- **Verdict ribbon** under the charts: the 24 stored hours ending at the shown hour, one cell per row colored by that row's `label` (warming up is its own color, a missing hour is a dashed empty cell). The shown hour is outlined. Counts in the head (`22 clean · 1 weather · 1 hardware`).
+- Root cause ("Why this hour"), in order:
+  1. `explainability_text` in bold.
+  2. **Decision trace** — three cards in the order QC ran them. *Physical rules*: `Passed`, or `Failed` with the rule named (missing channel from null `*_observed`, dew point from `thermo.passed`, freeze / spike from the alert `fault_type`); dew point and Td−T from `thermo`. *LSTM autoencoder*: `tier2_score` against `/healthz.threshold` as `N.N×` the operating score; `Passed` on `CLEAN`, `Flagged` otherwise, `Not run` when the score is null. *Buddy check*: `Neighbors agree` (weather), `Neighbors disagree` (hardware), `Skipped` (unconfirmed or after a hard rule), `Not run` (clean); neighbor count from `tier3_corr`, method from `tier3_method`. States are derived from `label`; the page does not read `tier1` / `tier3.performed` (not on GET routes).
+  3. Channel bars from the matching alert (`contribution_*`).
+  4. **Neighbor table** when `tier3_mix` is present: per channel, this sensor (`*_observed`) vs neighbor blend (`tier3_mix`), Δ, and the v2 agree band (`±3 °C / ±8 % / ±2 hPa`, display constants from `v2/config.py`) with an `inside band` / `outside band` chip. Buddies listed by name with `tier3_corr`. Caption states agreement is judged on the channels carrying the error.
+  5. TIMING: `GET /stations/{id}/timing?ts=&wait_s=0` polled until `ready`; then the sentence, a 24-bar `hour_attr` chart (bars from `start_hour_in_window` onward in the overlay color, earlier bars slate), and a `channel_attr` line.
+- **Take it with you**: `st.download_button` for the shown run as CSV (raw columns first; predicted / band columns filled only on rows with `imputed_interval`) and a plain-text technician note (verdict, raw T/P/H, suggested correction and band, reason, neighbor deltas, 7-day health, an action line — weather says *do not dispatch*). Both built client-side from telemetry + alert rows; no new API.
 - Health meter: 7-day sensor flag rate. Genuine weather does not count.
 - Telemetry: `GET /stations/{id}/telemetry?limit=` for the selected station only.
 
@@ -59,6 +66,7 @@ The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43
 
 - QC inbox. Clean hours never appear. Intro states the three kinds before the feed.
 - `GET /alerts?limit=` (optional `station_id` when “Only {station}” is on). Counts and filters are client-side: all / hardware / weather / unconfirmed.
+- **Exceptions per hour**: a stacked bar chart of the feed bucketed by hour (rose hardware / amber weather / slate unconfirmed). A wide amber bar is a shared weather hour; a lone rose bar is one sensor. Hidden when the feed is empty.
 - Newest first. Each card is a human label, station name, time, fault in plain language (`Spike`, `Missing packet`, …), confidence, reason, and a weather/unconfirmed health note. Amber weather (`GENUINE_WEATHER` and `STORM`) vs rose hardware (`PHYSICAL_FAULT`, `HARDWARE_ANOMALY`, `THERMO`, `COMMUNICATION`, `COMM_ERROR`) vs slate unconfirmed.
 - **Inspect this hour** pins that `alert_id` and focuses Station on that hour (not the live CLEAN hour).
 
@@ -124,7 +132,7 @@ Never N+1 the catalog. Map and KPIs use list `latest` only. Do not call port 800
 1. `GET /healthz`
 2. `GET /stations` for all 48
 3. Network dispatch: one `GET /alerts?limit=` (not N+1)
-4. Selected station: `GET /stations/{id}/telemetry?limit=`, `GET /alerts?station_id=`, and `GET /stations/{id}/timing?ts=&wait_s=0`
+4. Selected station: `GET /stations/{id}/telemetry?limit=`, `GET /alerts?station_id=`, `GET /stations/{id}/timing?ts=&wait_s=0`, and `GET /healthz` for `threshold` (the LSTM trace ratio)
 5. Alerts page: `GET /alerts?limit=`
 6. Control: `GET /healthz` for the poll line, `POST /demo/replay`, `POST /demo/reset`
 7. `GET /buddy-map` only to draw edges among the camera set
