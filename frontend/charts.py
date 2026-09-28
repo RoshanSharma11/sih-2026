@@ -21,6 +21,50 @@ CONTRIBUTION = (
     ("contribution_rhum", "Humidity", "#6D28D9"),
 )
 
+BAND_FILL = "rgba(217, 119, 6, 0.22)"
+
+
+def _correction(
+    observed: list[Any],
+    imputed: list[float | None],
+    lows: list[float | None],
+) -> list[float | None]:
+    """Trusted hours stay on the reading. A distrusted hour uses the prediction.
+
+    One stored prediction is still a series: the dashed line follows the sensor
+    and leaves it on the hour QC corrected.
+    """
+    if not any(value is not None for value in lows):
+        return [None] * len(observed)
+    series: list[float | None] = []
+    for obs, imp, low in zip(observed, imputed, lows, strict=True):
+        if low is not None:
+            series.append(imp)
+        elif isinstance(obs, (int, float)):
+            series.append(float(obs))
+        else:
+            series.append(None)
+    return series
+
+
+def _hour_ribbon(
+    stamps: list[Any],
+    lows: list[float | None],
+    highs: list[float | None],
+) -> tuple[list[Any], list[float | None], list[float | None]]:
+    """Each corrected hour is a filled span from the previous hour to this one."""
+    xs: list[Any] = []
+    lo: list[float | None] = []
+    hi: list[float | None] = []
+    for index, low in enumerate(lows):
+        if low is None or highs[index] is None:
+            continue
+        start = stamps[index - 1] if index else stamps[index]
+        xs.extend([start, stamps[index], None])
+        lo.extend([low, low, None])
+        hi.extend([highs[index], highs[index], None])
+    return xs, lo, hi
+
 
 def _band(row: dict[str, Any], channel: str) -> tuple[float, float] | None:
     interval = row.get("imputed_interval")
@@ -111,53 +155,64 @@ def channel_figure(
         highs.append(band[1])
         value = row.get(imputed_key)
         imputed.append(float(value) if isinstance(value, (int, float)) else None)
+    corrected = _correction(observed, imputed, lows)
+    ribbon_x, ribbon_lo, ribbon_hi = _hour_ribbon(stamps, lows, highs)
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=stamps,
-            y=observed,
-            mode="lines+markers",
-            name="Observed",
-            line=dict(color=OBSERVED, width=2),
-            marker=dict(size=5),
-            connectgaps=False,
-        )
-    )
-    if any(value is not None for value in highs):
+    if ribbon_x:
         fig.add_trace(
             go.Scatter(
-                x=stamps,
-                y=highs,
+                x=ribbon_x,
+                y=ribbon_hi,
                 mode="lines",
                 name="Band high",
                 line=dict(width=0),
                 hoverinfo="skip",
                 showlegend=False,
                 connectgaps=False,
+                legendrank=2,
             )
         )
         fig.add_trace(
             go.Scatter(
-                x=stamps,
-                y=lows,
+                x=ribbon_x,
+                y=ribbon_lo,
                 mode="lines",
                 name="90% band",
                 line=dict(width=0),
                 fill="tonexty",
-                fillcolor="rgba(217, 119, 6, 0.18)",
+                fillcolor=BAND_FILL,
                 hoverinfo="skip",
                 connectgaps=False,
+                legendrank=2,
             )
         )
-    if any(value is not None for value in imputed):
+    fig.add_trace(
+        go.Scatter(
+            x=stamps,
+            y=observed,
+            mode="lines+markers",
+            name="Observed",
+            line=dict(color=OBSERVED, width=2.4),
+            marker=dict(size=5, color=OBSERVED),
+            connectgaps=False,
+            legendrank=1,
+        )
+    )
+    if any(value is not None for value in corrected):
         fig.add_trace(
             go.Scatter(
                 x=stamps,
-                y=imputed,
-                mode="lines",
+                y=corrected,
+                mode="lines+markers",
                 name="Predicted",
                 line=dict(color=IMPUTED, width=2, dash="dash"),
+                marker=dict(
+                    size=[8 if low is not None else 0 for low in lows],
+                    color=IMPUTED,
+                    line=dict(color=CARD, width=1),
+                ),
                 connectgaps=False,
+                legendrank=3,
             )
         )
     fig.update_layout(

@@ -326,7 +326,7 @@ def _charts(
         )
     else:
         caption = (
-            "Solid = raw T, P, and H. Dashed correction and the 90% band appear only when this hour has an imputed interval."
+            "Solid = raw T, P, and H. The dashed correction follows the sensor and leaves it on an hour with an imputed interval. The band covers that hour."
         )
     st.markdown(section_html("Observed", caption), unsafe_allow_html=True)
     if window and len(window) != len(telemetry):

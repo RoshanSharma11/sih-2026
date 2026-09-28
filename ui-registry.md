@@ -135,7 +135,7 @@ File: `frontend/views/station.py`, `frontend/panels.py`
 | Value | IBM Plex Mono, 1.85rem |
 | Predicted line | `#D97706`, mono, only when `imputed_interval` is a pair |
 
-**Pattern notes:** Warm-up uses `.sg-warmup` with a slate bar and 24 hour dots (`.sg-dot-on` = `#94A3B8`). Health is a meter, not a Streamlit metric. Buddy chips stack a short name over a mono id / correlation.
+**Pattern notes:** Warm-up uses `.sg-warmup` with a slate bar and 24 hour dots (`.sg-dot-on` = `#94A3B8`). Health is a meter, not a Streamlit metric. Buddy chips stack a short name over a mono id / correlation. Charts keep observed solid (`#0F766E`). The dashed correction (`#D97706`) is drawn over it: it follows the raw reading until an hour with an interval, then uses the prediction. The 90% band is a fill across that hour (`rgba(217, 119, 6, 0.22)`).
 
 ### Control poll + replay results
 
@@ -147,7 +147,7 @@ File: `frontend/views/control.py`, `frontend/panels.py`
 | Story preview | `.sg-preview` — same left-edge language as `.sg-verdict` |
 | Result row | `.sg-result` — canvas fill, 4px status edge, mono meta |
 
-**Pattern notes:** Control does not auto-navigate after Play. Results stay on the page; Inspect is the Station handoff. Weather stories stay amber. Custom events reuse `.sg-preview` and `.sg-result` for the inject builder and armed overlays.
+**Pattern notes:** Control does not auto-navigate after Play. The scored hour replaces the story preview in that same card, Santa Cruz first, and Inspect takes the Play slot. Other stations sit under that button. Weather stories stay amber. Custom events reuse `.sg-preview` and `.sg-result` for the inject builder and armed overlays.
 
 ### Architecture page
 

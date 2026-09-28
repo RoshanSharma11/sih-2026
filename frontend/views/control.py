@@ -32,6 +32,7 @@ from panels import (
     poll_html,
     result_cards_html,
     section_html,
+    split_lead_result,
     story_preview_html,
     story_spec,
 )
@@ -63,32 +64,71 @@ def render_control() -> None:
     names = {row["station_id"]: short_name(row.get("name", row["station_id"])) for row in catalog}
     by_id = {row["station_id"]: row for row in catalog}
 
-    _replay_block()
+    _replay_block(names)
     _custom_block(catalog, names, by_id)
     _armed_overlays(names)
-    _last_run(names)
 
     st.button("Reset overlays", width="stretch", on_click=fire_reset)
 
 
-def _replay_block() -> None:
+def _replay_block(names: dict[str, str]) -> None:
     st.markdown(
         section_html(
             "Mumbai stories",
-            "Five scored fixtures. Play stays on this page so you can read the affect, then inspect Santa Cruz.",
+            "Five scored fixtures. Play scores the hour in this card. Inspect opens Santa Cruz.",
         ),
         unsafe_allow_html=True,
     )
     _story_picker()
     spec = story_spec(st.session_state.control_story)
+    last = st.session_state.get("replay_last")
+    if _result_for(last, spec["id"]):
+        _scored_story(names, spec, last)
+        return
     st.markdown(story_preview_html(spec["id"]), unsafe_allow_html=True)
     st.button(
         f"Play · {spec['title']}",
         type="primary",
         width="stretch",
+        key="replay_play",
         on_click=fire_replay,
         args=(spec["id"],),
     )
+
+
+def _result_for(last: Any, story_id: str) -> bool:
+    return isinstance(last, dict) and bool(last.get("results")) and last.get("story") == story_id
+
+
+def _scored_story(names: dict[str, str], spec: dict[str, str], last: dict[str, Any]) -> None:
+    lead, rest = split_lead_result(list(last.get("results") or []), SANTACRUZ)
+    st.markdown(
+        result_cards_html(lead, names, heading=f"Scored · {spec['title']}"),
+        unsafe_allow_html=True,
+    )
+    inspect, again = st.columns([3, 2], gap="small")
+    with inspect:
+        if st.button(
+            "Inspect Santa Cruz on Station",
+            type="primary",
+            width="stretch",
+            key="inspect_replay",
+        ):
+            focus_station(SANTACRUZ)
+            go_page("station")
+    with again:
+        st.button(
+            "Play again",
+            width="stretch",
+            key="replay_again",
+            on_click=fire_replay,
+            args=(spec["id"],),
+        )
+    if rest:
+        st.markdown(
+            result_cards_html(rest, names, heading="Other stations this hour"),
+            unsafe_allow_html=True,
+        )
 
 
 def _story_picker() -> None:
@@ -208,17 +248,3 @@ def _armed_overlays(names: dict[str, str]) -> None:
         return
     overlays = status.get("overlays") or []
     st.markdown(overlay_cards_html(overlays, names), unsafe_allow_html=True)
-
-
-def _last_run(names: dict[str, str]) -> None:
-    last = st.session_state.get("replay_last")
-    if not isinstance(last, dict) or not last.get("results"):
-        st.caption("Play a Mumbai story to see an instant scored hour here.")
-        return
-    st.markdown(
-        result_cards_html(list(last.get("results") or []), names, last.get("story")),
-        unsafe_allow_html=True,
-    )
-    if st.button("Inspect Santa Cruz on Station", type="primary", width="stretch"):
-        focus_station(SANTACRUZ)
-        go_page("station")

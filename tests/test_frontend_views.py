@@ -113,8 +113,16 @@ def test_chart_keeps_the_replay_run_apart_from_a_later_live_hour() -> None:
     assert window[-1]["temp_observed"] == 55.0
     assert live not in window
     figs = telemetry_figures(window, mark_at="2024-12-31T23:00:00Z", mark_label="Replay hour")
-    assert figs[0].data[0].y[-1] == 55.0
-    assert "Predicted" in [trace.name for trace in figs[0].data]
+    observed = next(trace for trace in figs[0].data if trace.name == "Observed")
+    assert observed.y[-1] == 55.0
+    predicted = next(trace for trace in figs[0].data if trace.name == "Predicted")
+    assert predicted.y[0] == 26.0
+    assert predicted.y[-2] == 26.0
+    assert predicted.y[-1] == 25.2
+    band = next(trace for trace in figs[0].data if trace.name == "90% band")
+    assert list(band.y)[:2] == [24.2, 24.2]
+    assert band.x[0] == "2024-12-31T22:00:00Z"
+    assert band.x[1] == "2024-12-31T23:00:00Z"
 
 
 def test_warming_is_its_own_idle_state() -> None:
@@ -173,12 +181,35 @@ def test_telemetry_keeps_observed_and_hides_the_band_until_distrusted() -> None:
         ]
     )
     assert len(figs) == 3
-    assert figs[0].data[0].y[0] == 48.1
+    observed = next(trace for trace in figs[0].data if trace.name == "Observed")
+    assert observed.y[0] == 48.1
     names = [trace.name for trace in figs[0].data]
     assert "Predicted" in names
     assert "90% band" in names
     predicted = next(trace for trace in figs[0].data if trace.name == "Predicted")
     assert predicted.y[0] == 32.0
+    band = next(trace for trace in figs[0].data if trace.name == "90% band")
+    assert list(band.y)[:2] == [30.0, 30.0]
+    span = telemetry_figures(
+        [
+            {
+                "timestamp": "2024-07-01T14:00:00Z",
+                "temp_observed": 40.0,
+                "temp_imputed": 30.0,
+                "imputed_interval": {"temp_c": [28.0, 32.0]},
+            },
+            {
+                "timestamp": "2024-07-01T15:00:00Z",
+                "temp_observed": 41.0,
+                "temp_imputed": 31.0,
+                "imputed_interval": {"temp_c": [29.0, 33.0]},
+            },
+        ]
+    )
+    filled = next(trace for trace in span[0].data if trace.name == "90% band")
+    assert [value for value in filled.y if value is not None] == [28.0, 28.0, 29.0, 29.0]
+    dashed = next(trace for trace in span[0].data if trace.name == "Predicted")
+    assert list(dashed.y) == [30.0, 31.0]
     assert figs[0].layout.paper_bgcolor in {"#FFFFFF", "white", "#ffffff"}
     marked = telemetry_figures(
         [

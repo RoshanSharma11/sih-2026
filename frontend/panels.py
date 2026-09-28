@@ -558,15 +558,28 @@ def story_preview_html(story_id: str) -> str:
     )
 
 
+def split_lead_result(
+    results: list[dict[str, Any]],
+    lead_id: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Put the station the judge should read first. The rest stay a second block."""
+    lead = [row for row in results if str(row.get("station_id")) == lead_id]
+    rest = [row for row in results if str(row.get("station_id")) != lead_id]
+    if not lead:
+        return list(results), []
+    return lead, rest
+
+
 def result_cards_html(
     results: list[dict[str, Any]],
     names: dict[str, str],
     story_id: str | None = None,
+    *,
+    heading: str | None = None,
 ) -> str:
     spec = story_spec(story_id) if story_id else None
-    heading = "Last run"
-    if spec:
-        heading = f"Last run · {spec['title']}"
+    if heading is None:
+        heading = f"Last run · {spec['title']}" if spec else "Last run"
     cards: list[str] = []
     for row in results:
         sid = str(row.get("station_id", ""))

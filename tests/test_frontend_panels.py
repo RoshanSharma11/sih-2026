@@ -28,6 +28,7 @@ from panels import (
     poll_html,
     readings_html,
     result_cards_html,
+    split_lead_result,
     story_preview_html,
     story_spec,
     warmup_html,
@@ -107,12 +108,30 @@ def test_story_preview_and_results_show_the_affect() -> None:
         {"43003": "Santa Cruz", "43057": "Colaba"},
         "hardware",
     )
+    assert "Last run · 55 °C at Santa Cruz" in cards
     assert "Santa Cruz" in cards
     assert "Hardware anomaly" in cards
     assert "55.0" in cards
     assert "predicted 25.2" in cards
     assert "Colaba" in cards
     assert "Clean" in cards
+    lead, rest = split_lead_result(
+        [
+            {"station_id": "43057"},
+            {"station_id": "43003"},
+            {"station_id": "43002"},
+        ],
+        "43003",
+    )
+    assert [row["station_id"] for row in lead] == ["43003"]
+    assert [row["station_id"] for row in rest] == ["43057", "43002"]
+    scored = result_cards_html(
+        [{"station_id": "43003", "label": "HARDWARE_ANOMALY", "observed": {"temp_c": 55.0}}],
+        {"43003": "Santa Cruz"},
+        heading="Scored · 55 °C at Santa Cruz",
+    )
+    assert "Scored · 55 °C at Santa Cruz" in scored
+    assert "Last run" not in scored
 
 
 def test_poll_html_surfaces_a_failed_imd_hour() -> None:
