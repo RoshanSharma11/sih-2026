@@ -37,8 +37,11 @@ PIPELINE_LABEL = {
 
 IDLE_COLOR = "#64748B"
 WARMING_COLOR = "#94A3B8"
+FEEDGAP_COLOR = "#6366F1"
 IDLE_LABEL = "Waiting for stream"
 WARMING_LABEL = "Warming up"
+FEEDGAP_LABEL = "Feed gap"
+CHANNEL_WORD = {"temp_c": "temperature", "pres_hpa": "pressure", "rhum_pct": "humidity"}
 SAFDARJUNG = "42182"
 SAFDARJUNG_NOTE = "Weather versus hardware cannot be called here."
 
@@ -114,9 +117,38 @@ def is_warming(station: dict[str, Any] | None) -> bool:
     return bool(latest_payload(station).get("warming_up"))
 
 
+def feed_gap(row: dict[str, Any] | None) -> list[str]:
+    """Channels the feed left empty network-wide this hour (station or telemetry row)."""
+    if not row:
+        return []
+    source = row.get("latest") if isinstance(row.get("latest"), dict) else row
+    gap = source.get("feed_gap")
+    return [str(item) for item in gap] if isinstance(gap, list) else []
+
+
+def is_feed_gap(row: dict[str, Any] | None) -> bool:
+    return bool(feed_gap(row))
+
+
+def feed_gap_words(channels: list[str]) -> str:
+    words = [CHANNEL_WORD.get(item, item) for item in channels]
+    if not words:
+        return ""
+    if len(words) == 1:
+        return words[0]
+    return ", ".join(words[:-1]) + " and " + words[-1]
+
+
+def feed_gap_label(row: dict[str, Any] | None) -> str:
+    words = feed_gap_words(feed_gap(row))
+    return f"{FEEDGAP_LABEL} · {words}" if words else FEEDGAP_LABEL
+
+
 def marker_color(station: dict[str, Any] | None) -> str:
     if is_warming(station):
         return WARMING_COLOR
+    if is_feed_gap(station):
+        return FEEDGAP_COLOR
     return pipeline_color(marker_key(station))
 
 
@@ -131,6 +163,8 @@ def pipeline_label(status: str | None) -> str:
 def status_label(station: dict[str, Any] | None) -> str:
     if is_warming(station):
         return WARMING_LABEL
+    if is_feed_gap(station):
+        return feed_gap_label(station)
     if station and latest_payload(station) == {} and not station.get("pipeline_status"):
         return IDLE_LABEL
     key = marker_key(station)
@@ -182,6 +216,8 @@ def verdict_kind_from_key(key: str | None, fault_type: str | None = None) -> str
 def verdict_kind(station: dict[str, Any] | None, fault_type: str | None = None) -> str:
     if is_warming(station):
         return "warming"
+    if is_feed_gap(station):
+        return "feedgap"
     key = marker_key(station)
     if not latest_payload(station) and not pipeline_status(station) and key is None:
         return "idle"
@@ -261,10 +297,21 @@ def overlay_caption(overlay: dict[str, Any]) -> str:
 
 
 def kpi_counts(stations: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {"clean": 0, "weather": 0, "hardware": 0, "unconfirmed": 0, "warming": 0, "idle": 0}
+    counts = {
+        "clean": 0,
+        "weather": 0,
+        "hardware": 0,
+        "unconfirmed": 0,
+        "warming": 0,
+        "feedgap": 0,
+        "idle": 0,
+    }
     for row in stations:
         if is_warming(row):
             counts["warming"] += 1
+            continue
+        if is_feed_gap(row):
+            counts["feedgap"] += 1
             continue
         latest = latest_payload(row)
         if not latest and not row.get("pipeline_status"):

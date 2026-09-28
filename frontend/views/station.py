@@ -33,6 +33,7 @@ from panels import (
     fmt_stamp,
     health_html,
     hour_caption,
+    hour_kind,
     identity_html,
     readings_html,
     section_html,
@@ -41,6 +42,8 @@ from panels import (
 from status import (
     alert_kind,
     alert_status_label,
+    feed_gap,
+    feed_gap_words,
     hour_alert,
     hour_telemetry,
     is_weather,
@@ -146,7 +149,20 @@ def station_live() -> None:
     else:
         mark_at, mark_label = latest.get("timestamp"), None
     window = _charts(telemetry, mark_at, mark_label, warming=warming)
-    if not warming:
+    gap = feed_gap(hour or latest)
+    if gap and alert is None and not warming:
+        st.markdown(
+            section_html(
+                "Why this hour",
+                f"IMD did not send {feed_gap_words(gap)} for most stations this hour. "
+                "The three tiers need the full hour, so v2 was not called. The raw hour is stored, "
+                "no alert is opened and 7-day sensor health is not charged. "
+                "This is a feed problem, not a sensor problem.",
+            ),
+            unsafe_allow_html=True,
+        )
+        _exports(station, window, hour, alert, names)
+    elif not warming:
         timing = _timing_for(client, station_id, hour or latest)
         _root_cause(hour, alert, timing, threshold=threshold, names=names)
         _exports(station, window, hour, alert, names)
@@ -240,11 +256,7 @@ def _verdict(
             )
     elif focus is not None:
         matched = hour_alert(alerts, focus.get("timestamp"))
-        kind = alert_kind(matched) if matched is not None else (
-            "warming" if focus.get("warming_up") else alert_kind(
-                {"label": focus.get("label"), "pipeline_status": focus.get("pipeline_status")}
-            )
-        )
+        kind = alert_kind(matched) if matched is not None else hour_kind(focus)
         stamp = fmt_stamp(focus.get("timestamp"))
         text = (
             (matched or {}).get("explainability_text")
@@ -273,6 +285,10 @@ def _verdict(
             text = {
                 "clean": f"{name} is tracking with its neighbors. No hardware alert this hour.",
                 "warming": f"{name} is warming up. This raw hour is stored. A verdict waits for 24 hourly values.",
+                "feedgap": (
+                    f"IMD did not send {feed_gap_words(feed_gap(latest))} for most stations this hour. "
+                    "Stored raw, not scored, sensor health not charged."
+                ),
                 "unknown": (
                     "Not enough same-hour neighbors for a buddy check. "
                     "Honesty over a fake spatial call."

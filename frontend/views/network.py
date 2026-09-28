@@ -24,6 +24,7 @@ from panels import (
     dispatch_lists,
     dispatch_panel_html,
     dispatch_row_html,
+    feed_gap_banner_html,
     map_head_html,
     network_intro_html,
 )
@@ -61,6 +62,10 @@ def network_live() -> None:
         alerts = []
 
     kpi_strip(kpi_counts(stations))
+    imd = health.get("imd") if isinstance(health.get("imd"), dict) else {}
+    banner = feed_gap_banner_html(imd)
+    if banner:
+        render_html(banner)
     if not stations:
         st.info("Catalog is empty. Import the 48-station catalog and restart the API.")
         return

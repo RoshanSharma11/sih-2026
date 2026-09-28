@@ -9,7 +9,7 @@ import streamlit as st
 
 from api import SkyGuardApiError, SkyGuardClient
 from status import short_name
-from theme import CLEAN, HARDWARE, SLATE, WARMING, WEATHER, CSS
+from theme import CLEAN, FEEDGAP, HARDWARE, SLATE, WARMING, WEATHER, CSS
 
 _PAGES: dict[str, Any] = {}
 _ASSETS = Path(__file__).resolve().parent / "assets"
@@ -232,6 +232,7 @@ def kpi_strip(counts: dict[str, int]) -> None:
         ("Hardware", counts.get("hardware", 0), HARDWARE),
         ("Unconfirmed", counts.get("unconfirmed", 0), SLATE),
         ("Warming", counts.get("warming", 0), WARMING),
+        ("Feed gap", counts.get("feedgap", 0), FEEDGAP),
         ("Waiting", counts.get("idle", 0), SLATE),
     )
     cells = "".join(
@@ -251,6 +252,7 @@ def legend() -> None:
         <span><i class="sg-dot" style="background:{HARDWARE}"></i> Hardware</span>
         <span><i class="sg-dot" style="background:{SLATE}"></i> Unconfirmed</span>
         <span><i class="sg-dot" style="background:{WARMING}"></i> Warming up</span>
+        <span><i class="sg-dot" style="background:{FEEDGAP}"></i> Feed gap</span>
         </div>""",
         unsafe_allow_html=True,
     )

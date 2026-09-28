@@ -1,6 +1,6 @@
 # UI registry — SkyGuard dashboard
 
-Last updated: 2026-09-28 (Station evidence block, Alerts timeline)
+Last updated: 2026-09-28 (feed-gap state)
 
 Light ops console. Weather is amber, never rose. Health is a badge, not the marker fill. Status color is reserved for QC state.
 
@@ -20,6 +20,8 @@ Light ops console. Weather is amber, never rose. Health is a badge, not the mark
 | Genuine weather | `#D97706` |
 | Hardware | `#E11D48` |
 | Unknown / idle | `#64748B` |
+| Warming up | `#94A3B8` |
+| Feed gap (upstream did not send the channel) | `#6366F1`, banner `.sg-feedgap` on `#EEF2FF` |
 | Observed series | `#0F766E` solid |
 | Imputed series | `#D97706` dashed |
 | Map | Carto Positron tiles; camera fits selected cluster |

@@ -7,11 +7,15 @@ from typing import Any
 
 from chrome import fmt_value
 from status import (
+    CHANNEL_WORD,
     LABEL_TEXT,
     PIPELINE_LABEL,
     alert_kind,
     alert_status_label,
+    feed_gap,
+    feed_gap_label,
     health_color,
+    is_feed_gap,
     is_warming,
     latest_payload,
     marker_color,
@@ -21,7 +25,7 @@ from status import (
     verdict_kind,
     verdict_kind_from_key,
 )
-from theme import CLEAN, HARDWARE, SLATE, WARMING, WEATHER
+from theme import CLEAN, FEEDGAP, HARDWARE, SLATE, WARMING, WEATHER
 
 WINDOW_HOURS = 24
 
@@ -37,6 +41,7 @@ KIND_COLOR = {
     "hardware": HARDWARE,
     "unknown": SLATE,
     "warming": WARMING,
+    "feedgap": FEEDGAP,
     "idle": SLATE,
 }
 
@@ -334,6 +339,8 @@ def hour_kind(row: dict[str, Any] | None) -> str:
         return "idle"
     if row.get("warming_up"):
         return "warming"
+    if is_feed_gap(row):
+        return "feedgap"
     return verdict_kind_from_key(row.get("label") or row.get("pipeline_status"), row.get("fault_type"))
 
 
@@ -342,6 +349,8 @@ def hour_caption(row: dict[str, Any] | None) -> str:
         return "Waiting"
     if row.get("warming_up"):
         return "Warming up"
+    if is_feed_gap(row):
+        return feed_gap_label(row)
     key = row.get("label") or row.get("pipeline_status")
     if key in LABEL_TEXT:
         return LABEL_TEXT[key]
@@ -426,7 +435,9 @@ def readings_html(
         show_pred = band is not None and not warming
         value = fmt_value(raw)
         missing = raw is None
-        if missing:
+        if missing and public in feed_gap(row):
+            sub = "Not sent by IMD this hour · feed gap, not a sensor fault"
+        elif missing:
             sub = "Channel missing this hour"
         elif warming:
             sub = "Stored raw · no predicted overlay until QC"
@@ -534,11 +545,40 @@ def poll_html(imd: dict[str, Any], n_stations: int = 48) -> str:
         state = "Waiting for first poll"
     count = matched if isinstance(matched, int) else "—"
     error = f'<div class="sg-poll-error">{escape(str(last_error))}</div>' if last_error else ""
+    gap = feed_gap_sentence(imd)
+    gap_line = f'<div class="sg-poll-meta" style="color:{FEEDGAP}">{escape(gap)}</div>' if gap else ""
     return (
         f'<div class="sg-poll sg-poll-{kind}">'
         f'<div class="sg-poll-state">{escape(state)}</div>'
         f'<div class="sg-poll-meta">{escape(str(count))} of {n_stations} matched'
-        f" · last success {escape(last_success)}</div>{error}</div>"
+        f" · last success {escape(last_success)}</div>{gap_line}{error}</div>"
+    )
+
+
+def feed_gap_sentence(imd: dict[str, Any]) -> str:
+    """One line from /healthz.imd.feed_gap: which channels the feed dropped and on how many stations."""
+    gap = imd.get("feed_gap")
+    if not isinstance(gap, dict) or not gap:
+        return ""
+    matched = imd.get("matched")
+    parts = []
+    for channel, count in gap.items():
+        word = CHANNEL_WORD.get(str(channel), str(channel))
+        where = f"{count} of {matched}" if isinstance(matched, int) and matched else str(count)
+        parts.append(f"{word} missing on {where} stations")
+    return "Feed gap · " + "; ".join(parts)
+
+
+def feed_gap_banner_html(imd: dict[str, Any]) -> str:
+    sentence = feed_gap_sentence(imd)
+    if not sentence:
+        return ""
+    return (
+        '<div class="sg-feedgap"><span>'
+        f"<b>{escape(sentence)}.</b> IMD did not send that channel in the last poll. "
+        "Those hours are stored raw, are not scored, open no alert and do not lower "
+        "7-day sensor health. This is the feed, not the sensors."
+        "</span></div>"
     )
 
 

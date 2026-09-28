@@ -396,3 +396,41 @@ def test_hour_helpers() -> None:
     assert hour_caption({"label": "GENUINE_WEATHER_EVENT"}) == "Genuine weather"
     assert "UTC" in fmt_stamp("2024-12-31T23:00:00Z")
     assert fmt_stamp(None) == "—"
+
+
+def test_feed_gap_state_is_its_own_kind_not_a_fault() -> None:
+    from status import feed_gap_label, is_feed_gap, kpi_counts, marker_color, status_label, verdict_kind
+    from panels import feed_gap_banner_html, feed_gap_sentence, hour_caption, hour_kind, readings_html
+
+    station = {
+        "station_id": "42182",
+        "name": "Safdarjung",
+        "status": "HEALTHY",
+        "health_score": 100.0,
+        "latest": {
+            "timestamp": "2026-09-28T09:00:00Z",
+            "label": None,
+            "pipeline_status": None,
+            "warming_up": False,
+            "feed_gap": ["rhum_pct"],
+            "observed": {"temp_c": 31.2, "pres_hpa": 1004.1, "rhum_pct": None},
+            "imputed": {},
+        },
+    }
+    assert is_feed_gap(station)
+    assert verdict_kind(station) == "feedgap"
+    assert status_label(station) == "Feed gap · humidity"
+    assert feed_gap_label(station["latest"]) == "Feed gap · humidity"
+    assert marker_color(station) == "#6366F1"
+    assert kpi_counts([station])["feedgap"] == 1
+    assert kpi_counts([station])["hardware"] == 0
+
+    row = {"timestamp": "2026-09-28T09:00:00Z", "feed_gap": ["rhum_pct"], "rhum_observed": None}
+    assert hour_kind(row) == "feedgap"
+    assert hour_caption(row) == "Feed gap · humidity"
+    assert "Not sent by IMD" in readings_html({**row, "temp_observed": 31.2})
+
+    imd = {"matched": 46, "feed_gap": {"rhum_pct": 40}}
+    assert feed_gap_sentence(imd) == "Feed gap · humidity missing on 40 of 46 stations"
+    assert "not the sensors" in feed_gap_banner_html(imd)
+    assert feed_gap_banner_html({"matched": 46, "feed_gap": {}}) == ""

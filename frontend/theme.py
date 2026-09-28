@@ -13,6 +13,7 @@ WEATHER = "#D97706"
 HARDWARE = "#E11D48"
 SLATE = "#64748B"
 WARMING = "#94A3B8"
+FEEDGAP = "#6366F1"  # upstream feed did not send the channel; not a sensor state
 OBSERVED = "#0F766E"
 IMPUTED = "#D97706"
 MAP_LAND = "#EEF2F7"
@@ -165,7 +166,7 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
 
 .sg-kpis {{
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.75rem;
   margin: 0.35rem 0 0.85rem 0;
 }}
@@ -222,6 +223,14 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
 .sg-verdict-clean {{ border-left-color: {CLEAN}; }}
 .sg-verdict-idle {{ border-left-color: {LINE}; }}
 .sg-verdict-warming {{ border-left-color: {WARMING}; }}
+.sg-verdict-feedgap {{ border-left-color: {FEEDGAP}; }}
+.sg-feedgap {{
+  display: flex; gap: 0.6rem; align-items: flex-start;
+  border: 1px solid {FEEDGAP}; border-left-width: 4px; border-radius: 10px;
+  background: #EEF2FF; color: #1E293B; padding: 0.55rem 0.8rem; margin: 0.2rem 0 0.7rem 0;
+  font-size: 0.86rem; line-height: 1.4;
+}}
+.sg-feedgap b {{ color: #3730A3; }}
 .sg-verdict-kicker {{
   font-size: 0.72rem;
   font-weight: 700;

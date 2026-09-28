@@ -12,10 +12,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from skyguard.db.models import Station
-from skyguard.engine.pipeline import ingest_observation
+from skyguard.engine.pipeline import feed_gap_for, ingest_observation
 from skyguard.errors import DuplicateObservation
 from skyguard.imd.client import ImdClient, load_credentials
-from skyguard.schemas import IngestPayload
+from skyguard.schemas import Channel, IngestPayload
 
 # Public state ids from the IMD AWS reference. These are the states that contain
 # the 48 stations in stations_judge48.csv. `sid` is the state; row `ID` is aws_id.
@@ -51,6 +51,7 @@ class ImdStatus:
     matched: int = 0
     stored: int = 0
     duplicates: int = 0
+    feed_gap: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -59,6 +60,42 @@ class PollOutcome:
     stored: int = 0
     duplicates: int = 0
     errors: list[str] = field(default_factory=list)
+    feed_gap: dict[str, int] = field(default_factory=dict)
+
+
+FEED_GAP_MIN_SHARE = 0.5
+FEED_GAP_MIN_STATIONS = 3
+
+
+def detect_feed_gap(
+    payloads: list[IngestPayload],
+    min_share: float = FEED_GAP_MIN_SHARE,
+    min_stations: int = FEED_GAP_MIN_STATIONS,
+) -> dict[datetime, list[Channel]]:
+    """Channels the feed left empty on at least `min_share` of matched stations, per hour.
+
+    One station missing humidity is a sensor problem. Forty stations missing humidity in
+    the same hour is the feed. The second case must not become forty COMMUNICATION faults.
+    """
+    by_hour: dict[datetime, list[IngestPayload]] = {}
+    for payload in payloads:
+        by_hour.setdefault(payload.timestamp, []).append(payload)
+    gaps: dict[datetime, list[Channel]] = {}
+    for hour, group in by_hour.items():
+        if len(group) < min_stations:
+            continue
+        missing: list[Channel] = []
+        for channel, getter in (
+            (Channel.TEMP_C, lambda p: p.temp_c),
+            (Channel.PRES_HPA, lambda p: p.pres_hpa),
+            (Channel.RHUM_PCT, lambda p: p.rhum_pct),
+        ):
+            nulls = sum(1 for p in group if getter(p) is None)
+            if nulls / len(group) >= min_share:
+                missing.append(channel)
+        if missing:
+            gaps[hour] = missing
+    return gaps
 
 
 def parse_channel(value: object) -> float | None:
@@ -140,17 +177,22 @@ def poll_once(
         session.close()
 
     outcome = PollOutcome()
-    seen: set[str] = set()
+    payloads: list[IngestPayload] = []
     for state_id in state_ids:
         try:
             rows = fetch_state(state_id)
         except Exception as exc:
             outcome.errors.append(str(exc).replace("\n", " ")[:240])
             continue
-        for payload in rows_to_payloads(rows, index):
-            seen.add(payload.station_id)
-            _ingest_payload(app, payload, outcome)
-    outcome.matched = len(seen)
+        payloads.extend(rows_to_payloads(rows, index))
+    outcome.matched = len({payload.station_id for payload in payloads})
+
+    gaps = detect_feed_gap(payloads)
+    for payload in payloads:
+        gap = gaps.get(payload.timestamp) or []
+        for channel in feed_gap_for(payload, gap):
+            outcome.feed_gap[channel.value] = outcome.feed_gap.get(channel.value, 0) + 1
+        _ingest_payload(app, payload, outcome, feed_gap=gap)
 
     status: ImdStatus = app.state.imd_status
     if outcome.errors and outcome.matched == 0 and not outcome.stored and not outcome.duplicates:
@@ -160,11 +202,14 @@ def poll_once(
         status.matched = outcome.matched
         status.stored = outcome.stored
         status.duplicates = outcome.duplicates
+        status.feed_gap = dict(outcome.feed_gap)
         status.last_error = outcome.errors[-1] if outcome.errors else None
     return outcome
 
 
-def _ingest_payload(app, payload: IngestPayload, outcome: PollOutcome) -> None:
+def _ingest_payload(
+    app, payload: IngestPayload, outcome: PollOutcome, feed_gap: list[Channel] | None = None
+) -> None:
     session = app.state.session_factory()
     try:
         ingest_observation(
@@ -174,6 +219,7 @@ def _ingest_payload(app, payload: IngestPayload, outcome: PollOutcome) -> None:
             app.state.windows,
             demo=app.state.demo,
             qc_engine=app.state.qc_engine,
+            feed_gap=feed_gap,
         )
         session.commit()
         outcome.stored += 1

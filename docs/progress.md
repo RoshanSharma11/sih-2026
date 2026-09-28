@@ -44,7 +44,8 @@ Next: nothing on the v2 live plan. Steps 1–8 are done.
 | V2-6 | `7af74ba` | `GET /stations/{id}/timing` reads the v2 cache so ingest can return before the attribution sentence is ready |
 | V2-7 | `3a2b639` | Dashboard shows the 48, warming up, interval-gated bands, root cause, and Mumbai replay instead of the Palam buttons |
 | V2-8 | `1738cd3` | One live poll stored raw warming-up hours; replay story 2 is hardware with a band near 25 °C and story 3 is weather with no band and health unchanged |
-| F12 | (this change) | Station evidence block: decision trace, neighbor table vs agree bands, TIMING chart, verdict ribbon, CSV + technician note; Alerts timeline; map hover readings |
+| F12 | `153d7c3` | Station evidence block: decision trace, neighbor table vs agree bands, TIMING chart, verdict ribbon, CSV + technician note; Alerts timeline; map hover readings |
+| L1 | (this change) | Feed gap: a channel IMD leaves empty on most stations in an hour is stored raw with a null label, no v2 call, no alert, no health charge; `feed_gap` on ingest/latest/telemetry and `/healthz.imd.feed_gap`; indigo state on the console |
 
 ## What works today (post-I6)
 
@@ -59,6 +60,7 @@ Next: nothing on the v2 live plan. Steps 1–8 are done.
 - Demo inject: `target=neighborhood` expands via the buddy graph. `target=cluster` is 400.
 - Dashboard: light console, plus an Architecture page under Guide (animated hour, then charts from `v2/artifacts` when those files are present). The ops pages are Network, Station, Alerts, Control, and How QC works. Network plots all 48 and frames Mumbai plus Safdarjung. Warming up is its own state. Dispatch on Network is a full-width board above the map: **Page** is 7-day `DEGRADED` / `CRITICAL`; **Watch** is this-hour hardware while still `HEALTHY`; weather never appears; reasons are plain language. Station is an ops workstation: identity, `n/24` warmup, raw T/P/H tiles, named buddies, then temperature / pressure / humidity charts (the dashed correction follows the raw reading and leaves it on an hour with `imputed_interval`; the band fills that hour), reason, dew point, channel bars, neighbors, and TIMING. Control is select-then-observe for the Mumbai replay: Play replaces the preview with the scored hour and puts Inspect in that same card. Custom events still use `POST /demo/inject` (spike / freeze / drift / comms / neighborhood weather). Alerts is a QC inbox: purpose, hardware/weather/unconfirmed counts, filters, readable cards, **Inspect this hour**. Palam is not on the map. The client default is `http://127.0.0.1:8000`. It does not call port 8001 or `ml.engine`.
 - Station evidence (F12): under the charts a 24-cell verdict ribbon; "Why this hour" is the reason, a three-card decision trace (physical rules / LSTM score vs `/healthz.threshold` / buddy check, states derived from `label`), channel bars, a neighbor table (`tier3_mix` vs observed against the v2 agree bands), and TIMING as a sentence plus a 24-bar `hour_attr` chart. Two downloads: the run as CSV and a plain-text technician note. Alerts has a stacked exceptions-per-hour chart. Map hover shows the latest raw T / P / H. All from existing GET fields; no API change.
+- Feed gap (L1): the 2026-09-28 live poll returned an empty `RH` for the Mumbai four and Safdarjung, which the pipeline had scored as `PHYSICAL_FAULT / COMMUNICATION:rhum` every hour and driven Safdarjung to health 0. `detect_feed_gap` in the poller now marks a channel null on ≥ 50 % of matched stations (≥ 3) as a feed gap for that hour; those hours are stored raw with `label` null and `feed_gap=["rhum_pct"]`, v2 is not called, no alert, health unchanged. Hours stored before this change keep their old labels; `POST /demo/reset` clears them.
 - Checked 2026-09-28 on a fresh database: one IMD poll stored 46 raw hours, each `warming_up` with a null label. Replay `hardware` scored Santa Cruz `HARDWARE_ANOMALY` with imputed temperature 25.2 °C and a band of 24.2–26.3 °C. Replay `weather` scored `GENUINE_WEATHER_EVENT` with no band and health 100. The live hour stayed the latest after both stories. Dum Dum `42809` and Hyderabad Airport `43128` were absent from that snapshot.
 - ML standalone: `ml/ml/main.py` remains eval-only. Do not point the dashboard at 8001.
 - Tests: D18 mapping is unit-tested; live ingest covers two-buddy T3, isolate/one-buddy → `UNCONFIRMED_ANOMALY`, weather does not lower health. IdentityDetector / NORTH live-path tests are skipped. Engine integration skips when artifacts are missing.
@@ -113,7 +115,7 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Open issues
 
-- LSTM threshold not frozen; freeze/drift are Tier 1 / window heuristics in ML, not the autoencoder.
+- LSTM threshold is frozen at the 2023 p99 (`operating_score` 0.008487, `threshold_frozen: true` in `v2/artifacts/model_metadata.json`); freeze/drift are Tier 1 / window heuristics in ML, not the autoencoder.
 - Nested path `ml/ml/` is awkward; do not flatten during I-slices unless a later cleanup slice says so.
 - `docs/backend-simulator-summary.md` describes the **legacy** backend QC. Trust this file + `architecture.md` for the live path.
 - A station with fewer than 24 hourly rows is `warming_up` with a null label. Seed still fills the window with `CLEAN` rows.

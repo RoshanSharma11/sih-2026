@@ -153,6 +153,7 @@ class IngestResult(BaseModel):
     label: Label | None = None
     pipeline_status: PipelineStatus | None = None
     warming_up: bool = False
+    feed_gap: list[Channel] = Field(default_factory=list)
     fault_type: FaultType | None = None
     confidence: float | None = None
     severity: Severity | None = None
@@ -201,6 +202,7 @@ class LatestSnapshot(BaseModel):
     label: Label | None = None
     pipeline_status: PipelineStatus | None = None
     warming_up: bool = False
+    feed_gap: list[Channel] = Field(default_factory=list)
     observed: ChannelValues
     imputed: ChannelValues
 
@@ -239,6 +241,7 @@ class TelemetryRow(BaseModel):
     label: Label | None = None
     pipeline_status: PipelineStatus | None = None
     warming_up: bool = False
+    feed_gap: list[Channel] = Field(default_factory=list)
     mse: float | None = None
     explainability_text: str | None = None
     imputed_interval: ImputedInterval | None = None
@@ -273,6 +276,8 @@ class ImdPoll(BaseModel):
     last_success: datetime | None = None
     last_error: str | None = None
     matched: int = 0
+    # Channels the feed left empty on most matched stations in the last poll -> count of stations.
+    feed_gap: dict[str, int] = Field(default_factory=dict)
 
 
 class Healthz(BaseModel):

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 from collections import defaultdict
 from collections.abc import Iterator
@@ -27,6 +28,7 @@ from skyguard.engine.demo import DemoController
 from skyguard.engine.windows import WindowPoint, WindowStore
 from skyguard.errors import CatalogNotLoaded, DuplicateObservation, StationNotFound, UnknownScaler
 from skyguard.schemas import (
+    Channel,
     ChannelValues,
     FaultType,
     ImputedInterval,
@@ -74,6 +76,30 @@ def as_utc(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
+def feed_gap_for(payload: IngestPayload, feed_gap: list[Channel] | None) -> list[Channel]:
+    """Channels that are both network-wide missing this hour and missing on this payload.
+
+    A station that did report the channel is scored normally even during a feed gap.
+    """
+    if not feed_gap:
+        return []
+    values = {
+        Channel.TEMP_C: payload.temp_c,
+        Channel.PRES_HPA: payload.pres_hpa,
+        Channel.RHUM_PCT: payload.rhum_pct,
+    }
+    return [channel for channel in feed_gap if values.get(channel) is None]
+
+
+def feed_gap_from_row(row: TelemetryLog) -> list[Channel]:
+    if not row.feed_gap:
+        return []
+    try:
+        return [Channel(value) for value in json.loads(row.feed_gap)]
+    except (ValueError, TypeError):
+        return []
+
+
 def ingest_observation(
     session: Session,
     payload: IngestPayload,
@@ -83,7 +109,15 @@ def ingest_observation(
     demo: DemoController | None = None,
     detector=None,
     qc_engine=None,
+    feed_gap: list[Channel] | None = None,
 ) -> IngestResult:
+    """Persist one hour and run v2 QC on it.
+
+    `feed_gap` lists channels the upstream feed left empty on most stations this hour
+    (see `skyguard.imd.poller.detect_feed_gap`). Such an hour is stored raw with a null
+    label, is not sent to v2, opens no alert and does not charge 7-day health: the
+    sensor did not fail, the feed did.
+    """
     del residuals, detector
     if not catalog_ready:
         raise CatalogNotLoaded("Station catalog not loaded")
@@ -106,6 +140,7 @@ def ingest_observation(
             observed, demo_injected = demo.apply(payload.station_id, observed)
 
         current = WindowPoint(timestamp, observed.temp_c, observed.pres_hpa, observed.rhum_pct)
+        gap_channels = feed_gap_for(payload, feed_gap)
         row = TelemetryLog(
             station_id=payload.station_id,
             timestamp=timestamp,
@@ -116,12 +151,15 @@ def ingest_observation(
             label=None,
             pipeline_status=None,
             warming_up=True,
+            feed_gap=json.dumps([channel.value for channel in gap_channels]) if gap_channels else None,
         )
         session.add(row)
         session.flush()
         windows.append(payload.station_id, current)
 
-        if len(windows.points(payload.station_id)) < windows.size:
+        warming = len(windows.points(payload.station_id)) < windows.size
+        if warming or gap_channels:
+            row.warming_up = warming
             health_score, station_status = health_from_stored_labels(
                 session, payload.station_id, timestamp
             )
@@ -277,6 +315,7 @@ def result_from_row(
         label=resolved_label,
         pipeline_status=_pipeline_status(row.pipeline_status),
         warming_up=bool(row.warming_up),
+        feed_gap=feed_gap_from_row(row),
         fault_type=fault_type,
         confidence=confidence,
         severity=severity,
@@ -318,6 +357,7 @@ def latest_snapshot_from_row(row: TelemetryLog) -> LatestSnapshot:
         label=label,
         pipeline_status=_pipeline_status(row.pipeline_status),
         warming_up=bool(row.warming_up),
+        feed_gap=feed_gap_from_row(row),
         observed=ChannelValues(
             temp_c=row.temp_observed,
             pres_hpa=row.pres_observed,
@@ -372,6 +412,7 @@ def health_from_stored_labels(
 
 def telemetry_qc(row: TelemetryLog) -> dict:
     return {
+        "feed_gap": feed_gap_from_row(row),
         "explainability_text": row.explainability_text,
         "imputed_interval": load_model(row.imputed_interval, ImputedInterval),
         "thermo": load_model(row.thermo, ThermoView),

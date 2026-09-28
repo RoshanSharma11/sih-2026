@@ -27,6 +27,7 @@ _EXTRA_COLUMNS = (
     ("telemetry_logs", "tier3_mix", "TEXT"),
     ("telemetry_logs", "tier3_corr", "TEXT"),
     ("telemetry_logs", "warming_up", "BOOLEAN NOT NULL DEFAULT 0"),
+    ("telemetry_logs", "feed_gap", "TEXT"),
 )
 
 

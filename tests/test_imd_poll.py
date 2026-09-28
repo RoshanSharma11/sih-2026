@@ -6,7 +6,14 @@ from fastapi.testclient import TestClient
 
 from skyguard.api.main import create_app
 from skyguard.imd.client import ImdClient, ImdCredentials
-from skyguard.imd.poller import bucket_hour, parse_channel, poll_once, rows_to_payloads
+from skyguard.imd.poller import (
+    bucket_hour,
+    detect_feed_gap,
+    parse_channel,
+    poll_once,
+    rows_to_payloads,
+)
+from skyguard.schemas import Channel
 
 
 def test_empty_imd_strings_are_null_and_time_buckets_to_the_utc_hour() -> None:
@@ -155,3 +162,99 @@ def test_poll_ingests_matches_and_skips_duplicate_hours(tmp_path) -> None:
         assert second.stored == 0
         assert second.duplicates == 1
         assert second.matched == 1
+
+
+def _rows(ids: list[str], rh: str | None) -> list[dict]:
+    return [
+        {
+            "ID": aws,
+            "DATE": "2026-09-27",
+            "TIME": "17:15:00",
+            "CURR_TEMP": "26.3",
+            "RH": rh,
+            "MSLP": "1013.2",
+        }
+        for aws in ids
+    ]
+
+
+def test_detect_feed_gap_needs_a_network_wide_share() -> None:
+    hour = datetime(2026, 9, 27, 17, 0, tzinfo=timezone.utc)
+    index = {f"A{i}": [f"S{i}"] for i in range(6)}
+    # one station missing humidity: sensor problem, not a gap
+    one = rows_to_payloads(_rows(["A0"], "") + _rows(["A1", "A2", "A3", "A4", "A5"], "70"), index)
+    assert detect_feed_gap(one) == {}
+    # four of six missing humidity: feed gap on rhum_pct only
+    most = rows_to_payloads(_rows(["A0", "A1", "A2", "A3"], "") + _rows(["A4", "A5"], "70"), index)
+    assert detect_feed_gap(most) == {hour: [Channel.RHUM_PCT]}
+    # two stations is too few to call a gap
+    tiny = rows_to_payloads(_rows(["A0", "A1"], ""), index)
+    assert detect_feed_gap(tiny) == {}
+
+
+# Real catalog ids: the v2 engine rejects stations without a train scaler.
+_GAP_STATIONS = ("43003", "43057", "42182", "43371")
+
+
+def test_feed_gap_hour_is_stored_raw_and_never_charged_to_the_sensor(tmp_path) -> None:
+    stations = tmp_path / "stations.json"
+    stations.write_text(
+        json.dumps(
+            {
+                "stations": [
+                    {
+                        "station_id": station_id,
+                        "name": f"Station {station_id}",
+                        "latitude": 19.0 + i * 0.01,
+                        "longitude": 72.8,
+                        "aws_id": f"A{i}",
+                        "isolate": True,
+                        "buddy_ids": [],
+                    }
+                    for i, station_id in enumerate(_GAP_STATIONS)
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    app = create_app(db_path=tmp_path / "test.db", stations_path=stations, buddy_edges_path=tmp_path / "none.json")
+
+    def fetch(state_id: int):
+        return _rows(["A0", "A1", "A2"], "") + _rows(["A3"], "70")
+
+    with TestClient(app) as client:
+        start = datetime(2026, 9, 26, 17, 0, tzinfo=timezone.utc)
+        client.post(
+            "/stations/43003/seed",
+            json={
+                "observations": [
+                    {
+                        "timestamp": (start + timedelta(hours=i)).isoformat(),
+                        "temp_c": 26.0,
+                        "pres_hpa": 1010.0,
+                        "rhum_pct": 70.0,
+                    }
+                    for i in range(24)
+                ]
+            },
+        ).raise_for_status()
+
+        outcome = poll_once(app, fetch, state_ids=(21,))
+        assert outcome.stored == 4
+        assert outcome.feed_gap == {"rhum_pct": 3}
+        body = client.get("/healthz").json()
+        assert body["imd"]["feed_gap"] == {"rhum_pct": 3}
+
+        # warmed station in the gap: raw stored, not scored, health untouched
+        detail = client.get("/stations/43003").json()
+        assert detail["latest"]["feed_gap"] == ["rhum_pct"]
+        assert detail["latest"]["label"] is None
+        assert detail["latest"]["warming_up"] is False
+        assert detail["latest"]["observed"]["rhum_pct"] is None
+        assert detail["health_score"] == 100.0
+        assert client.get("/alerts").json() == []
+        rows = client.get("/stations/43003/telemetry", params={"hours": 48}).json()
+        assert rows[-1]["feed_gap"] == ["rhum_pct"]
+
+        # the station that did report humidity is not marked as a gap
+        assert client.get("/stations/43371").json()["latest"]["feed_gap"] == []

@@ -95,6 +95,7 @@ Response:
   "label": "HARDWARE_ANOMALY",
   "pipeline_status": "HARDWARE",
   "warming_up": false,
+  "feed_gap": [],
   "fault_type": "SPIKE",
   "confidence": 0.984,
   "severity": "HIGH",
@@ -145,6 +146,8 @@ Response:
 `health_score` / `station_status` are recomputed from stored labels over the last 168 hours (seed rows count). `PHYSICAL_FAULT`, `HARDWARE_ANOMALY`, and `UNCONFIRMED_ANOMALY` lower the score. `GENUINE_WEATHER_EVENT` does not. Hours with a null label are not in that rate. The engine’s in-memory tracker is not the product score.
 
 `warming_up` is true while the station has fewer than 24 hourly rows. That response has `label` and `pipeline_status` null, the raw `observed` hour, and null `imputed`. It does not raise an alert and it does not call v2. The hour that completes the window has `warming_up` false and the real v2 label. Seed rows are `CLEAN` and count toward the 24.
+
+`feed_gap` lists public channel names that the upstream feed left empty on at least half of the matched stations in that same hour **and** that are null on this station (`[]` normally). A feed-gap hour is stored raw with `label` and `pipeline_status` null, is not sent to v2, opens no alert and is not counted in 7-day health: the feed failed, not the sensor. A station that did report the channel is scored normally. Only the IMD poller sets this (`detect_feed_gap`, share ≥ 0.5, at least 3 matched stations in the hour); `/ingest` from the simulator never does. `warming_up` and `feed_gap` can both be set on the same hour.
 
 ## Demo inject
 
@@ -269,6 +272,7 @@ Station summary (list **includes** `latest` so the live map does not N+1):
     "label": "CLEAN",
     "pipeline_status": "CLEAN",
     "warming_up": false,
+    "feed_gap": [],
     "observed": {"temp_c": 34.2, "pres_hpa": 1002.4, "rhum_pct": 71.0},
     "imputed": {"temp_c": 34.1, "pres_hpa": 1002.5, "rhum_pct": 70.8}
   }
@@ -302,12 +306,12 @@ Station summary (list **includes** `latest` so the live map does not N+1):
 `/healthz` `imd` is the live poll:
 
 ```json
-{"last_success": "2026-09-27T17:20:00Z", "last_error": null, "matched": 42}
+{"last_success": "2026-09-27T17:20:00Z", "last_error": null, "matched": 42, "feed_gap": {"rhum_pct": 38}}
 ```
 
-`matched` is how many of the 48 catalog stations had an IMD `ID` in the last poll. Stations that share an `aws_id` all receive that hour. `last_success` is when that poll finished. `last_error` is the latest state or token failure, or null when the last poll was clean. A duplicate hour is not an error.
+`matched` is how many of the 48 catalog stations had an IMD `ID` in the last poll. Stations that share an `aws_id` all receive that hour. `last_success` is when that poll finished. `last_error` is the latest state or token failure, or null when the last poll was clean. A duplicate hour is not an error. `feed_gap` maps a public channel name to the number of matched stations whose hour was stored as a feed gap for that channel in the last poll (`{}` when the feed was complete).
 
-Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, `tier3_corr`, and `warming_up`. `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label, or null while `warming_up` is true. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
+Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, `tier3_corr`, `warming_up`, and `feed_gap` (list of public channel names, `[]` normally). `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label, or null while `warming_up` is true or the hour is a feed gap. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
 
 `GET /buddy-map` is the ML graph for the dashboard, not a QC input:
 
@@ -392,6 +396,7 @@ CREATE TABLE telemetry_logs (
   tier3_method    VARCHAR(20),
   tier3_mix       TEXT,
   tier3_corr      TEXT,
+  feed_gap        TEXT,
   UNIQUE (station_id, timestamp)
 );
 
@@ -415,7 +420,7 @@ CREATE INDEX idx_alerts_station_time ON anomaly_alerts (station_id, timestamp);
 
 Drop `cluster_id NOT NULL` on `stations` in the same migration as the catalog import.
 
-`imputed_interval`, `thermo`, `tier3_mix`, and `tier3_corr` are JSON text. `tier3_method` is `cw_idw` on the product path.
+`imputed_interval`, `thermo`, `tier3_mix`, `tier3_corr`, and `feed_gap` (JSON list of public channel names, null normally) are JSON text. `tier3_method` is `cw_idw` on the product path.
 
 Health is recomputed from stored `telemetry_logs.label` over the last 168 hours (7-day flag rate, weather excluded). The v2 in-memory tracker is not this score:
 

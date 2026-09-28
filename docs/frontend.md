@@ -36,9 +36,9 @@ The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43
 ### Network
 
 - Header chips from `GET /healthz`: `ok`, `model_loaded`, `n_stations`.
-- Intro card states the amber/rose rule and the five-color legend. KPI strip counted from `latest.label` on all 48: clean / genuine weather / hardware (`PHYSICAL_FAULT` + `HARDWARE_ANOMALY`) / unconfirmed / warming up (`warming_up`) / waiting (`latest` null). Six equal KPI tiles.
+- Intro card states the amber/rose rule and the five-color legend. KPI strip counted from `latest.label` on all 48: clean / genuine weather / hardware (`PHYSICAL_FAULT` + `HARDWARE_ANOMALY`) / unconfirmed / warming up (`warming_up`) / feed gap (`latest.feed_gap` non-empty) / waiting (`latest` null). Seven equal KPI tiles. When `/healthz.imd.feed_gap` is non-empty an indigo banner under the KPIs says which channel IMD did not send and on how many stations, and that those hours are unscored and not charged to the sensors.
 - Dispatch is a full-width board above the map. **Needs a technician** is `status` `DEGRADED` / `CRITICAL` (7-day health; weather already excluded). **Watch this hour** is `latest.label` hardware while `status` is still `HEALTHY`. Warming up, waiting, weather, and unconfirmed stay off the list. One `GET /alerts?limit=` attaches the newest hardware reason, shown as one plain line (`Missing packet · temperature`, not `COMMUNICATION:temp`). Open focuses Station and pins that `alert_id` when present. The map sits left; the rail is the station list only.
-- India map of `GET /stations` (no `ids`) on a light Carto basemap. Camera fits Mumbai plus Safdarjung. Marker color from `latest.label` (fallback `pipeline_status`). Warming up is its own slate, not “waiting”. Hover shows the label, the latest raw T / P / H from `latest.observed` with its hour, and 7-day health. Safdarjung’s hover says weather versus hardware cannot be called there. Click marker or roster row sets `station_id` and switches to Station. Only the selected marker is labeled on the map.
+- India map of `GET /stations` (no `ids`) on a light Carto basemap. Camera fits Mumbai plus Safdarjung. Marker color from `latest.label` (fallback `pipeline_status`). Warming up is its own slate, not “waiting”. A feed-gap hour is indigo (`Feed gap · humidity`), never rose. Hover shows the label, the latest raw T / P / H from `latest.observed` with its hour, and 7-day health. Safdarjung’s hover says weather versus hardware cannot be called there. Click marker or roster row sets `station_id` and switches to Station. Only the selected marker is labeled on the map.
 - Buddy edges only among the five-station camera set (`GET /buddy-map` subset). Do not draw the full graph.
 - Roster on the rail: Mumbai + Safdarjung first, then the rest by name. Selected row uses the teal inset, not a full-width primary button.
 
@@ -107,6 +107,7 @@ Below the diagram, two charts read `v2-deliverable/v2/artifacts`: the 2023 recon
 | Hardware | `#E11D48` |
 | Unconfirmed / waiting | `#64748B` |
 | Warming up | `#94A3B8` |
+| Feed gap | `#6366F1` |
 | Font | IBM Plex Sans / IBM Plex Mono |
 | Plotly | white paper, light grid, observed solid, predicted dashed |
 
@@ -123,6 +124,7 @@ Prefer five-way `label`. Fall back to `pipeline_status` (D18) if `label` is miss
 | `PHYSICAL_FAULT` / `HARDWARE_ANOMALY` | `HARDWARE` | rose | Sensor / comms / physical fault |
 | `UNCONFIRMED_ANOMALY` | `UNKNOWN` | slate | Unconfirmed (D11) |
 | `warming_up` | — | `#94A3B8` | Fewer than 24 hours. Not a verdict. |
+| `feed_gap` non-empty | — | `#6366F1` | IMD did not send that channel network-wide. Not a verdict, not a fault. |
 | (no `latest`) | — | slate | Waiting for a live hour or a replay |
 
 ## How we poll
@@ -137,7 +139,7 @@ Never N+1 the catalog. Map and KPIs use list `latest` only. Do not call port 800
 6. Control: `GET /healthz` for the poll line, `POST /demo/replay`, `POST /demo/reset`
 7. `GET /buddy-map` only to draw edges among the camera set
 
-If `latest` is null, the station is waiting. If `warming_up` is true, it is warming up.
+If `latest` is null, the station is waiting. If `warming_up` is true, it is warming up. If `feed_gap` is non-empty, the hour is a feed gap: the verdict card, the missing reading tile and the ribbon cell say so, "Why this hour" explains it instead of the decision trace, and Control's poll strip shows the same count from `/healthz.imd.feed_gap`.
 
 ## Out of scope
 

@@ -50,7 +50,7 @@ def test_kpi_counts_split_weather_and_idle() -> None:
             {"latest": None},
         ]
     )
-    assert counts == {"clean": 1, "weather": 1, "hardware": 1, "unconfirmed": 1, "warming": 0, "idle": 1}
+    assert counts == {"clean": 1, "weather": 1, "hardware": 1, "unconfirmed": 1, "warming": 0, "feedgap": 0, "idle": 1}
 
 
 def test_pick_alert_and_hour_match() -> None:

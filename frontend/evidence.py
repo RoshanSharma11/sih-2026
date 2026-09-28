@@ -16,7 +16,7 @@ from typing import Any
 from chrome import fmt_value
 from panels import CHANNELS, channel_values, fmt_stamp, hour_caption, hour_kind, interval_pair
 from status import short_name, stamp_key
-from theme import CLEAN, HARDWARE, LINE, SLATE, WARMING, WEATHER
+from theme import CLEAN, FEEDGAP, HARDWARE, LINE, SLATE, WARMING, WEATHER
 
 # v2 Tier 3 agreement bands (|observed − neighbor blend|). Display context, not an API field.
 AGREE_BAND = {"temp_c": 3.0, "rhum_pct": 8.0, "pres_hpa": 2.0}
@@ -29,6 +29,7 @@ KIND_COLOR = {
     "hardware": HARDWARE,
     "unknown": SLATE,
     "warming": WARMING,
+    "feedgap": FEEDGAP,
     "idle": LINE,
 }
 
@@ -297,7 +298,7 @@ def verdict_ribbon_html(
         return ""
     key = stamp_key(focus_ts)
     cells: list[str] = []
-    counts = {"clean": 0, "weather": 0, "hardware": 0, "unknown": 0, "warming": 0}
+    counts = {"clean": 0, "weather": 0, "hardware": 0, "unknown": 0, "warming": 0, "feedgap": 0}
     for row in rows:
         kind = hour_kind(row)
         counts[kind] = counts.get(kind, 0) + 1
@@ -315,6 +316,8 @@ def verdict_ribbon_html(
         bits.append(f"{counts['unknown']} unconfirmed")
     if counts["warming"]:
         bits.append(f"{counts['warming']} warming")
+    if counts["feedgap"]:
+        bits.append(f"{counts['feedgap']} feed gap")
     return (
         '<div class="sg-ribbon">'
         '<div class="sg-meter-head"><span>Last 24 verdicts</span>'
