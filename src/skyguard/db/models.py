@@ -25,6 +25,8 @@ class Station(Base):
     aws_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     aws_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     aws_distance_km: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # IMD `sid` this station's aws_id was last seen under; lets the poller skip empty states.
+    aws_state_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     health_score: Mapped[float] = mapped_column(Float, default=100.0)
     status: Mapped[str] = mapped_column(String(20), default="HEALTHY")
 

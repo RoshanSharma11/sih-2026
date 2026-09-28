@@ -258,3 +258,80 @@ def test_feed_gap_hour_is_stored_raw_and_never_charged_to_the_sensor(tmp_path) -
 
         # the station that did report humidity is not marked as a gap
         assert client.get("/stations/43371").json()["latest"]["feed_gap"] == []
+
+
+def test_hourly_polls_align_to_the_poll_minute_and_back_off_doubles() -> None:
+    from skyguard.imd.poller import backoff_seconds, next_aligned
+
+    now = datetime(2026, 9, 28, 12, 5, tzinfo=timezone.utc)
+    assert next_aligned(now, 3600.0, minute=20) == datetime(2026, 9, 28, 12, 20, tzinfo=timezone.utc)
+    late = datetime(2026, 9, 28, 12, 25, tzinfo=timezone.utc)
+    assert next_aligned(late, 3600.0, minute=20) == datetime(2026, 9, 28, 13, 20, tzinfo=timezone.utc)
+    # sub-hourly (tests / demos) is plain interval
+    assert next_aligned(now, 300.0) == now + timedelta(seconds=300)
+    assert [backoff_seconds(n) for n in range(0, 5)] == [0.0, 3600.0, 7200.0, 14400.0, 14400.0]
+
+
+def test_poller_learns_matched_states_and_stops_the_cycle_on_429(tmp_path) -> None:
+    from skyguard.imd.poller import LIVE_STATE_IDS, ImdPoller, states_for_poll
+
+    stations = tmp_path / "stations.json"
+    _catalog(stations)
+    app = create_app(db_path=tmp_path / "test.db", stations_path=stations, buddy_edges_path=tmp_path / "none.json")
+    calls: list[int] = []
+
+    def fetch(state_id: int):
+        calls.append(state_id)
+        if state_id == 21:
+            return _rows(["B489804E"], "70")
+        if state_id == 7:
+            return _rows(["55FDD400"], "70")
+        return []
+
+    clock = {"now": datetime(2026, 9, 28, 12, 5, tzinfo=timezone.utc)}
+    poller = ImdPoller(app, interval_seconds=3600.0, poll_minute=20, clock=lambda: clock["now"])
+    with TestClient(app) as client:
+        # first cycle scans every state and remembers where the 48 live
+        next_at = poller.run_cycle(fetch)
+        assert len(calls) == len(LIVE_STATE_IDS)
+        assert next_at == datetime(2026, 9, 28, 12, 20, tzinfo=timezone.utc)
+        session = app.state.session_factory()
+        try:
+            assert states_for_poll(session) == (7, 21)
+        finally:
+            session.close()
+        body = client.get("/healthz").json()["imd"]
+        assert body["states_polled"] == len(LIVE_STATE_IDS)
+        assert body["next_poll"].startswith("2026-09-28T12:20:00")
+        assert body["rate_limited_until"] is None
+
+        # second cycle touches only those two states
+        calls.clear()
+        clock["now"] = datetime(2026, 9, 28, 12, 20, tzinfo=timezone.utc)
+        poller.run_cycle(fetch)
+        assert sorted(calls) == [7, 21]
+
+        # a 429 ends the cycle after one call and pushes the next poll out an hour
+        calls.clear()
+
+        def limited(state_id: int):
+            calls.append(state_id)
+            raise RuntimeError(f"IMD aws_data sid={state_id} HTTP 429: Hourly API limit exceeded")
+
+        clock["now"] = datetime(2026, 9, 28, 13, 20, tzinfo=timezone.utc)
+        next_at = poller.run_cycle(limited)
+        assert calls == [7]
+        assert next_at == datetime(2026, 9, 28, 14, 20, tzinfo=timezone.utc)
+        body = client.get("/healthz").json()["imd"]
+        assert body["rate_limited_until"].startswith("2026-09-28T14:20:00")
+        assert "HTTP 429" in body["last_error"]
+
+        # a second strike doubles the wait
+        clock["now"] = datetime(2026, 9, 28, 14, 20, tzinfo=timezone.utc)
+        next_at = poller.run_cycle(limited)
+        assert next_at == datetime(2026, 9, 28, 16, 20, tzinfo=timezone.utc)
+
+        # a clean cycle clears the backoff
+        clock["now"] = datetime(2026, 9, 28, 16, 20, tzinfo=timezone.utc)
+        poller.run_cycle(fetch)
+        assert client.get("/healthz").json()["imd"]["rate_limited_until"] is None

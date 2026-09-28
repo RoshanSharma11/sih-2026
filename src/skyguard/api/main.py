@@ -17,7 +17,7 @@ from skyguard.db.session import create_tables, make_engine, make_session_factory
 from skyguard.engine.adapter import load_qc_engine
 from skyguard.engine.demo import DemoController, StreamFilterController
 from skyguard.engine.windows import WindowStore
-from skyguard.imd.poller import ImdPoller, ImdStatus, poll_enabled, poll_interval_seconds
+from skyguard.imd.poller import ImdPoller, ImdStatus, poll_enabled, poll_interval_seconds, poll_minute
 
 
 def create_app(
@@ -64,7 +64,7 @@ def create_app(
         finally:
             session.close()
         if poll_enabled(db_path is not None):
-            poller = ImdPoller(app, interval_seconds=poll_interval_seconds())
+            poller = ImdPoller(app, interval_seconds=poll_interval_seconds(), poll_minute=poll_minute())
             app.state.imd_poller = poller
             poller.start()
         yield

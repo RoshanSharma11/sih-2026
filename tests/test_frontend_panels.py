@@ -434,3 +434,21 @@ def test_feed_gap_state_is_its_own_kind_not_a_fault() -> None:
     assert feed_gap_sentence(imd) == "Feed gap · humidity missing on 40 of 46 stations"
     assert "not the sensors" in feed_gap_banner_html(imd)
     assert feed_gap_banner_html({"matched": 46, "feed_gap": {}}) == ""
+
+
+def test_poll_strip_shows_budget_and_rate_limit() -> None:
+    from panels import poll_budget_line, poll_html
+
+    imd = {
+        "matched": 46,
+        "last_success": "2026-09-28T12:20:00Z",
+        "next_poll": "2026-09-28T13:20:00Z",
+        "states_polled": 12,
+        "rate_limited_until": None,
+    }
+    line = poll_budget_line(imd)
+    assert "next poll" in line and "12 states called" in line
+    html = poll_html(imd)
+    assert "Poll ok" in html and "12 states called" in html
+    limited = poll_html({**imd, "rate_limited_until": "2026-09-28T14:20:00Z", "last_error": "HTTP 429"})
+    assert "paused until" in limited and "sg-poll-bad" in limited

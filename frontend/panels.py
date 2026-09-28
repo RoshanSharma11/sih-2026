@@ -534,7 +534,11 @@ def poll_html(imd: dict[str, Any], n_stations: int = 48) -> str:
     matched = imd.get("matched")
     last_success = fmt_stamp(imd.get("last_success"))
     last_error = imd.get("last_error")
-    if last_error:
+    limited_until = imd.get("rate_limited_until")
+    if limited_until:
+        kind = "bad"
+        state = f"IMD rate limit · paused until {fmt_stamp(limited_until)}"
+    elif last_error:
         kind = "bad"
         state = "Poll failed"
     elif imd.get("last_success"):
@@ -551,8 +555,19 @@ def poll_html(imd: dict[str, Any], n_stations: int = 48) -> str:
         f'<div class="sg-poll sg-poll-{kind}">'
         f'<div class="sg-poll-state">{escape(state)}</div>'
         f'<div class="sg-poll-meta">{escape(str(count))} of {n_stations} matched'
-        f" · last success {escape(last_success)}</div>{gap_line}{error}</div>"
+        f" · last success {escape(last_success)}{escape(poll_budget_line(imd))}</div>{gap_line}{error}</div>"
     )
+
+
+def poll_budget_line(imd: dict[str, Any]) -> str:
+    """` · next poll 13:20 UTC · 12 states` from /healthz.imd. Empty before the first cycle."""
+    bits = []
+    if imd.get("next_poll"):
+        bits.append(f"next poll {fmt_stamp(imd['next_poll'])}")
+    states = imd.get("states_polled")
+    if isinstance(states, int) and states:
+        bits.append(f"{states} state{'s' if states != 1 else ''} called")
+    return "".join(f" · {bit}" for bit in bits)
 
 
 def feed_gap_sentence(imd: dict[str, Any]) -> str:

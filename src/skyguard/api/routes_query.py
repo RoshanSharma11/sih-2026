@@ -155,6 +155,9 @@ def healthz(request: Request, session: Session = Depends(get_db)) -> Healthz:
             last_error=getattr(imd, "last_error", None),
             matched=int(getattr(imd, "matched", 0) or 0),
             feed_gap=dict(getattr(imd, "feed_gap", None) or {}),
+            next_poll=getattr(imd, "next_poll", None),
+            states_polled=int(getattr(imd, "states_polled", 0) or 0),
+            rate_limited_until=getattr(imd, "rate_limited_until", None),
         ),
     )
 

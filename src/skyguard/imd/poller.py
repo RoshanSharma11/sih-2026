@@ -5,10 +5,10 @@ from __future__ import annotations
 import os
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from skyguard.db.models import Station
@@ -43,6 +43,15 @@ LIVE_STATE_IDS = (
 
 FetchState = Callable[[int], list[dict[str, Any]]]
 
+# IMD rows carry TIME hh:15 in practice; hh:20 catches the fresh hour once.
+DEFAULT_POLL_SECONDS = 3600.0
+DEFAULT_POLL_MINUTE = 20
+# Re-scan every state this often so a station that moves to a new `sid` is found again.
+FULL_SCAN_EVERY = 24
+RATE_LIMIT_MARK = "HTTP 429"
+BACKOFF_BASE_SECONDS = 3600.0
+BACKOFF_MAX_SECONDS = 4 * 3600.0
+
 
 @dataclass
 class ImdStatus:
@@ -52,6 +61,9 @@ class ImdStatus:
     stored: int = 0
     duplicates: int = 0
     feed_gap: dict[str, int] = field(default_factory=dict)
+    next_poll: datetime | None = None
+    states_polled: int = 0
+    rate_limited_until: datetime | None = None
 
 
 @dataclass
@@ -61,6 +73,8 @@ class PollOutcome:
     duplicates: int = 0
     errors: list[str] = field(default_factory=list)
     feed_gap: dict[str, int] = field(default_factory=dict)
+    states_polled: int = 0
+    rate_limited: bool = False
 
 
 FEED_GAP_MIN_SHARE = 0.5
@@ -164,28 +178,89 @@ def aws_index(session: Session) -> dict[str, list[str]]:
     return index
 
 
+def states_for_poll(session: Session) -> tuple[int, ...]:
+    """States that held a matched station last time. Every state until we have learned any."""
+    rows = session.scalars(
+        select(Station.aws_state_id).where(Station.aws_state_id.is_not(None)).distinct()
+    ).all()
+    learned = tuple(sorted({int(value) for value in rows}))
+    return learned or LIVE_STATE_IDS
+
+
+def remember_states(session: Session, station_states: dict[str, int]) -> None:
+    for station_id, state_id in station_states.items():
+        session.execute(
+            update(Station).where(Station.station_id == station_id).values(aws_state_id=state_id)
+        )
+
+
+def is_rate_limited(message: str) -> bool:
+    return RATE_LIMIT_MARK in message
+
+
+def backoff_seconds(strikes: int) -> float:
+    """1 h after the first 429, doubling to a 4 h cap. One 429 ends the whole cycle."""
+    if strikes <= 0:
+        return 0.0
+    return min(BACKOFF_BASE_SECONDS * (2 ** (strikes - 1)), BACKOFF_MAX_SECONDS)
+
+
+def next_aligned(now: datetime, interval_seconds: float, minute: int = DEFAULT_POLL_MINUTE) -> datetime:
+    """Next poll time. Hourly polls land on hh:MM so one call per hour sees the new IMD hour."""
+    if interval_seconds >= 3600.0:
+        step_hours = max(1, int(interval_seconds // 3600))
+        slot = now.replace(minute=minute, second=0, microsecond=0)
+        while slot <= now:
+            slot += timedelta(hours=step_hours)
+        return slot
+    return now + timedelta(seconds=interval_seconds)
+
+
 def poll_once(
     app,
     fetch_state: FetchState,
-    state_ids: tuple[int, ...] = LIVE_STATE_IDS,
+    state_ids: tuple[int, ...] | None = None,
 ) -> PollOutcome:
-    """Ingest one snapshot. A duplicate hour is skipped; it does not stop the loop."""
+    """Ingest one snapshot. A duplicate hour is skipped; it does not stop the loop.
+
+    `state_ids=None` polls only the states that matched a catalog station before
+    (`states_for_poll`). A 429 ends the cycle at once so the hourly budget is not spent
+    on calls that will also fail.
+    """
     session = app.state.session_factory()
     try:
         index = aws_index(session)
+        if state_ids is None:
+            state_ids = states_for_poll(session)
     finally:
         session.close()
 
     outcome = PollOutcome()
     payloads: list[IngestPayload] = []
+    station_states: dict[str, int] = {}
     for state_id in state_ids:
+        outcome.states_polled += 1
         try:
             rows = fetch_state(state_id)
         except Exception as exc:
-            outcome.errors.append(str(exc).replace("\n", " ")[:240])
+            message = str(exc).replace("\n", " ")[:240]
+            outcome.errors.append(message)
+            if is_rate_limited(message):
+                outcome.rate_limited = True
+                break
             continue
-        payloads.extend(rows_to_payloads(rows, index))
+        matched_here = rows_to_payloads(rows, index)
+        for payload in matched_here:
+            station_states[payload.station_id] = state_id
+        payloads.extend(matched_here)
     outcome.matched = len({payload.station_id for payload in payloads})
+    if station_states:
+        session = app.state.session_factory()
+        try:
+            remember_states(session, station_states)
+            session.commit()
+        finally:
+            session.close()
 
     gaps = detect_feed_gap(payloads)
     for payload in payloads:
@@ -195,6 +270,7 @@ def poll_once(
         _ingest_payload(app, payload, outcome, feed_gap=gap)
 
     status: ImdStatus = app.state.imd_status
+    status.states_polled = outcome.states_polled
     if outcome.errors and outcome.matched == 0 and not outcome.stored and not outcome.duplicates:
         status.last_error = outcome.errors[-1]
     else:
@@ -234,12 +310,56 @@ def _ingest_payload(
 
 
 class ImdPoller:
-    def __init__(self, app, interval_seconds: float = 900.0) -> None:
+    """Hourly, aligned, budget-aware loop.
+
+    First poll runs at start-up and scans every state; later polls scan only the states
+    that matched, and every `FULL_SCAN_EVERY` polls do a full scan again. A 429 ends the
+    cycle and pushes the next poll out by `backoff_seconds` (1 h, 2 h, 4 h cap).
+    """
+
+    def __init__(
+        self,
+        app,
+        interval_seconds: float = DEFAULT_POLL_SECONDS,
+        poll_minute: int = DEFAULT_POLL_MINUTE,
+        clock: Callable[[], datetime] | None = None,
+    ) -> None:
         self.app = app
         self.interval_seconds = interval_seconds
+        self.poll_minute = poll_minute
+        self.clock = clock or (lambda: datetime.now(timezone.utc))
+        self.polls = 0
+        self.strikes = 0
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._client: ImdClient | None = None
+
+    def state_ids_for_cycle(self) -> tuple[int, ...] | None:
+        if self.polls % FULL_SCAN_EVERY == 0:
+            return LIVE_STATE_IDS
+        return None
+
+    def run_cycle(self, fetch_state: FetchState) -> datetime:
+        """One poll, then the time of the next one. Pure apart from the poll itself."""
+        status: ImdStatus = self.app.state.imd_status
+        try:
+            outcome = poll_once(self.app, fetch_state, state_ids=self.state_ids_for_cycle())
+        except Exception as exc:
+            status.last_error = str(exc).replace("\n", " ")[:240]
+            outcome = PollOutcome(errors=[status.last_error])
+        self.polls += 1
+        now = self.clock()
+        if outcome.rate_limited:
+            self.strikes += 1
+            wait = backoff_seconds(self.strikes)
+            next_at = max(now + timedelta(seconds=wait), next_aligned(now, self.interval_seconds, self.poll_minute))
+            status.rate_limited_until = next_at
+        else:
+            self.strikes = 0
+            status.rate_limited_until = None
+            next_at = next_aligned(now, self.interval_seconds, self.poll_minute)
+        status.next_poll = next_at
+        return next_at
 
     def start(self) -> None:
         credentials = load_credentials()
@@ -261,11 +381,9 @@ class ImdPoller:
     def _loop(self) -> None:
         assert self._client is not None
         while not self._stop.is_set():
-            try:
-                poll_once(self.app, self._client.fetch_state)
-            except Exception as exc:
-                self.app.state.imd_status.last_error = str(exc).replace("\n", " ")[:240]
-            if self._stop.wait(self.interval_seconds):
+            next_at = self.run_cycle(self._client.fetch_state)
+            wait = max(1.0, (next_at - self.clock()).total_seconds())
+            if self._stop.wait(wait):
                 break
 
 
@@ -277,8 +395,16 @@ def poll_enabled(db_path_overridden: bool) -> bool:
 
 
 def poll_interval_seconds() -> float:
-    raw = os.environ.get("SKYGUARD_IMD_POLL_SECONDS", "900").strip()
+    raw = os.environ.get("SKYGUARD_IMD_POLL_SECONDS", str(int(DEFAULT_POLL_SECONDS))).strip()
     try:
         return max(30.0, float(raw))
     except ValueError:
-        return 900.0
+        return DEFAULT_POLL_SECONDS
+
+
+def poll_minute() -> int:
+    raw = os.environ.get("SKYGUARD_IMD_POLL_MINUTE", str(DEFAULT_POLL_MINUTE)).strip()
+    try:
+        return min(59, max(0, int(raw)))
+    except ValueError:
+        return DEFAULT_POLL_MINUTE

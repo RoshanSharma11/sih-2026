@@ -306,10 +306,14 @@ Station summary (list **includes** `latest` so the live map does not N+1):
 `/healthz` `imd` is the live poll:
 
 ```json
-{"last_success": "2026-09-27T17:20:00Z", "last_error": null, "matched": 42, "feed_gap": {"rhum_pct": 38}}
+{
+  "last_success": "2026-09-27T17:20:00Z", "last_error": null, "matched": 42,
+  "feed_gap": {"rhum_pct": 38},
+  "next_poll": "2026-09-27T18:20:00Z", "states_polled": 12, "rate_limited_until": null
+}
 ```
 
-`matched` is how many of the 48 catalog stations had an IMD `ID` in the last poll. Stations that share an `aws_id` all receive that hour. `last_success` is when that poll finished. `last_error` is the latest state or token failure, or null when the last poll was clean. A duplicate hour is not an error. `feed_gap` maps a public channel name to the number of matched stations whose hour was stored as a feed gap for that channel in the last poll (`{}` when the feed was complete).
+`matched` is how many of the 48 catalog stations had an IMD `ID` in the last poll. Stations that share an `aws_id` all receive that hour. `last_success` is when that poll finished. `last_error` is the latest state or token failure, or null when the last poll was clean. A duplicate hour is not an error. `feed_gap` maps a public channel name to the number of matched stations whose hour was stored as a feed gap for that channel in the last poll (`{}` when the feed was complete). `next_poll` is when the loop will call IMD again (hourly, on `SKYGUARD_IMD_POLL_MINUTE`, default :20). `states_polled` is how many `sid` calls the last cycle made: every state on the first cycle and every 24th, otherwise only the states that held a matched station (`stations.aws_state_id`). `rate_limited_until` is set when IMD answered HTTP 429; the cycle stopped at that call and the next poll waits 1 h, then 2 h, then 4 h at most, until a clean cycle clears it.
 
 Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, `tier3_corr`, `warming_up`, and `feed_gap` (list of public channel names, `[]` normally). `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label, or null while `warming_up` is true or the hour is a feed gap. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
 
@@ -364,6 +368,7 @@ CREATE TABLE stations (
   aws_id       VARCHAR(32),
   aws_name     VARCHAR(100),
   aws_distance_km REAL,
+  aws_state_id    INTEGER,
   health_score REAL NOT NULL DEFAULT 100.0,
   status       VARCHAR(20) NOT NULL DEFAULT 'HEALTHY'
 );

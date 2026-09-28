@@ -278,6 +278,9 @@ class ImdPoll(BaseModel):
     matched: int = 0
     # Channels the feed left empty on most matched stations in the last poll -> count of stations.
     feed_gap: dict[str, int] = Field(default_factory=dict)
+    next_poll: datetime | None = None
+    states_polled: int = 0
+    rate_limited_until: datetime | None = None
 
 
 class Healthz(BaseModel):
