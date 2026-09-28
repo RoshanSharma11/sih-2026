@@ -30,6 +30,10 @@ Do not start `uvicorn v2.main:app` or `uvicorn ml.main:app` as the product serve
 5. Otherwise the adapter builds the ML payload (window + buddies) and calls `process_aws_data`
 6. Map result (D12 / D18) and persist overlay, alert, and health from stored labels
 
+### Export — `api/routes_export.py`
+
+`GET /export` streams stored hours as CSV with a WMO-style `qc_flag` (0 good, 1 probably good = confirmed weather, 2 suspect = unconfirmed, 3 erroneous = physical/hardware, 9 not checked = warming up / feed gap / no label). It reads `telemetry_logs` only; it never recomputes QC.
+
 ### Adapter — `engine/adapter.py`
 
 | SkyGuard | v2 |

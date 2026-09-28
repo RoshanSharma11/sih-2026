@@ -482,7 +482,14 @@ def _exports(
         ),
         unsafe_allow_html=True,
     )
-    left, right = st.columns(2, gap="medium")
+    left, mid, right = st.columns(3, gap="medium")
+    with mid:
+        st.link_button(
+            "QC'd archive (CSV, 30 days)",
+            get_client().export_url(sid, hours=24 * 30),
+            width="stretch",
+            help="GET /export: every stored hour with a WMO-style qc_flag (0 good · 1 probably good · 2 suspect · 3 erroneous · 9 not checked).",
+        )
     with left:
         st.download_button(
             "Download this run (CSV)",

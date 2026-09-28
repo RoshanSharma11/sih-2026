@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -109,6 +110,17 @@ class SkyGuardClient:
 
     def buddy_map(self) -> dict[str, Any]:
         return self._get_json("/buddy-map")
+
+    def export_url(self, station_id: str | None = None, hours: int | None = None) -> str:
+        """Browser link to GET /export (QC'd CSV with a WMO-style qc_flag). Not polled."""
+        params: list[str] = []
+        if station_id:
+            params.append(f"station_id={station_id}")
+        if hours:
+            start = datetime.now(timezone.utc) - timedelta(hours=hours)
+            params.append("from=" + start.strftime("%Y-%m-%dT%H:%M:%SZ"))
+        query = "&".join(params)
+        return f"{self.base_url}/export" + (f"?{query}" if query else "")
 
     def demo_status(self) -> dict[str, Any]:
         return self._get_json("/demo/status")

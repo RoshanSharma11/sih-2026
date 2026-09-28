@@ -80,6 +80,11 @@ def network_live() -> None:
     map_col, rail_col = st.columns([2.2, 1], gap="large")
     with map_col:
         render_html(map_head_html(len(stations), selected_name))
+        st.link_button(
+            "Download the network's QC'd hours (CSV, 7 days)",
+            client.export_url(hours=24 * 7),
+            help="GET /export: raw T / P / H for every station with a WMO-style qc_flag per hour.",
+        )
         event = st.plotly_chart(
             india_map(
                 stations,

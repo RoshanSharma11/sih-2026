@@ -9,6 +9,7 @@ CONTRACT_PATHS = {
     "/stations/{station_id}/timing": {"get"},
     "/alerts": {"get"},
     "/alerts/{alert_id}/ack": {"post"},
+    "/export": {"get"},
     "/buddy-map": {"get"},
     "/ingest": {"post"},
     "/demo/inject": {"post"},

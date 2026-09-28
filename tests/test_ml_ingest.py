@@ -526,3 +526,42 @@ def test_alert_ack_moves_state_and_filters_without_touching_qc(tmp_path: Path) -
 
         assert client.post("/alerts/999999/ack", json={"state": "resolved"}).status_code == 404
         assert client.post(f"/alerts/{alert_id}/ack", json={"state": "closed"}).status_code == 422
+
+
+def test_export_csv_carries_wmo_style_flags(tmp_path: Path) -> None:
+    import csv
+    import io
+
+    from skyguard.api.routes_export import qc_flag_for
+
+    assert qc_flag_for("CLEAN") == 0
+    assert qc_flag_for("GENUINE_WEATHER_EVENT") == 1
+    assert qc_flag_for("UNCONFIRMED_ANOMALY") == 2
+    assert qc_flag_for("PHYSICAL_FAULT") == 3
+    assert qc_flag_for("HARDWARE_ANOMALY") == 3
+    assert qc_flag_for(None) == 9
+    assert qc_flag_for("CLEAN", warming_up=True) == 9
+    assert qc_flag_for("CLEAN", feed_gap=True) == 9
+
+    with _client(tmp_path) as client:
+        _seed(client, PALAM, vary=True)
+        _ingest(client, PALAM, temp_c=99.0)
+        response = client.get("/export", params={"station_id": PALAM})
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/csv")
+        assert "skyguard_42181_qc.csv" in response.headers["content-disposition"]
+        rows = list(csv.DictReader(io.StringIO(response.text)))
+        n_rows = len(rows)
+        assert n_rows >= 24
+        assert rows[0]["qc_flag"] == "0" and rows[0]["qc_label"] == "CLEAN"
+        last = rows[-1]
+        assert last["temp_c"] == "99.0"  # raw stays raw
+        assert last["qc_flag"] == "3" and last["qc_flag_text"] == "erroneous"
+        assert last["qc_label"] == "PHYSICAL_FAULT"
+        assert last["reason"]
+        # whole-network export and filters
+        everything = client.get("/export").text.splitlines()
+        assert len(everything) == n_rows + 1
+        assert client.get("/export", params={"station_id": "nope"}).status_code == 404
+        window = client.get("/export", params={"station_id": PALAM, "from": rows[-1]["timestamp_utc"]}).text.splitlines()
+        assert len(window) == 2
