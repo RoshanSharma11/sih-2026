@@ -184,6 +184,7 @@ class DetectionEngine:
         }
         predicted = {f: None for f in FEATURES}
         suspicious = False
+        corroborated = False
 
         if window_df is not None and self.lstm.loaded and self.lstm.has_scaler(station_id):
             inf = self.lstm.infer(station_id, window_df)
@@ -247,6 +248,9 @@ class DetectionEngine:
                 "residual": {f: None for f in FEATURES},
                 "corr": {},
                 "neighbors_agree": None,
+                "neighbor_shock": None,
+                "blend_shift": {f: None for f in FEATURES},
+                "blend_baseline_delta": {f: None for f in FEATURES},
                 "usable_count": 0,
                 "reason_skip": skip,
             }
@@ -276,8 +280,15 @@ class DetectionEngine:
             label = "UNCONFIRMED_ANOMALY"
             is_anomaly = True
         elif tier3["neighbors_agree"]:
-            label = "GENUINE_WEATHER_EVENT"
-            is_anomaly = True
+            if tier3.get("neighbor_shock") is False:
+                # Neighbours agree with the reading and did not move themselves: the LSTM
+                # found the pattern unusual, but nothing happened. Corroborated clean hour.
+                label = "CLEAN"
+                is_anomaly = False
+                corroborated = True
+            else:
+                label = "GENUINE_WEATHER_EVENT"
+                is_anomaly = True
         else:
             label = "HARDWARE_ANOMALY"
             is_anomaly = True
@@ -319,6 +330,7 @@ class DetectionEngine:
             tier2=tier2,
             tier3=tier3,
             window_error=window_error,
+            corroborated=corroborated,
         )
         health = self.health.update(station_id, timestamp, label in SENSOR_HEALTH_LABELS)
 
@@ -357,6 +369,9 @@ class DetectionEngine:
                 "residual": tier3.get("residual"),
                 "reason_skip": tier3.get("reason_skip"),
                 "p_agree": tier3.get("p_agree"),
+                "neighbor_shock": tier3.get("neighbor_shock"),
+                "blend_shift": tier3.get("blend_shift"),
+                "blend_baseline_delta": tier3.get("blend_baseline_delta"),
             },
             "climatology": climo,
             "timing": None,

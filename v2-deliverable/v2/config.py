@@ -58,6 +58,16 @@ AGREE_TEMP = 3.0
 AGREE_RHUM = 8.0
 AGREE_PRES = 2.0
 CORR_TAU = 0.35
+# Shared shock: for "genuine weather" the neighbour blend itself must have moved.
+# Either the blend jumped this hour by SHOCK_STEP_FRACTION of the agree band, or it sits
+# SHOCK_BASELINE_FRACTION of the band away from its own 24 h mean. Otherwise an LSTM flag
+# with agreeing, calm neighbours is a clean hour the model simply found unusual.
+# Frozen on 2023 Jul-Sep Mumbai four (seed-42 injector): storm recall flat at 313/324 for
+# every setting tried; clean hours labelled weather fell 1088 -> 533 here. 2024 held-out:
+# 1056 -> 504, storm 306/324 unchanged, hardware recall unchanged.
+SHOCK_STEP_FRACTION = 1.0
+SHOCK_BASELINE_FRACTION = 1.5
+SHOCK_BASELINE_MIN_HOURS = 6
 
 CONFIDENCE_K = 2.0
 DEFAULT_PERCENTILE = "99"

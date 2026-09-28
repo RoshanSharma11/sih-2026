@@ -69,6 +69,16 @@ def _missing_channels(observed: dict[str, Any]) -> list[str]:
     return [names[key] for key in ("temp_c", "pres_hpa", "rhum_pct") if observed.get(key) is None]
 
 
+CORROBORATED_MARK = "Corroborated by neighbors"
+
+
+def is_corroborated_clean(hour: dict[str, Any] | None) -> bool:
+    """A CLEAN hour the LSTM flagged but calm, agreeing neighbours vouched for (v2 shared-shock rule)."""
+    if not hour or hour.get("label") != "CLEAN":
+        return False
+    return CORROBORATED_MARK in str(hour.get("explainability_text") or "")
+
+
 def decision_steps(
     hour: dict[str, Any] | None,
     alert: dict[str, Any] | None,
@@ -109,6 +119,7 @@ def decision_steps(
 
     # Tier 2 — LSTM reconstruction score
     score = hour.get("tier2_score")
+    corroborated = is_corroborated_clean(hour)
     ratio = None
     if isinstance(score, (int, float)) and isinstance(threshold, (int, float)) and threshold > 0:
         ratio = float(score) / float(threshold)
@@ -116,6 +127,10 @@ def decision_steps(
         state = "not_run"
         head = "No reconstruction score stored"
         detail = "The window was not scored, or this hour predates the v2 path."
+    elif label == "CLEAN" and corroborated:
+        state = "flagged"
+        head = f"Score {float(score):.4f} is over the threshold"
+        detail = "Unusual for this station’s own climate, but see the buddy check below."
     elif label == "CLEAN":
         state = "passed"
         head = f"Score {float(score):.4f} is under the frozen 2023 threshold"
@@ -152,6 +167,12 @@ def decision_steps(
     elif label == "PHYSICAL_FAULT":
         state, head = "skipped", "Not needed after a hard rule"
         detail = "A frozen or missing channel is hardware without a neighbor vote."
+    elif label == "CLEAN" and corroborated:
+        state, head = "agree", f"{n_used or 'Two or more'} neighbors agree and stayed calm{method_bit}"
+        detail = (
+            "The blend sits with this reading and did not move itself (no shared shock). "
+            "The LSTM found the pattern unusual; nothing happened. Corroborated clean, no alert."
+        )
     elif label == "CLEAN":
         state, head = "not_run", "Not required on a clean hour"
         detail = "Neighbors are only asked when the LSTM is suspicious."

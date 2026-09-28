@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
@@ -16,6 +16,9 @@ from .config import (
     FEATURES,
     IDW_POWER,
     MIN_USABLE_BUDDIES,
+    SHOCK_BASELINE_FRACTION,
+    SHOCK_BASELINE_MIN_HOURS,
+    SHOCK_STEP_FRACTION,
     WINDOW_HOURS,
 )
 from .lstm_inference import _to_naive
@@ -75,6 +78,76 @@ def _corr(a: np.ndarray | None, b: np.ndarray | None) -> float:
     return max(-1.0, min(1.0, c))
 
 
+AGREE_BANDS = {"temp": AGREE_TEMP, "rhum": AGREE_RHUM, "pres": AGREE_PRES}
+
+
+def _feature_mean(window: list, end: datetime, feature: str, hours: int = WINDOW_HOURS) -> float | None:
+    """Mean of a buddy's last `hours` values strictly before `end`. None under SHOCK_BASELINE_MIN_HOURS."""
+    target = _to_naive(end)
+    vals = []
+    for raw in window or []:
+        row = raw.model_dump() if hasattr(raw, "model_dump") else dict(raw)
+        ts = _to_naive(row["timestamp"])
+        if ts >= target or (target - ts).total_seconds() > hours * 3600.0:
+            continue
+        v = row.get(feature)
+        if v is None or (isinstance(v, float) and pd.isna(v)):
+            continue
+        vals.append(float(v))
+    if len(vals) < SHOCK_BASELINE_MIN_HOURS:
+        return None
+    return float(np.mean(vals))
+
+
+def shared_shock(
+    timestamp: datetime,
+    usable: list[dict],
+    buddies: list[dict],
+    wsum: float,
+    check_feats: list[str],
+) -> dict:
+    """Did the neighbour blend itself move on the checked channels?
+
+    Returns `blend_shift` (blend now − blend one hour ago), `blend_baseline_delta`
+    (blend now − mean of the buddies' previous 24 h) and `neighbor_shock`: True when
+    either exceeds its fraction of the agree band on any checked channel, False when
+    both are available and calm, None when the buddies' history cannot say.
+    """
+    by_id = {str(b.get("station_id", "")): b.get("window") or [] for b in buddies or []}
+    shift: dict[str, float | None] = {}
+    baseline: dict[str, float | None] = {}
+    verdicts: list[bool] = []
+    for feat in FEATURES:
+        prev_parts = []
+        base_parts = []
+        for u in usable:
+            window = by_id.get(u["station_id"], [])
+            prev = _value_at(window, timestamp - timedelta(hours=1), feat, tolerance_hours=0.5)
+            base = _feature_mean(window, timestamp, feat)
+            prev_parts.append(None if prev is None else prev * u["w"])
+            base_parts.append(None if base is None else base * u["w"])
+        now = sum(u[feat] * u["w"] for u in usable) / wsum
+        shift[feat] = None if any(p is None for p in prev_parts) or wsum <= 0 else float(now - sum(prev_parts) / wsum)
+        baseline[feat] = None if any(b is None for b in base_parts) or wsum <= 0 else float(now - sum(base_parts) / wsum)
+        if feat not in check_feats:
+            continue
+        band = AGREE_BANDS[feat]
+        step_hit = shift[feat] is not None and abs(shift[feat]) >= SHOCK_STEP_FRACTION * band
+        base_hit = baseline[feat] is not None and abs(baseline[feat]) >= SHOCK_BASELINE_FRACTION * band
+        if step_hit or base_hit:
+            verdicts.append(True)
+        elif shift[feat] is not None or baseline[feat] is not None:
+            verdicts.append(False)
+    shock: bool | None
+    if any(verdicts):
+        shock = True
+    elif verdicts:
+        shock = False
+    else:
+        shock = None
+    return {"neighbor_shock": shock, "blend_shift": shift, "blend_baseline_delta": baseline}
+
+
 def evaluate_tier3(
     timestamp: datetime,
     observed: dict,
@@ -92,6 +165,9 @@ def evaluate_tier3(
         "residual": {f: None for f in FEATURES},
         "corr": {},
         "neighbors_agree": None,
+        "neighbor_shock": None,
+        "blend_shift": {f: None for f in FEATURES},
+        "blend_baseline_delta": {f: None for f in FEATURES},
         "usable_count": 0,
         "reason_skip": None,
     }
@@ -135,7 +211,7 @@ def evaluate_tier3(
     residual = {}
     check_feats = affected if affected else list(FEATURES)
     agree = True
-    bands = {"temp": AGREE_TEMP, "rhum": AGREE_RHUM, "pres": AGREE_PRES}
+    bands = AGREE_BANDS
     for feat in FEATURES:
         est = sum(u[feat] * u["w"] for u in usable) / wsum if wsum > 0 else None
         mix[feat] = None if est is None else float(est)
@@ -149,6 +225,11 @@ def evaluate_tier3(
         if feat in check_feats and abs(residual[feat]) >= bands[feat]:
             agree = False
 
+    shock = shared_shock(timestamp, usable, buddies or [], wsum, check_feats) if wsum > 0 else {
+        "neighbor_shock": None,
+        "blend_shift": {f: None for f in FEATURES},
+        "blend_baseline_delta": {f: None for f in FEATURES},
+    }
     return {
         "performed": True,
         "method": "cw_idw",
@@ -160,6 +241,7 @@ def evaluate_tier3(
         "neighbors_agree": agree,
         "usable_count": len(usable),
         "reason_skip": None,
+        **shock,
     }
 
 

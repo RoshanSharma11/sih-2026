@@ -183,6 +183,7 @@ CONTRACT_PROPERTIES = {
         "buddy_ids",
         "usable_count",
         "neighbors_agree",
+        "neighbor_shock",
         "reason_skip",
         "mix",
         "corr",

@@ -50,7 +50,8 @@ Next: nothing on the v2 live plan. Steps 1–8 are done.
 | L3 | `bfde9d9` | Alert acknowledge: `ack_state` / `ack_note` / `ack_by` / `ack_at` on `anomaly_alerts`, `POST /alerts/{id}/ack`, `GET /alerts?state=`; Alerts inbox defaults to Open with Acknowledge / Resolve / Reopen; Dispatch can acknowledge |
 | L4 | `900ee86` | `GET /export` CSV with WMO-style `qc_flag`; link buttons on Station (30 d) and Network (7 d) |
 | L5 | `9209bb4` | Webhook pager: `SKYGUARD_WEBHOOK_URL` gets `station_status_changed` (DEGRADED / CRITICAL / recovery) and `alert_opened` (HIGH hardware) off the ingest thread; `/healthz.webhook`; Control strip |
-| L6 | (this change) | `GET /reliability` and a Reliability page: completeness, outcome counts, flag rate, isolates, feed-gap hours per station |
+| L6 | `4f300b6` | `GET /reliability` and a Reliability page: completeness, outcome counts, flag rate, isolates, feed-gap hours per station |
+| L7 | (this change) | v2 shared-shock rule (no retrain): an LSTM flag with agreeing but calm neighbours is `CLEAN` (corroborated), not weather. `tier3.neighbor_shock` / `blend_shift` / `blend_baseline_delta`; fractions 1.0 / 1.5 frozen on 2023 Jul–Sep Mumbai four (clean→weather 1088 → 533, storm 313/324 flat, hardware recall unchanged); 2024 held-out 1056 → 504, storm 306/324 flat. Station decision trace reads the “Corroborated by neighbors” reason |
 
 ## What works today (post-I6)
 

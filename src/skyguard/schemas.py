@@ -108,6 +108,7 @@ class Tier3View(BaseModel):
     buddy_ids: list[str] = Field(default_factory=list)
     usable_count: int = 0
     neighbors_agree: bool | None = None
+    neighbor_shock: bool | None = None
     reason_skip: str | None = None
     mix: ChannelValues | None = None
     corr: dict[str, float] = Field(default_factory=dict)

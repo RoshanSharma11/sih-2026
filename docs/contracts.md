@@ -128,12 +128,15 @@ Response:
     "buddy_ids": ["42181"],
     "usable_count": 2,
     "neighbors_agree": false,
+    "neighbor_shock": false,
     "reason_skip": null,
     "mix": {"temp_c": 28.1, "pres_hpa": 1008.0, "rhum_pct": 76.0},
     "corr": {"42181": 0.42}
   }
 }
 ```
+
+`tier3.neighbor_shock` is the v2 shared-shock verdict: did the neighbour blend itself move this hour or sit far from its own 24 h mean (`true`), stay calm (`false`), or is the buddies' history too short to say (`null`)? An LSTM flag with agreeing, calm neighbours (`neighbors_agree=true`, `neighbor_shock=false`) is labelled `CLEAN`, not `GENUINE_WEATHER_EVENT`; the reason sentence says "Corroborated by neighbors". See `v2-deliverable/docs/CONTRACT.md` §Labels.
 
 `demo_injected` is `null` or a `FaultType` / `GENUINE_WEATHER` the DemoController applied. It is never shown as ground truth to judges unless we are on an eval page.
 

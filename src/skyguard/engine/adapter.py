@@ -328,6 +328,7 @@ def _tier3(raw: dict[str, Any]) -> Tier3View:
         buddy_ids=[str(item) for item in raw.get("buddy_ids") or []],
         usable_count=int(raw.get("usable_count") or 0),
         neighbors_agree=raw.get("neighbors_agree"),
+        neighbor_shock=raw.get("neighbor_shock"),
         reason_skip=raw.get("reason_skip"),
         mix=_mix(raw.get("mix")),
         corr=_corr(raw.get("corr")),

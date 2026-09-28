@@ -310,3 +310,27 @@ def test_map_hover_shows_latest_reading_when_present() -> None:
     assert "2024-12-31 23:00 UTC" in hovers[0]
     assert "T " not in hovers[1]
     assert "7-day health 100" in hovers[1]
+
+
+def test_corroborated_clean_hour_shows_flagged_lstm_and_calm_agreeing_neighbors() -> None:
+    from evidence import decision_steps, is_corroborated_clean
+
+    hour = {
+        "timestamp": "2026-09-28T09:00:00Z",
+        "label": "CLEAN",
+        "tier2_score": 0.0121,
+        "tier3_method": "cw_idw",
+        "tier3_corr": {"43057": 0.8, "43002": 0.7},
+        "explainability_text": (
+            "temp observed 30.40, neighbor mix 30.20 (n=2). LSTM score above threshold, but neighbors agree "
+            "and did not move themselves (no shared shock). Corroborated by neighbors; treated as clean."
+        ),
+    }
+    assert is_corroborated_clean(hour)
+    steps = decision_steps(hour, None, THRESHOLD)
+    assert steps[1]["state"] == "flagged"
+    assert steps[2]["state"] == "agree"
+    assert "stayed calm" in steps[2]["head"]
+    plain = {**hour, "explainability_text": "Last-hour-weighted reconstruction within the frozen 2023 threshold.", "tier2_score": 0.002}
+    assert not is_corroborated_clean(plain)
+    assert decision_steps(plain, None, THRESHOLD)[2]["state"] == "not_run"

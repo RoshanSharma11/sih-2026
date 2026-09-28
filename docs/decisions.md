@@ -175,3 +175,7 @@ A station window that already contains an hour after the fixture end is put back
 ## D23 — TIMING is polled, not on the ingest path
 
 **Lock:** `GET /stations/{id}/timing?ts=` reads `v2` `get_timing`. `wait_s` defaults to 0 and is capped at 10. Ingest never calls it. The first ingest JSON has no timing field. `channel_attr` is returned with public names (`temp_c`, `rhum_pct`, `pres_hpa`). `pending` means poll again. `not_requested` means that hour was not queued. `error` hides the sentence.
+
+## D24 — Weather needs a shared shock
+
+**Lock:** `GENUINE_WEATHER_EVENT` is not "the LSTM flagged it and the neighbours agree". The CW-IDW blend must itself have moved: `blend_shift` ≥ `SHOCK_STEP_FRACTION` × agree band this hour, or `blend_baseline_delta` ≥ `SHOCK_BASELINE_FRACTION` × band from the buddies' previous-24 h mean, on a checked channel. Agreeing, calm neighbours make the hour `CLEAN` with a "Corroborated by neighbors" reason and no alert. `neighbor_shock` is `null` when buddy history is too short, and that keeps the old weather call. Fractions live in `v2-deliverable/v2/config.py`, were calibrated on 2023 only, and are not tuned in the UI. Disagreement (hardware) and unconfirmed paths are unchanged. No model was retrained.

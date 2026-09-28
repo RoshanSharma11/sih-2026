@@ -77,11 +77,25 @@ def build_reason(
     tier2: dict,
     tier3: dict,
     window_error: str | None,
+    corroborated: bool = False,
 ) -> str:
     if label == "PHYSICAL_FAULT":
         return "Tier 1 physical rule failed: " + "; ".join(tier1.get("violations") or [])
     if window_error and "INSUFFICIENT_WINDOW" in window_error:
         return window_error
+    if label == "CLEAN" and corroborated:
+        feat = (affected or ["temp"])[0]
+        mix = (tier3.get("mix") or {}).get(feat)
+        n = tier3.get("usable_count") or 0
+        obs_v = observed.get(feat)
+        bit = ""
+        if obs_v is not None and mix is not None:
+            bit = f"{feat} observed {obs_v:.2f}, neighbor mix {mix:.2f} (n={n}). "
+        return (
+            bit
+            + "LSTM score above threshold, but neighbors agree and did not move themselves "
+            "(no shared shock). Corroborated by neighbors; treated as clean."
+        )
     if label == "CLEAN":
         return "Last-hour-weighted reconstruction within the frozen 2023 threshold."
     pred = predicted or {}
