@@ -1,0 +1,16 @@
+.git
+.cursor
+.venv
+venv
+.env
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.mplconfig
+data/raw
+data/*.db
+ml/data/raw
+ml/eval_out
+tests

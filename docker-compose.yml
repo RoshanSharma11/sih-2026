@@ -1,0 +1,18 @@
+services:
+  skyguard:
+    build: .
+    ports:
+      - "8000:8000"
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      # Server-side polls stay inside the container. SKYGUARD_PUBLIC_API comes from .env.
+      SKYGUARD_API: http://127.0.0.1:8000
+      SKYGUARD_DB: /var/lib/skyguard/skyguard.db
+    volumes:
+      - skyguard-data:/var/lib/skyguard
+    restart: unless-stopped
+
+volumes:
+  skyguard-data:

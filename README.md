@@ -49,6 +49,8 @@ python scripts/run_dashboard.py
 
 Tests: `pytest -q`.
 
+The files `Dockerfile`, `docker-compose.yml`, and `scripts/serve.sh` run both processes on `0.0.0.0` for a remote machine. Locally, keep using the two scripts above.
+
 ## Judge script (Mumbai replay)
 
 No stream. Control → Play, or:

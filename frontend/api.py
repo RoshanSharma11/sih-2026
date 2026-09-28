@@ -51,6 +51,9 @@ class SkyGuardClient:
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         self.base_url = (base_url or os.environ.get("SKYGUARD_API", DEFAULT_API)).rstrip("/")
+        # Browser links (CSV export). Server-side polls stay on base_url.
+        public = os.environ.get("SKYGUARD_PUBLIC_API", "").strip()
+        self.public_url = (public or self.base_url).rstrip("/")
         self._client = httpx.Client(base_url=self.base_url, timeout=timeout, transport=transport)
 
     def close(self) -> None:
@@ -123,7 +126,7 @@ class SkyGuardClient:
             start = datetime.now(timezone.utc) - timedelta(hours=hours)
             params.append("from=" + start.strftime("%Y-%m-%dT%H:%M:%SZ"))
         query = "&".join(params)
-        return f"{self.base_url}/export" + (f"?{query}" if query else "")
+        return f"{self.public_url}/export" + (f"?{query}" if query else "")
 
     def demo_status(self) -> dict[str, Any]:
         return self._get_json("/demo/status")
