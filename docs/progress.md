@@ -1,6 +1,6 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-28 (Station evidence block + Alerts timeline on the console).
+Last updated: 2026-09-28 (L1–L8: feed-gap, poller budget, ack, export, webhook, reliability, shared-shock, residual CUSUM drift).
 
 **Next session:** the live plan is complete. Do not extend the Palam / `ml/` path. Credentials stay in `.env` only.
 
@@ -12,7 +12,7 @@ Nothing product-blocking. `ml/data/raw/` is on disk (gitignored). Do not commit 
 
 Optional, not blocking: the frozen v1 threshold note in `ml/` is not the live score. Product ingest uses the v2 threshold (`0.008487`).
 
-Nothing else needs a product decision. Language and D14–D23 are locked. D19 is the live 48. D20 is the IMD poller. D21 is warm-up: null label until 24 hours, then the real v2 label. D22 is replay on the same ingest path. D23 is the TIMING proxy: ingest does not wait.
+Nothing else needs a product decision. Language and D14–D25 are locked. D19 is the live 48. D20 is the IMD poller. D21 is warm-up: null label until 24 hours, then the real v2 label. D22 is replay on the same ingest path. D23 is the TIMING proxy: ingest does not wait. D24 is shared shock. D25 is residual CUSUM drift.
 
 ## Status
 
@@ -51,14 +51,15 @@ Next: nothing on the v2 live plan. Steps 1–8 are done.
 | L4 | `900ee86` | `GET /export` CSV with WMO-style `qc_flag`; link buttons on Station (30 d) and Network (7 d) |
 | L5 | `9209bb4` | Webhook pager: `SKYGUARD_WEBHOOK_URL` gets `station_status_changed` (DEGRADED / CRITICAL / recovery) and `alert_opened` (HIGH hardware) off the ingest thread; `/healthz.webhook`; Control strip |
 | L6 | `4f300b6` | `GET /reliability` and a Reliability page: completeness, outcome counts, flag rate, isolates, feed-gap hours per station |
-| L7 | (this change) | v2 shared-shock rule (no retrain): an LSTM flag with agreeing but calm neighbours is `CLEAN` (corroborated), not weather. `tier3.neighbor_shock` / `blend_shift` / `blend_baseline_delta`; fractions 1.0 / 1.5 frozen on 2023 Jul–Sep Mumbai four (clean→weather 1088 → 533, storm 313/324 flat, hardware recall unchanged); 2024 held-out 1056 → 504, storm 306/324 flat. Station decision trace reads the “Corroborated by neighbors” reason |
+| L7 | `4d8df20` | v2 shared-shock rule (no retrain): an LSTM flag with agreeing but calm neighbours is `CLEAN` (corroborated), not weather. `tier3.neighbor_shock` / `blend_shift` / `blend_baseline_delta`; fractions 1.0 / 1.5 frozen on 2023 Jul–Sep Mumbai four (clean→weather 1088 → 533, storm 313/324 flat, hardware recall unchanged); 2024 held-out 1056 → 504, storm 306/324 flat. Station decision trace reads the “Corroborated by neighbors” reason |
+| L8 | (this change) | Residual CUSUM drift (no retrain): `observed − CW-IDW mix` over the 24 h window; official +0.1/h over 24 h fires, a lone spike and a shared weather ramp do not. `HARDWARE_ANOMALY` / `DRIFT` even when LSTM is under threshold. Weather never overridden. `tier3.drift` / `tier3_drift`. Isolates skip. |
 
 ## What works today (post-I6)
 
 - Catalog: `data/processed/stations.json` (48) + `buddy_edges.json` (edges inside that set). Each station has `aws_id`, `aws_name`, `aws_distance_km`. Re-run with `python -m skyguard.data.import_ml_catalog`. `--legacy-151` is the old training dump.
 - API: `/healthz` reports `model_loaded`, `threshold` (`0.008487` when v2 weights load), `n_stations`, `n_isolates`, `v2_artifacts` (`lstm`, `overlay`, `stgnn`), and `imd` (`last_success`, `last_error`, `matched`). `GET /stations?ids=` includes `latest`, `buddy_ids`, `isolate`, `aws_id`. `GET /buddy-map`. Telemetry and alerts store `label`. `/ingest`, seed, `/demo/*`. Buddy payloads omit neighbors with no hours.
 - IMD poller: JWT from `IMD_TOKEN_URL`, state snapshots `sid` on `IMD_AWS_URL`, `ID` → `aws_id`, hour bucket in UTC, duplicate hours skipped. Off when `SKYGUARD_IMD_POLL=0` or when tests pass their own database. Budget (L2): hourly at :20, only the states that matched before (`aws_state_id`, full rescan every 24th cycle), one 429 ends the cycle and backs off 1 h / 2 h / 4 h. The 2026-09-28 poller at 20 states every 15 min (80 calls/h) hit `HTTP 429 Hourly API limit exceeded` and stored nothing; the new loop needs about 12 calls/h.
-- Live QC: `engine/adapter.py` maps public fields ↔ v2; `pipeline.py` persists raw, calls `v2.engine.process_aws_data` (`use_stgnn=False`, `timing_async=True`), writes overlay (`predicted`, `imputed_interval`, `thermo`, `tier2.score`, `tier3.method` / `mix` / `corr`, `reason`) and recomputes 7-day health from stored labels. Weather does not count. `ml.engine` and legacy `skyguard.engine.tier*` are not on this path.
+- Live QC: `engine/adapter.py` maps public fields ↔ v2; `pipeline.py` persists raw, calls `v2.engine.process_aws_data` (`use_stgnn=False`, `timing_async=True`), writes overlay (`predicted`, `imputed_interval`, `thermo`, `tier2.score`, `tier3.method` / `mix` / `corr` / `drift`, `reason`) and recomputes 7-day health from stored labels. Weather does not count. `ml.engine` and legacy `skyguard.engine.tier*` are not on this path. Residual CUSUM (L8) can turn a quiet hour into `HARDWARE_ANOMALY` / `DRIFT` when the blend residual accumulates; weather is never overridden.
 - Missing artifacts on a full window → persist anyway, `UNCONFIRMED_ANOMALY`. Fewer than 24 hourly rows → raw hour, `warming_up`, null label, no v2 call. Catalog station with no train scaler → 400. Station not in the catalog → 404.
 - Replay: `POST /demo/replay` with `clean`, `hardware`, `weather`, `freeze`, or `comms`. Seeds the 2024-12-31 fixture, ingests the scored hour, and clears the arm. `hardware` and `weather` ingest the Mumbai four. A newer live window is restored after the story.
 - TIMING: `GET /stations/{id}/timing?ts=` reads the v2 cache (`pending` / `ready` / `not_requested` / `error`). `wait_s` defaults to 0, max 10. Ingest does not call it.
@@ -121,7 +122,7 @@ Tests: `pytest -q`. UI extras: `pip install -e ".[ui]"`. ML runtime needs `torch
 
 ## Open issues
 
-- LSTM threshold is frozen at the 2023 p99 (`operating_score` 0.008487, `threshold_frozen: true` in `v2/artifacts/model_metadata.json`); freeze/drift are Tier 1 / window heuristics in ML, not the autoencoder.
+- LSTM threshold is frozen at the 2023 p99 (`operating_score` 0.008487, `threshold_frozen: true` in `v2/artifacts/model_metadata.json`). Freeze is still a Tier 1 / window heuristic. Slow calibration drift is the residual CUSUM in `v2.drift` (D25), not the autoencoder. Do not quote a 2024 drift recall until `simulate_corruption_eval.py` is re-run.
 - Nested path `ml/ml/` is awkward; do not flatten during I-slices unless a later cleanup slice says so.
 - `docs/backend-simulator-summary.md` describes the **legacy** backend QC. Trust this file + `architecture.md` for the live path.
 - A station with fewer than 24 hourly rows is `warming_up` with a null label. Seed still fills the window with `CLEAN` rows.

@@ -83,6 +83,7 @@ class TelemetryLog(Base):
     tier3_corr: Mapped[str | None] = mapped_column(String, nullable=True)
     # JSON list of public channel names the feed did not send network-wide this hour.
     feed_gap: Mapped[str | None] = mapped_column(String, nullable=True)
+    tier3_drift: Mapped[str | None] = mapped_column(String, nullable=True)
 
     station: Mapped[Station] = relationship(back_populates="telemetry")
 

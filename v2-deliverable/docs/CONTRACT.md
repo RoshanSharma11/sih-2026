@@ -272,6 +272,8 @@ Amber, **not** red. `imputed_interval` is `null` — **no dashed line, no band**
 
 **Shared shock (Tier 3, no retrain).** `GENUINE_WEATHER_EVENT` needs two things: the primary agrees with the CW-IDW blend on the affected channels **and** the blend itself moved — `tier3.blend_shift` (blend now − blend one hour ago) reaches `SHOCK_STEP_FRACTION` × the agree band, or `tier3.blend_baseline_delta` (blend now − the buddies' previous-24 h mean) reaches `SHOCK_BASELINE_FRACTION` × the band, on any checked channel. `tier3.neighbor_shock` is that verdict (`true` / `false` / `null` when the buddies' history is too short to say). When the LSTM is above threshold, neighbors agree, and `neighbor_shock` is `false`, the hour is `CLEAN` with `is_anomaly=false` and a reason that says so ("…neighbors agree and did not move themselves (no shared shock). Corroborated by neighbors; treated as clean."). `null` keeps the old behaviour (weather). Disagreement paths are untouched. Fractions 1.0 / 1.5 were frozen on 2023 Jul–Sep Mumbai four with the seed-42 injector (storm recall flat at 313/324 across the grid; clean hours called weather 1088 → 533); 2024 Jul–Sep held-out: 1056 → 504, storm 306/324 and hardware recall unchanged.
 
+**Drift CUSUM (no retrain).** `fault_type=DRIFT` is a clipped two-sided CUSUM on `observed − CW-IDW mix` over the 24 h window (`v2.drift.detect_drift`). It runs even when the LSTM is under threshold, because a +0.1 / hour bias is climate-like to the AE. Weather does not fire it (neighbours moved too, residual stays small). A single spike is clipped to 1.5× the agree band, which sits below `h`. Isolates skip it. Constants are fractions of the agree band in `v2/config.py` (`k=0.20`, `h=2.00`, `clip=1.50`, last residual ≥ `0.40`× band, ≥ 18 hours). Not retuned on 2024. Overlay is the neighbour mix. `tier3.drift` is `{fired, channel, hours, last, cusum, k, h}`.
+
 `fault_type` when anomalous: `SPIKE` | `FREEZE` | `DRIFT` | `COMMUNICATION` | `THERMO` | `STORM` | `UNCONFIRMED`.
 
 Health: `HEALTHY` if `index_7d ≥ 0.90`, `DEGRADED` if `≥ 0.70`, else `CRITICAL`.
@@ -389,7 +391,7 @@ Must show, in this order:
 1. `reason` (full sentence).
 2. Physics card: `thermo.dewpoint_c`, `thermo.td_minus_t`, `tier1.violations`.
 3. Last-hour bars: `tier2.feature_contributions`.
-4. Neighbor table: `tier3.buddy_ids`, `tier3.corr`, `tier3.mix`, `tier3.neighbors_agree`, `tier3.method`, `tier3.usable_count`, and `tier3.neighbor_shock` (whether the neighbours moved themselves).
+4. Neighbor table: `tier3.buddy_ids`, `tier3.corr`, `tier3.mix`, `tier3.neighbors_agree`, `tier3.method`, `tier3.usable_count`, `tier3.neighbor_shock` (whether the neighbours moved themselves), and `tier3.drift` (residual CUSUM vs that mix).
 5. TIMING line when `status=ready` (§6).
 6. Optional IMD chip: backend-only `imd_corroboration` on amber rows. ML does not produce this.
 

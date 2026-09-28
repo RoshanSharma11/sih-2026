@@ -27,6 +27,7 @@ from skyguard.schemas import (
     Tier1View,
     Tier2View,
     Tier3View,
+    DriftView,
 )
 
 PUBLIC_TO_ML = {
@@ -332,6 +333,22 @@ def _tier3(raw: dict[str, Any]) -> Tier3View:
         reason_skip=raw.get("reason_skip"),
         mix=_mix(raw.get("mix")),
         corr=_corr(raw.get("corr")),
+        drift=_drift(raw.get("drift")),
+    )
+
+
+def _drift(raw: Any) -> DriftView | None:
+    if not isinstance(raw, dict):
+        return None
+    channel = raw.get("channel")
+    return DriftView(
+        fired=bool(raw.get("fired")),
+        channel=_public_name(str(channel)) if channel else None,
+        hours=int(raw.get("hours") or 0),
+        last=_float_or_none(raw.get("last")),
+        cusum=_float_or_none(raw.get("cusum")),
+        k=_float_or_none(raw.get("k")),
+        h=_float_or_none(raw.get("h")),
     )
 
 

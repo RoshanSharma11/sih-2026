@@ -118,6 +118,15 @@ def test_decision_steps_physical_fault_names_the_rule() -> None:
     assert "frozen" in steps[0]["head"].lower()
 
 
+def test_decision_steps_drift_is_slow_bias_not_a_spike() -> None:
+    hour = dict(HARDWARE_HOUR, tier3_drift={"fired": True, "channel": "temp_c", "hours": 24, "last": 2.4})
+    alert = dict(HARDWARE_ALERT, fault_type="DRIFT")
+    steps = decision_steps(hour, alert, THRESHOLD)
+    assert steps[2]["head"] == "Slow bias versus neighbors"
+    assert "accumulating" in steps[2]["detail"]
+    assert "+2.4" in steps[2]["detail"]
+
+
 def test_decision_trace_html_uses_status_colors_not_all_rose() -> None:
     html = decision_trace_html(HARDWARE_HOUR, HARDWARE_ALERT, THRESHOLD)
     assert html.count("sg-trace-step") == 3
@@ -258,6 +267,14 @@ def test_technician_note_is_plain_text_with_action() -> None:
     assert "<" not in note
     weather = technician_note(station, _weather_hour(), None, NAMES)
     assert "Do not dispatch" in weather
+    drift = technician_note(
+        station,
+        dict(HARDWARE_HOUR, tier3_drift={"fired": True, "channel": "temp_c", "hours": 24, "last": 2.4}),
+        dict(HARDWARE_ALERT, fault_type="DRIFT"),
+        NAMES,
+    )
+    assert "inspect calibration" in drift
+    assert "not a one-hour spike" in drift
 
 
 def test_alerts_timeline_stacks_by_kind_per_hour() -> None:

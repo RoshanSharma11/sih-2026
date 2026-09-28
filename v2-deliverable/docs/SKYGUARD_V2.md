@@ -442,7 +442,7 @@ This is the remaining SIH demo, not more Kaggle:
 
 ### Not done (ML, optional — do not block the demo)
 
-- Drift detector that actually recalls the official DRIFT injector (~2.7% today)
+- Drift detector that actually recalls the official DRIFT injector (~2.7% today) — **v2 now has a residual CUSUM** (`v2.drift`); unit tests cover the +0.1/h injector over 24 h. Re-run the 2024 seed-42 table before quoting a new recall.
 - Retrain GAT on the **official** SPIKE recipe if you want GAT on ingest
 - Full stride-1 2024 eval (current report is stride 24 — still 16k windows)
 - Climatology p99.9 card (`climatology.temp_p999_train` is **null** in the JSON)
@@ -455,7 +455,7 @@ This is the remaining SIH demo, not more Kaggle:
 
 **Accuracy**
 
-- **Drift is unsolved.** 2.7% recall. Slow calibration bias barely moves last-hour \(s\). Do not put “drift 100%” on a slide.
+- **Drift is a residual CUSUM, not the AE.** Last-hour \(s\) still barely moves on a +0.1/h bias. `v2.drift.detect_drift` watches `observed − mix` instead. Do not quote a 2024 recall until `simulate_corruption_eval.py` is re-run. Isolates still cannot see drift.
 - **Clean FPR is 32.5%, not 5%.** Better than V1’s 60%, still a lot of CLEAN hours called `GENUINE_WEATHER_EVENT`. The LSTM is twitchy; neighbors often still agree, so we amber instead of rose. That is the honest residual.
 - **Eval is stride 24**, last-hour labels vs a 24 h window. It is the official injector on the 48, not a full hourly census.
 - **STORM recall 89.7%** means ~10% of injected storms are hardware/unconfirmed. Neighborhood ingest gaps and agree bands both contribute.

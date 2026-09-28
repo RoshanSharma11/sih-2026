@@ -85,6 +85,15 @@ FREEZE_EPS = 0.15
 FREEZE_EPS_BY_FEATURE = {"temp": 0.15, "rhum": 0.5, "pres": 0.15}
 DRIFT_HOURS = 12
 DRIFT_BIAS = 0.15
+# Residual CUSUM vs the CW-IDW blend. Fires on a slow bias the LSTM reconstructs (official
+# injector slope 0.1 / hour). Not a learned model. Fractions of the agree band, frozen on
+# the injector geometry — a 24 h ramp of 0.1 °C/h crosses h; a single clipped spike does not.
+# Isolates cannot run this (need ≥ 2 usable buddies), same as weather-vs-hardware.
+DRIFT_MIN_HOURS = 18
+DRIFT_CUSUM_K_FRACTION = 0.20
+DRIFT_CUSUM_H_FRACTION = 2.00
+DRIFT_CLIP_FRACTION = 1.50
+DRIFT_LAST_FRACTION = 0.40
 
 MAGNUS_A = 17.27
 MAGNUS_B = 237.7

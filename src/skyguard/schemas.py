@@ -102,6 +102,16 @@ class Tier2View(BaseModel):
     feature_contributions: dict[str, float | None] = Field(default_factory=dict)
 
 
+class DriftView(BaseModel):
+    fired: bool = False
+    channel: str | None = None
+    hours: int = 0
+    last: float | None = None
+    cusum: float | None = None
+    k: float | None = None
+    h: float | None = None
+
+
 class Tier3View(BaseModel):
     performed: bool
     method: str | None = None
@@ -112,6 +122,7 @@ class Tier3View(BaseModel):
     reason_skip: str | None = None
     mix: ChannelValues | None = None
     corr: dict[str, float] = Field(default_factory=dict)
+    drift: DriftView | None = None
 
 
 class ImputedInterval(BaseModel):
@@ -257,6 +268,7 @@ class TelemetryRow(BaseModel):
     tier3_method: str | None = None
     tier3_mix: ChannelValues | None = None
     tier3_corr: dict[str, float] | None = None
+    tier3_drift: DriftView | None = None
 
 
 class AlertRow(BaseModel):

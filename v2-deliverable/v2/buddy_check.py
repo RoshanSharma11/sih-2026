@@ -148,6 +148,56 @@ def shared_shock(
     return {"neighbor_shock": shock, "blend_shift": shift, "blend_baseline_delta": baseline}
 
 
+def neighbor_estimate(
+    timestamp: datetime,
+    observed: dict,
+    buddies: list[dict],
+    primary_window: list | None = None,
+) -> dict:
+    """CW-IDW blend of the usable buddies at `timestamp` and the primary's residual against it.
+
+    A buddy is usable when it has all three channels within BUDDY_TIME_TOLERANCE_HOURS and a
+    distance. Returns `usable` (with weights), `wsum`, `corr`, `mix` and `residual`
+    (observed − mix, None where either side is missing). `mix`/`residual` are all-None when
+    fewer than MIN_USABLE_BUDDIES are usable. Shared by Tier 3 and the drift monitor.
+    """
+    prim_t = _temp_series(primary_window or [], timestamp)
+    usable = []
+    corrs = {}
+    for buddy in buddies or []:
+        bid = str(buddy.get("station_id", ""))
+        dist = buddy.get("distance_km")
+        window = buddy.get("window") or []
+        sample = {}
+        ok = True
+        for feat in FEATURES:
+            sample[feat] = _value_at(window, timestamp, feat)
+            if sample[feat] is None:
+                ok = False
+        if not ok or dist is None:
+            continue
+        try:
+            dkm = float(dist)
+        except (TypeError, ValueError):
+            continue
+        c = _corr(prim_t, _temp_series(window, timestamp))
+        corrs[bid] = round(c, 4)
+        w = math_weight(c, dkm)
+        usable.append({"station_id": bid, "distance_km": dkm, "w": w, **sample})
+
+    mix: dict[str, float | None] = {f: None for f in FEATURES}
+    residual: dict[str, float | None] = {f: None for f in FEATURES}
+    wsum = sum(u["w"] for u in usable)
+    if len(usable) >= MIN_USABLE_BUDDIES and wsum > 0:
+        for feat in FEATURES:
+            est = sum(u[feat] * u["w"] for u in usable) / wsum
+            mix[feat] = float(est)
+            obs = observed.get(feat)
+            if obs is not None and not (isinstance(obs, float) and pd.isna(obs)):
+                residual[feat] = float(obs - est)
+    return {"usable": usable, "wsum": wsum, "corr": corrs, "mix": mix, "residual": residual}
+
+
 def evaluate_tier3(
     timestamp: datetime,
     observed: dict,
@@ -175,30 +225,8 @@ def evaluate_tier3(
         empty["reason_skip"] = "isolate_station"
         return empty
 
-    prim_t = _temp_series(primary_window or [], timestamp)
-    usable = []
-    corrs = {}
-    for buddy in buddies or []:
-        bid = str(buddy.get("station_id", ""))
-        dist = buddy.get("distance_km")
-        window = buddy.get("window") or []
-        sample = {}
-        ok = True
-        for feat in FEATURES:
-            sample[feat] = _value_at(window, timestamp, feat)
-            if sample[feat] is None:
-                ok = False
-        if not ok or dist is None:
-            continue
-        try:
-            dkm = float(dist)
-        except (TypeError, ValueError):
-            continue
-        c = _corr(prim_t, _temp_series(window, timestamp))
-        corrs[bid] = round(c, 4)
-        w = math_weight(c, dkm)
-        usable.append({"station_id": bid, "distance_km": dkm, "w": w, **sample})
-
+    est = neighbor_estimate(timestamp, observed, buddies, primary_window)
+    usable, corrs = est["usable"], est["corr"]
     if len(usable) < MIN_USABLE_BUDDIES:
         empty["usable_count"] = len(usable)
         empty["buddy_ids"] = [u["station_id"] for u in usable]
@@ -206,23 +234,12 @@ def evaluate_tier3(
         empty["reason_skip"] = "fewer_than_2_usable_buddies"
         return empty
 
-    wsum = sum(u["w"] for u in usable)
-    mix = {}
-    residual = {}
+    wsum, mix, residual = est["wsum"], est["mix"], est["residual"]
     check_feats = affected if affected else list(FEATURES)
     agree = True
     bands = AGREE_BANDS
-    for feat in FEATURES:
-        est = sum(u[feat] * u["w"] for u in usable) / wsum if wsum > 0 else None
-        mix[feat] = None if est is None else float(est)
-        obs = observed.get(feat)
-        if est is None or obs is None:
-            residual[feat] = None
-            if feat in check_feats:
-                agree = False
-            continue
-        residual[feat] = float(obs - est)
-        if feat in check_feats and abs(residual[feat]) >= bands[feat]:
+    for feat in check_feats:
+        if residual.get(feat) is None or abs(residual[feat]) >= bands[feat]:
             agree = False
 
     shock = shared_shock(timestamp, usable, buddies or [], wsum, check_feats) if wsum > 0 else {

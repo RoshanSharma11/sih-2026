@@ -158,6 +158,19 @@ def decision_steps(
     if label == "GENUINE_WEATHER_EVENT":
         state, head = "agree", f"{n_used or 'Two or more'} neighbors share the shock{method_bit}"
         detail = "Correlation-weighted neighbors moved with this station. Weather, not a sensor. Health unchanged."
+    elif label == "HARDWARE_ANOMALY" and fault == "DRIFT":
+        drift = hour.get("tier3_drift") if isinstance(hour.get("tier3_drift"), dict) else {}
+        hours = drift.get("hours")
+        last = drift.get("last")
+        extra = ""
+        if hours and last is not None:
+            extra = f" Residual {last:+.1f} over {hours} h."
+        state, head = "disagree", "Slow bias versus neighbors"
+        detail = (
+            "The LSTM reconstructs a slow calibration shift, so last-hour score can stay under "
+            "the threshold. The residual against the neighbour blend has been accumulating."
+            f"{extra} Overlay is the blend, not a rewrite of a storm."
+        )
     elif label == "HARDWARE_ANOMALY":
         state, head = "disagree", f"{n_used or 'Two or more'} neighbors did not move{method_bit}"
         detail = "The blend of nearby stations sits far from this reading. The sensor is distrusted and a corrected hour is drawn."
@@ -464,6 +477,11 @@ def technician_note(
     ]
     if label == "GENUINE_WEATHER_EVENT":
         lines.append("Action: none. Neighbors agree; this is weather. Do not dispatch.")
+    elif label == "HARDWARE_ANOMALY" and str(fault) == "DRIFT":
+        lines.append(
+            "Action: inspect calibration on the flagged channel. The residual vs neighbors "
+            "has been accumulating; this is not a one-hour spike. Keep the raw record."
+        )
     elif label in {"HARDWARE_ANOMALY", "PHYSICAL_FAULT"}:
         lines.append("Action: inspect the flagged channel. Keep the raw record; use the correction downstream.")
     elif label == "UNCONFIRMED_ANOMALY":

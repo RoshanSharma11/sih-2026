@@ -20,6 +20,7 @@ def infer_fault_type(
     observed: dict,
     predicted: dict | None,
     neighbors_agree: bool | None,
+    drift_fired: bool = False,
 ) -> str | None:
     if communication:
         return "COMMUNICATION"
@@ -29,6 +30,8 @@ def infer_fault_type(
         return "FREEZE"
     if any(v.startswith("RANGE:") or v.startswith("STEP:") for v in tier1_violations):
         return "SPIKE"
+    if drift_fired:
+        return "DRIFT"
     if window_df is None or window_df.empty:
         return None
     feats = affected or list(FEATURES)
@@ -115,6 +118,14 @@ def build_reason(
             extra = "Step/range fired but "
         return bit + extra + "neighbors agree on CW-IDW; treated as a genuine weather event."
     if label == "HARDWARE_ANOMALY":
+        if fault_type == "DRIFT":
+            drift = tier3.get("drift") if isinstance(tier3.get("drift"), dict) else {}
+            hours = drift.get("hours")
+            last = drift.get("last")
+            extra = ""
+            if hours and last is not None:
+                extra = f" Residual vs neighbors {last:+.2f} over {hours} h."
+            return bit + "Slow bias against the neighbour blend; treated as calibration drift." + extra
         return bit + "Neighbors disagree; treated as hardware anomaly."
     if label == "UNCONFIRMED_ANOMALY":
         skip = tier3.get("reason_skip") or "tier3_not_performed"

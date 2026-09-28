@@ -262,6 +262,15 @@ def test_map_v2_overlay_fields() -> None:
                 "reason_skip": None,
                 "mix": {"temp": 24.4, "rhum": 77.0, "pres": 1012.8},
                 "corr": {"43057": 0.2445},
+                "drift": {
+                    "fired": True,
+                    "channel": "temp",
+                    "hours": 24,
+                    "last": 2.4,
+                    "cusum": 6.1,
+                    "k": 0.6,
+                    "h": 6.0,
+                },
             },
         )
     )
@@ -276,3 +285,5 @@ def test_map_v2_overlay_fields() -> None:
     assert mapped["tier3"].method == "cw_idw"
     assert mapped["tier3"].mix.temp_c == 24.4
     assert mapped["tier3"].corr == {"43057": 0.2445}
+    assert mapped["tier3"].drift.fired is True
+    assert mapped["tier3"].drift.channel == "temp_c"

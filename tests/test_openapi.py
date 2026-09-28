@@ -118,6 +118,7 @@ CONTRACT_PROPERTIES = {
         "tier3_method",
         "tier3_mix",
         "tier3_corr",
+        "tier3_drift",
     },
     "AlertRow": {
         "alert_id",
@@ -187,7 +188,9 @@ CONTRACT_PROPERTIES = {
         "reason_skip",
         "mix",
         "corr",
+        "drift",
     },
+    "DriftView": {"fired", "channel", "hours", "last", "cusum", "k", "h"},
     "ImputedInterval": {"temp_c", "pres_hpa", "rhum_pct"},
     "ThermoView": {"dewpoint_c", "td_minus_t", "passed"},
     "TimingView": {"start_hour_in_window", "channel_attr", "hour_attr", "reason"},

@@ -10,7 +10,8 @@ except ImportError:
 import pandas as pd
 import numpy as np
 
-from .buddy_check import evaluate_tier3
+from .buddy_check import evaluate_tier3, neighbor_estimate
+from .drift import detect_drift
 from .catalog import build_buddy_graph, load_catalog
 from .config import CONFIDENCE_K, FEATURES, STGNN_ON_INGEST, WINDOW_HOURS
 from .lstm_inference import LSTMInference, _to_naive
@@ -216,6 +217,7 @@ class DetectionEngine:
             primary_window = window_df.to_dict("records")
         soft_t1 = bool(tier1.get("soft")) or is_soft_t1(tier1.get("violations") or [], bool(tier1.get("communication")))
         run_tier3 = bool((tier1["passed"] and suspicious) or (soft_t1 and not tier1.get("communication")))
+        est = neighbor_estimate(timestamp, observed, req_buddies, primary_window)
         if run_tier3:
             tier3 = evaluate_tier3(
                 timestamp,
@@ -242,18 +244,21 @@ class DetectionEngine:
             tier3 = {
                 "performed": False,
                 "method": "cw_idw",
-                "buddy_ids": [],
-                "mix": {f: None for f in FEATURES},
-                "idw_estimate": {f: None for f in FEATURES},
-                "residual": {f: None for f in FEATURES},
-                "corr": {},
+                "buddy_ids": [u["station_id"] for u in est["usable"]],
+                "mix": est["mix"],
+                "idw_estimate": est["mix"],
+                "residual": est["residual"],
+                "corr": est["corr"],
                 "neighbors_agree": None,
                 "neighbor_shock": None,
                 "blend_shift": {f: None for f in FEATURES},
                 "blend_baseline_delta": {f: None for f in FEATURES},
-                "usable_count": 0,
+                "usable_count": len(est["usable"]),
                 "reason_skip": skip,
             }
+
+        drift = detect_drift(timestamp, primary_window, req_buddies)
+        tier3["drift"] = drift
 
         if tier1.get("communication") or (
             not tier1["passed"] and not soft_t1
@@ -293,6 +298,15 @@ class DetectionEngine:
             label = "HARDWARE_ANOMALY"
             is_anomaly = True
 
+        # Residual CUSUM vs neighbours. Does not override weather (the blend moved too)
+        # or a hard physical fail. Catches a slow bias the LSTM reconstructs as climate.
+        if drift.get("fired") and label in {"CLEAN", "UNCONFIRMED_ANOMALY"}:
+            label = "HARDWARE_ANOMALY"
+            is_anomaly = True
+            corroborated = False
+            if drift.get("channel"):
+                affected = [str(drift["channel"])]
+
         fault_type = infer_fault_type(
             communication=bool(tier1.get("communication")),
             tier1_violations=tier1.get("violations") or [],
@@ -301,6 +315,7 @@ class DetectionEngine:
             observed=observed,
             predicted=predicted if tier2["ran"] else None,
             neighbors_agree=tier3.get("neighbors_agree"),
+            drift_fired=bool(drift.get("fired")) and label == "HARDWARE_ANOMALY",
         )
         if not is_anomaly:
             fault_type = None
@@ -372,6 +387,7 @@ class DetectionEngine:
                 "neighbor_shock": tier3.get("neighbor_shock"),
                 "blend_shift": tier3.get("blend_shift"),
                 "blend_baseline_delta": tier3.get("blend_baseline_delta"),
+                "drift": tier3.get("drift"),
             },
             "climatology": climo,
             "timing": None,

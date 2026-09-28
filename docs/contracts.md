@@ -131,12 +131,15 @@ Response:
     "neighbor_shock": false,
     "reason_skip": null,
     "mix": {"temp_c": 28.1, "pres_hpa": 1008.0, "rhum_pct": 76.0},
-    "corr": {"42181": 0.42}
+    "corr": {"42181": 0.42},
+    "drift": {"fired": false, "channel": null, "hours": 0, "last": null, "cusum": null, "k": null, "h": null}
   }
 }
 ```
 
 `tier3.neighbor_shock` is the v2 shared-shock verdict: did the neighbour blend itself move this hour or sit far from its own 24 h mean (`true`), stay calm (`false`), or is the buddies' history too short to say (`null`)? An LSTM flag with agreeing, calm neighbours (`neighbors_agree=true`, `neighbor_shock=false`) is labelled `CLEAN`, not `GENUINE_WEATHER_EVENT`; the reason sentence says "Corroborated by neighbors". See `v2-deliverable/docs/CONTRACT.md` §Labels.
+
+`tier3.drift` is the residual CUSUM against that same blend (`fired`, `channel` in public names, `hours`, `last`, `cusum`). When `fired` and the hour would otherwise be `CLEAN` or `UNCONFIRMED_ANOMALY`, the label is `HARDWARE_ANOMALY` with `fault_type=DRIFT`. Weather is never overridden. See D25.
 
 `demo_injected` is `null` or a `FaultType` / `GENUINE_WEATHER` the DemoController applied. It is never shown as ground truth to judges unless we are on an eval page.
 
@@ -321,7 +324,7 @@ Station summary (list **includes** `latest` so the live map does not N+1):
 
 `matched` is how many of the 48 catalog stations had an IMD `ID` in the last poll. Stations that share an `aws_id` all receive that hour. `last_success` is when that poll finished. `last_error` is the latest state or token failure, or null when the last poll was clean. A duplicate hour is not an error. `feed_gap` maps a public channel name to the number of matched stations whose hour was stored as a feed gap for that channel in the last poll (`{}` when the feed was complete). `next_poll` is when the loop will call IMD again (hourly, on `SKYGUARD_IMD_POLL_MINUTE`, default :20). `states_polled` is how many `sid` calls the last cycle made: every state on the first cycle and every 24th, otherwise only the states that held a matched station (`stations.aws_state_id`). `rate_limited_until` is set when IMD answered HTTP 429; the cycle stopped at that call and the next poll waits 1 h, then 2 h, then 4 h at most, until a clean cycle clears it.
 
-Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, `tier3_corr`, `warming_up`, and `feed_gap` (list of public channel names, `[]` normally). `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label, or null while `warming_up` is true or the hour is a feed gap. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
+Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, `tier3_corr`, `tier3_drift`, `warming_up`, and `feed_gap` (list of public channel names, `[]` normally). `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label, or null while `warming_up` is true or the hour is a feed gap. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
 
 `/healthz` `webhook` is the outbound pager: `{configured, sent, failed, last_sent, last_error, last_event}`. When `SKYGUARD_WEBHOOK_URL` is set the backend POSTs JSON to it, off the ingest thread, for two events only: `station_status_changed` (7-day status entered `DEGRADED` / `CRITICAL`, moved between them, or recovered to `HEALTHY`) and `alert_opened` (a `PHYSICAL_FAULT` / `HARDWARE_ANOMALY` alert with severity `HIGH` or `CRITICAL`). Weather and unconfirmed never page. The body is `{event, station_id, station_name, timestamp, status, previous_status, health_score, label, fault_type, severity, reason, alert_id, sent_at}` with ISO-8601 `Z` timestamps and nulls for fields the event does not carry. Delivery is best-effort: a failed POST increments `failed` and sets `last_error`; nothing is retried and ingest never waits on it.
 
@@ -415,6 +418,7 @@ CREATE TABLE telemetry_logs (
   tier3_method    VARCHAR(20),
   tier3_mix       TEXT,
   tier3_corr      TEXT,
+  tier3_drift     TEXT,
   feed_gap        TEXT,
   UNIQUE (station_id, timestamp)
 );
@@ -443,7 +447,7 @@ CREATE INDEX idx_alerts_station_time ON anomaly_alerts (station_id, timestamp);
 
 Drop `cluster_id NOT NULL` on `stations` in the same migration as the catalog import.
 
-`imputed_interval`, `thermo`, `tier3_mix`, `tier3_corr`, and `feed_gap` (JSON list of public channel names, null normally) are JSON text. `tier3_method` is `cw_idw` on the product path.
+`imputed_interval`, `thermo`, `tier3_mix`, `tier3_corr`, `tier3_drift`, and `feed_gap` (JSON list of public channel names, null normally) are JSON text. `tier3_method` is `cw_idw` on the product path.
 
 Health is recomputed from stored `telemetry_logs.label` over the last 168 hours (7-day flag rate, weather excluded). The v2 in-memory tracker is not this score:
 

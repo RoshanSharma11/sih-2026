@@ -179,3 +179,7 @@ A station window that already contains an hour after the fixture end is put back
 ## D24 — Weather needs a shared shock
 
 **Lock:** `GENUINE_WEATHER_EVENT` is not "the LSTM flagged it and the neighbours agree". The CW-IDW blend must itself have moved: `blend_shift` ≥ `SHOCK_STEP_FRACTION` × agree band this hour, or `blend_baseline_delta` ≥ `SHOCK_BASELINE_FRACTION` × band from the buddies' previous-24 h mean, on a checked channel. Agreeing, calm neighbours make the hour `CLEAN` with a "Corroborated by neighbors" reason and no alert. `neighbor_shock` is `null` when buddy history is too short, and that keeps the old weather call. Fractions live in `v2-deliverable/v2/config.py`, were calibrated on 2023 only, and are not tuned in the UI. Disagreement (hardware) and unconfirmed paths are unchanged. No model was retrained.
+
+## D25 — Drift is a residual CUSUM, not the autoencoder
+
+**Lock:** Slow calibration bias is detected by a clipped two-sided CUSUM on `observed − CW-IDW mix` over the 24 h window (`v2.drift.detect_drift`). It runs even when the LSTM is under threshold. A hit that would otherwise be `CLEAN` or `UNCONFIRMED_ANOMALY` becomes `HARDWARE_ANOMALY` / `DRIFT`. Weather is never overridden. A single spike is clipped below the decision threshold. Isolates skip it (need ≥ 2 usable buddies). Fractions of the agree band live in `v2/config.py` and were set so the official +0.1 / hour injector over 24 h fires; they are not tuned on 2024. Overlay is the neighbour mix. No model was retrained.

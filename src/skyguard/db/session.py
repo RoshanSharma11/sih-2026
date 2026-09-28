@@ -28,6 +28,7 @@ _EXTRA_COLUMNS = (
     ("telemetry_logs", "tier3_corr", "TEXT"),
     ("telemetry_logs", "warming_up", "BOOLEAN NOT NULL DEFAULT 0"),
     ("telemetry_logs", "feed_gap", "TEXT"),
+    ("telemetry_logs", "tier3_drift", "TEXT"),
     ("stations", "aws_state_id", "INTEGER"),
     ("anomaly_alerts", "ack_state", "VARCHAR(20) NOT NULL DEFAULT 'open'"),
     ("anomaly_alerts", "ack_note", "TEXT"),

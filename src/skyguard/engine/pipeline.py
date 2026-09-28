@@ -42,6 +42,7 @@ from skyguard.schemas import (
     Severity,
     StationStatus,
     ThermoView,
+    DriftView,
 )
 
 _HEALTH_HOURS = 24 * 7
@@ -424,6 +425,7 @@ def telemetry_qc(row: TelemetryLog) -> dict:
         "tier3_method": row.tier3_method,
         "tier3_mix": load_model(row.tier3_mix, ChannelValues),
         "tier3_corr": load_corr(row.tier3_corr),
+        "tier3_drift": load_model(row.tier3_drift, DriftView),
     }
 
 
@@ -444,6 +446,7 @@ def _apply_overlay(row: TelemetryLog, mapped: dict) -> None:
     row.tier3_method = tier3.method
     row.tier3_mix = dump_json(tier3.mix)
     row.tier3_corr = dump_json(tier3.corr)
+    row.tier3_drift = dump_json(tier3.drift)
 
 
 def _page(
