@@ -26,11 +26,11 @@ To **fetch, run the API, stream, inject, or open the dashboard**, use the [root 
 | Ground-truth hours, catalog import, streamer | Data + Simulator | data-simulator.md |
 | Fault injection library + eval labels | Data + Simulator | data-simulator.md |
 | FastAPI, SQLite, demo overlay, query APIs, ML adapter | Backend | backend.md, contracts.md |
-| Production 3-tier QC (rules + LSTM + buddy) | ML (`ml/`) | ml engine + contracts § QC boundary |
+| Production QC (rules + LSTM + buddy, in-process) | `v2-deliverable` `v2.engine` | contracts § QC boundary |
 | Legacy backend tiers | unused on live ingest | backend.md (legacy) |
 | Streamlit dashboard | Frontend | frontend.md |
 | ESP32 firmware | Edge/QA (not us) | out of scope |
 
 ## Rule
 
-Shared types live in `contracts.md`. Injection math lives in one library. The simulator streams **clean** data. The backend applies demo faults then calls ML. Raw observations are never overwritten. Buddy checks use the ML graph, not NORTH/WEST.
+Shared types live in `contracts.md`. Injection math lives in one library. The simulator streams **clean** data. The backend applies demo faults then calls `v2.engine.process_aws_data`. Raw observations are never overwritten. Buddy checks use the v2 graph (≥2 neighbors), not NORTH/WEST.

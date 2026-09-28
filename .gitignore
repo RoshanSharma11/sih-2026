@@ -23,3 +23,6 @@ data/eval/*.json
 data/eval/*.csv
 data/skyguard.db
 *.db
+
+ml/eval_out/
+ml/ml/reports/*.csv

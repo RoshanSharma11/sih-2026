@@ -178,7 +178,7 @@ Response:
 | Storm | `target` must be `neighborhood`; expand `station_id` via buddy graph |
 | Hardware | `target` must be `station` |
 
-Legacy body `{target: "cluster", cluster_id: "NORTH"}` is rejected with 400 after I3. Use Palam neighborhood (`42181`) for the storm hero.
+Legacy body `{target: "cluster", cluster_id: "NORTH"}` is rejected with 400 after I3. The live storm is the Mumbai neighborhood (Santa Cruz `43003` and its buddies). Palam `42181` is not in the catalog.
 
 `POST /demo/reset` — clear all armed overlays and any replay arm. It does not delete stored hours.
 
