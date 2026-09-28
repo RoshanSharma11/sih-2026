@@ -111,6 +111,9 @@ class SkyGuardClient:
     def buddy_map(self) -> dict[str, Any]:
         return self._get_json("/buddy-map")
 
+    def reliability(self, hours: int = 168) -> dict[str, Any]:
+        return self._get_json("/reliability", params={"hours": hours})
+
     def export_url(self, station_id: str | None = None, hours: int | None = None) -> str:
         """Browser link to GET /export (QC'd CSV with a WMO-style qc_flag). Not polled."""
         params: list[str] = []

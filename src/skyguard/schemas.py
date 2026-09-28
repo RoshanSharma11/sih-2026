@@ -378,3 +378,43 @@ class BuddyMap(BaseModel):
     stations: list[str]
     isolates: list[str]
     buddies: dict[str, list[str]]
+
+
+class ReliabilityRow(BaseModel):
+    station_id: str
+    name: str
+    isolate: bool = False
+    buddy_count: int = 0
+    hours_expected: int
+    hours_stored: int = 0
+    hours_scored: int = 0
+    clean: int = 0
+    weather: int = 0
+    hardware: int = 0
+    unconfirmed: int = 0
+    warming: int = 0
+    feed_gap: int = 0
+    completeness: float = 0.0
+    flag_rate: float | None = None
+    health_score: float
+    status: StationStatus
+    last_hour: datetime | None = None
+
+
+class ReliabilityNetwork(BaseModel):
+    n_stations: int = 0
+    n_isolates: int = 0
+    hours_expected: int
+    hours_stored: int = 0
+    hours_scored: int = 0
+    feed_gap_hours: int = 0
+    mean_completeness: float = 0.0
+    stations_complete: int = 0
+    stations_degraded: int = 0
+
+
+class ReliabilityReport(BaseModel):
+    generated_at: datetime
+    hours: int
+    network: ReliabilityNetwork
+    stations: list[ReliabilityRow]

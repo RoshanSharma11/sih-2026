@@ -1066,6 +1066,62 @@ def network_intro_html() -> str:
     )
 
 
+def reliability_intro_html() -> str:
+    return (
+        '<div class="sg-card">'
+        '<div class="sg-verdict-kicker">Why this page exists</div>'
+        '<div class="sg-verdict-text">Health says whether a sensor is trusted. Reliability says whether the station reports at all.</div>'
+        '<p class="sg-caption" style="margin:0.45rem 0 0 0">'
+        "Completeness is stored hours over the window. Flag rate is hardware plus unconfirmed over scored hours; "
+        "weather never counts against a station. Feed-gap hours are the upstream feed, not the sensor. "
+        "A station with fewer than two in-set buddies cannot get a buddy check, so its anomalies stay unconfirmed."
+        "</p></div>"
+    )
+
+
+def reliability_kpis_html(network: dict[str, Any]) -> str:
+    n = int(network.get("n_stations") or 0)
+    items = (
+        ("Mean completeness", f"{100 * float(network.get('mean_completeness') or 0):.0f}%", CLEAN),
+        ("Stations ≥ 90% complete", f"{network.get('stations_complete', 0)} / {n}", CLEAN),
+        ("Degraded or critical", str(network.get("stations_degraded", 0)), HARDWARE),
+        ("Isolates (< 2 buddies)", f"{network.get('n_isolates', 0)} / {n}", SLATE),
+        ("Feed-gap hours", str(network.get("feed_gap_hours", 0)), FEEDGAP),
+    )
+    cells = "".join(
+        f'<div class="sg-kpi" style="border-top-color:{color}">'
+        f'<div class="sg-kpi-label">{escape(label)}</div>'
+        f'<div class="sg-kpi-value" style="color:{color};font-size:1.25rem">{escape(value)}</div></div>'
+        for label, value, color in items
+    )
+    return f'<div class="sg-kpis sg-kpis-5">{cells}</div>'
+
+
+def reliability_table(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Flat rows for st.dataframe. Percentages as 0–1 floats for ProgressColumn."""
+    table: list[dict[str, Any]] = []
+    for row in rows:
+        table.append(
+            {
+                "Station": short_name(str(row.get("name") or row.get("station_id"))),
+                "ID": str(row.get("station_id")),
+                "Completeness": float(row.get("completeness") or 0.0),
+                "Flag rate": row.get("flag_rate"),
+                "Stored": int(row.get("hours_stored") or 0),
+                "Scored": int(row.get("hours_scored") or 0),
+                "Hardware": int(row.get("hardware") or 0),
+                "Weather": int(row.get("weather") or 0),
+                "Unconfirmed": int(row.get("unconfirmed") or 0),
+                "Feed gap": int(row.get("feed_gap") or 0),
+                "Buddies": int(row.get("buddy_count") or 0),
+                "7-day health": float(row.get("health_score") or 0.0),
+                "Status": str(row.get("status") or ""),
+                "Last hour": fmt_stamp(row.get("last_hour")) if row.get("last_hour") else "—",
+            }
+        )
+    return table
+
+
 def map_head_html(count: int, selected_name: str | None) -> str:
     focus = escape(selected_name) if selected_name else "Mumbai + Safdarjung"
     return (

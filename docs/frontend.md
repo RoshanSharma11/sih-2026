@@ -23,7 +23,8 @@ Do not invent routes or API fields. Shared session: `view_ids`, `station_id`, `i
 Operations
   Network     48 markers + KPIs
   Station     raw line, band only when distrusted, root cause
-  Alerts      newest-first feed, weather ≠ hardware
+  Alerts      newest-first feed, weather ≠ hardware, acknowledge / resolve
+  Reliability per-station completeness + flag history (GET /reliability)
 Demo
   Control     live poll + Mumbai replay + custom inject
 Guide
@@ -70,6 +71,13 @@ The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43
 - **Exceptions per hour**: a stacked bar chart of the feed bucketed by hour (rose hardware / amber weather / slate unconfirmed). A wide amber bar is a shared weather hour; a lone rose bar is one sensor. Hidden when the feed is empty.
 - Newest first. Each card is a human label, station name, time, fault in plain language (`Spike`, `Missing packet`, …), confidence, reason, and a weather/unconfirmed health note. Amber weather (`GENUINE_WEATHER` and `STORM`) vs rose hardware (`PHYSICAL_FAULT`, `HARDWARE_ANOMALY`, `THERMO`, `COMMUNICATION`, `COMM_ERROR`) vs slate unconfirmed.
 - **Inspect this hour** pins that `alert_id` and focuses Station on that hour (not the live CLEAN hour).
+
+### Reliability
+
+- One `GET /reliability?hours=` per render (24 h / 3 d / 7 d / 30 d radio, default 7 d). Not a 1-second fragment; it reruns on the radio.
+- Intro states the difference: health is trust in the sensor, completeness is whether the station reports. Five KPIs from `network`: mean completeness, stations ≥ 90 % complete, degraded or critical, isolates (`n_isolates / n_stations`, the < 2-buddy count), feed-gap hours.
+- **Hours by outcome**: one horizontal stacked bar per station (clean teal, weather amber, hardware rose, unconfirmed slate, warming `#94A3B8`, feed gap indigo), worst completeness at the top, a dotted line at the full window.
+- **Every station**: `st.dataframe` with `ProgressColumn` for completeness and flag rate, plus stored / scored / hardware / weather / unconfirmed / feed gap / buddies / 7-day health / status / last hour. A select-box plus **Open on Station** focuses that station.
 
 ### Control
 
@@ -137,6 +145,7 @@ Never N+1 the catalog. Map and KPIs use list `latest` only. Do not call port 800
 3. Network dispatch: one `GET /alerts?limit=` (not N+1)
 4. Selected station: `GET /stations/{id}/telemetry?limit=`, `GET /alerts?station_id=`, `GET /stations/{id}/timing?ts=&wait_s=0`, and `GET /healthz` for `threshold` (the LSTM trace ratio)
 5. Alerts page: `GET /alerts?limit=&state=`; buttons call `POST /alerts/{id}/ack`
+6. Reliability page: `GET /reliability?hours=` once per render
 6. Control: `GET /healthz` for the poll line, `POST /demo/replay`, `POST /demo/reset`
 7. `GET /buddy-map` only to draw edges among the camera set
 

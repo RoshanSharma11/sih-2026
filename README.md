@@ -99,6 +99,7 @@ Poll shapes are frozen in [docs/contracts.md](docs/contracts.md). No SSE. Do not
 | `GET`        | `/alerts?station_id=&state=&limit=`         | newest first — verdict sentence + `label` + `ack_state`           |
 | `POST`       | `/alerts/{id}/ack`                          | `{state, note?, by?}` — open / acknowledged / resolved            |
 | `GET`        | `/buddy-map`                                | ML graph for the dashboard                                        |
+| `GET`        | `/reliability?hours=`                       | per-station completeness, outcome counts, flag rate over a window  |
 | `GET`        | `/export?station_id=&from=&to=`             | QC'd CSV: raw T/P/H + WMO-style `qc_flag` 0/1/2/3/9 per hour       |
 | `GET`        | `/demo/status`                              | armed overlays                                                    |
 | `GET`/`POST` | `/demo/stream-filter`                       | view vs ingest sets                                               |

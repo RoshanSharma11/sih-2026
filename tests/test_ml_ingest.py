@@ -617,3 +617,28 @@ def test_webhook_pages_on_high_hardware_alert_and_status_change_only(tmp_path: P
     (tmp_path / "quiet").mkdir(exist_ok=True)
     with _client(tmp_path / "quiet", notifier=quiet) as client:
         assert client.get("/healthz").json()["webhook"]["configured"] is False
+
+
+def test_reliability_counts_stored_scored_and_flagged_hours(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        _seed(client, PALAM, vary=True)
+        _ingest(client, PALAM, temp_c=99.0)
+        report = client.get("/reliability", params={"hours": 168, "to": "2024-07-02T00:00:00Z"}).json()
+        assert report["hours"] == 168
+        by_id = {row["station_id"]: row for row in report["stations"]}
+        palam = by_id[PALAM]
+        assert palam["hours_stored"] >= 24
+        assert palam["hours_scored"] == palam["clean"] + palam["weather"] + palam["hardware"] + palam["unconfirmed"]
+        assert palam["hardware"] == 1
+        assert palam["completeness"] == round(min(1.0, palam["hours_stored"] / 168), 4)
+        assert palam["flag_rate"] == round(1 / palam["hours_scored"], 4)
+        assert palam["last_hour"].startswith("2024-06-30T23:00:00")
+        # a station with no hours is present with zero completeness
+        quiet = by_id[SAFDARJUNG]
+        assert quiet["hours_stored"] == 0 and quiet["completeness"] == 0.0 and quiet["flag_rate"] is None
+        net = report["network"]
+        assert net["n_stations"] == len(report["stations"])
+        assert net["hours_stored"] == sum(row["hours_stored"] for row in report["stations"])
+        assert net["stations_complete"] == 0
+        # sorted worst completeness first
+        assert report["stations"][0]["completeness"] <= report["stations"][-1]["completeness"]

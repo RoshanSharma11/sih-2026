@@ -431,3 +431,50 @@ def contribution_html(alert: dict[str, Any] | None) -> str:
     if not rows:
         return ""
     return '<div class="sg-bars">' + "".join(rows) + "</div>"
+
+
+def reliability_figure(rows: list[dict[str, Any]], limit: int = 48) -> go.Figure | None:
+    """One horizontal stacked bar per station: hours by outcome, ordered worst completeness first."""
+    if not rows:
+        return None
+    rows = rows[:limit]
+    names = [str(row.get("name") or row.get("station_id")) for row in rows]
+    series = (
+        ("clean", "Clean", OBSERVED),
+        ("weather", "Weather", "#D97706"),
+        ("hardware", "Hardware", "#E11D48"),
+        ("unconfirmed", "Unconfirmed", "#64748B"),
+        ("warming", "Warming / unscored", "#94A3B8"),
+        ("feed_gap", "Feed gap", "#6366F1"),
+    )
+    fig = go.Figure()
+    for key, label, color in series:
+        xs = [int(row.get(key) or 0) for row in rows]
+        if not any(xs):
+            continue
+        fig.add_trace(
+            go.Bar(
+                y=names,
+                x=xs,
+                orientation="h",
+                name=label,
+                marker=dict(color=color, line=dict(width=0)),
+                hovertemplate="%{y}<br>" + label + " %{x} h<extra></extra>",
+            )
+        )
+    expected = int(rows[0].get("hours_expected") or 0)
+    if expected:
+        fig.add_vline(x=expected, line=dict(color=MUTED, width=1, dash="dot"))
+    fig.update_layout(
+        barmode="stack",
+        paper_bgcolor=CARD,
+        plot_bgcolor=CARD,
+        margin=dict(l=8, r=16, t=30, b=32),
+        height=max(260, 18 * len(rows) + 80),
+        legend=dict(orientation="h", y=1.04, x=0, font=dict(size=11, color=MUTED)),
+        font=dict(color=MUTED, size=11, family="IBM Plex Sans, system-ui, sans-serif"),
+        xaxis=dict(gridcolor=GRID, zeroline=False, showline=False, color=MUTED, title="stored hours"),
+        yaxis=dict(gridcolor=GRID, zeroline=False, showline=False, color=MUTED, autorange="reversed"),
+        bargap=0.25,
+    )
+    return fig

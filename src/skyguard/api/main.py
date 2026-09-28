@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from skyguard.api.routes_demo import router as demo_router
 from skyguard.api.routes_export import router as export_router
 from skyguard.api.routes_ingest import router as ingest_router
+from skyguard.api.routes_reliability import router as reliability_router
 from skyguard.api.routes_query import router as query_router
 from skyguard.config import BUDDY_EDGES_PATH, DB_PATH, STATIONS_PATH
 from skyguard.data.catalog import read_catalog
@@ -83,6 +84,7 @@ def create_app(
     app.include_router(ingest_router)
     app.include_router(demo_router)
     app.include_router(export_router)
+    app.include_router(reliability_router)
     return app
 
 

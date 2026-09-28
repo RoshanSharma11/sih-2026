@@ -488,3 +488,29 @@ def test_webhook_strip_states() -> None:
     assert "Paging on" in on and "3 sent" in on and "alert opened" in on
     bad = webhook_html({"configured": True, "sent": 3, "failed": 1, "last_error": "HTTP 500"})
     assert "Paging failed" in bad and "HTTP 500" in bad
+
+
+def test_reliability_helpers() -> None:
+    from charts import reliability_figure
+    from panels import reliability_kpis_html, reliability_table
+
+    rows = [
+        {"station_id": "43003", "name": "Mumbai / Santa Cruz", "hours_expected": 168, "hours_stored": 150,
+         "hours_scored": 120, "clean": 110, "weather": 5, "hardware": 4, "unconfirmed": 1, "warming": 24,
+         "feed_gap": 6, "completeness": 0.8929, "flag_rate": 0.0417, "buddy_count": 3, "health_score": 96.0,
+         "status": "HEALTHY", "last_hour": "2026-09-28T12:00:00Z"},
+        {"station_id": "42182", "name": "Safdarjung", "hours_expected": 168, "hours_stored": 0, "hours_scored": 0,
+         "clean": 0, "weather": 0, "hardware": 0, "unconfirmed": 0, "warming": 0, "feed_gap": 0,
+         "completeness": 0.0, "flag_rate": None, "buddy_count": 0, "health_score": 100.0, "status": "HEALTHY",
+         "last_hour": None},
+    ]
+    table = reliability_table(rows)
+    assert table[0]["Station"] == "Santa Cruz" and table[0]["Completeness"] == 0.8929
+    assert table[1]["Flag rate"] is None and table[1]["Last hour"] == "—"
+    fig = reliability_figure(rows)
+    assert fig is not None
+    assert {trace.name for trace in fig.data} == {"Clean", "Weather", "Hardware", "Unconfirmed", "Warming / unscored", "Feed gap"}
+    assert reliability_figure([]) is None
+    html = reliability_kpis_html({"n_stations": 48, "n_isolates": 36, "mean_completeness": 0.71,
+                                  "stations_complete": 12, "stations_degraded": 2, "feed_gap_hours": 40})
+    assert "36 / 48" in html and "71%" in html and "12 / 48" in html

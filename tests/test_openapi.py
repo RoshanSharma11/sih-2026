@@ -10,6 +10,7 @@ CONTRACT_PATHS = {
     "/alerts": {"get"},
     "/alerts/{alert_id}/ack": {"post"},
     "/export": {"get"},
+    "/reliability": {"get"},
     "/buddy-map": {"get"},
     "/ingest": {"post"},
     "/demo/inject": {"post"},
