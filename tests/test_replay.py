@@ -10,6 +10,7 @@ from skyguard.api.main import create_app
 from skyguard.config import BUDDY_EDGES_PATH, STATIONS_PATH
 from skyguard.data.inject import Observation
 from skyguard.engine.demo import DemoController
+from skyguard.engine.play import PLAY_START, SEED_HOURS
 from skyguard.engine.replay import load_demo_windows
 from skyguard.errors import InvalidDemoRequest
 from skyguard.schemas import FaultType, ReplayStory
@@ -236,6 +237,73 @@ def test_replay_leaves_a_newer_live_hour_in_the_window(tmp_path: Path) -> None:
         assert follow.json()["observed"]["temp_c"] == 21.0
         assert follow.json()["demo_injected"] is None
         assert [point.temp_c for point in client.app.state.windows.points("43003")] == [31.0, 21.0]
+    finally:
+        _close(client)
+
+
+def test_play_lays_armed_overlays_end_to_end_on_1_june(tmp_path: Path) -> None:
+    client, engine = _client(tmp_path)
+    try:
+        empty = client.post("/demo/play")
+        assert empty.status_code == 400
+
+        spike = client.post(
+            "/demo/inject",
+            json={
+                "target": "station",
+                "station_id": "43003",
+                "kind": "SPIKE",
+                "channel": "temp_c",
+                "duration_hours": 2,
+            },
+        )
+        assert spike.status_code == 200, spike.text
+        freeze = client.post(
+            "/demo/inject",
+            json={
+                "target": "station",
+                "station_id": "43003",
+                "kind": "FREEZE",
+                "channel": "pres_hpa",
+                "duration_hours": 2,
+            },
+        )
+        assert freeze.status_code == 200, freeze.text
+
+        played = client.post("/demo/play")
+        assert played.status_code == 200, played.text
+        body = played.json()
+        assert body["scored_hours"] == 4
+        assert body["start"].startswith("2024-06-01T23:00:00")
+        assert body["end"].startswith("2024-06-02T02:00:00")
+        assert body["station_ids"][-1] == "43003"
+        assert client.get("/demo/status").json() == {"overlays": []}
+
+        template = load_demo_windows()["43003"]
+        santa = [row for row in engine.payloads if row["station_id"] == "43003"]
+        assert len(santa) == 4
+        assert len(santa[0]["window"]) == 24
+        assert len(santa[0]["buddies"]) == 3
+        for offset, row in enumerate(santa[:2]):
+            source = template[(SEED_HOURS + offset) % 24]
+            assert row["temp"] != source.temp_c
+            assert row["pres"] == source.pres_hpa
+        held = template[(SEED_HOURS + 2) % 24].pres_hpa
+        assert santa[2]["pres"] == held
+        assert santa[3]["pres"] == held
+        assert santa[3]["temp"] == template[(SEED_HOURS + 3) % 24].temp_c
+
+        rows = client.get("/stations/43003/telemetry?limit=50").json()
+        june = [row for row in rows if str(row["timestamp"]).startswith("2024-06")]
+        assert len(june) == SEED_HOURS + 4
+        assert all(row["label"] == "CLEAN" for row in june[:SEED_HOURS])
+        assert june[SEED_HOURS]["temp_observed"] == santa[0]["temp"]
+        assert june[-1]["pres_observed"] == held
+        assert PLAY_START.isoformat().startswith("2024-06-01")
+        assert not any(str(row["timestamp"]).startswith("2024-12-31") for row in rows)
+
+        points = client.app.state.windows.points("43003")
+        assert points[-1].timestamp.month == 6
     finally:
         _close(client)
 

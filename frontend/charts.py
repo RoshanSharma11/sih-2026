@@ -94,6 +94,76 @@ def _as_dt(value: Any) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
+def ordered_hours(telemetry: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = [row for row in telemetry if _as_dt(row.get("timestamp")) is not None]
+    rows.sort(key=lambda row: _as_dt(row.get("timestamp")) or datetime.min.replace(tzinfo=timezone.utc))
+    return rows
+
+
+def split_runs(
+    telemetry: list[dict[str, Any]],
+    gap: timedelta = timedelta(hours=6),
+) -> list[list[dict[str, Any]]]:
+    """Continuous runs. A gap longer than `gap` starts a new run.
+
+    December replay and a later live hour stay in separate runs so the chart
+    does not draw a line across the empty span.
+    """
+    rows = ordered_hours(telemetry)
+    if not rows:
+        return []
+    runs: list[list[dict[str, Any]]] = [[rows[0]]]
+    for previous, row in zip(rows, rows[1:]):
+        left = _as_dt(previous.get("timestamp"))
+        right = _as_dt(row.get("timestamp"))
+        if left is None or right is None or right - left > gap:
+            runs.append([row])
+        else:
+            runs[-1].append(row)
+    return runs
+
+
+def run_index(runs: list[list[dict[str, Any]]], timestamp: Any | None) -> int:
+    if not runs:
+        return 0
+    target = _as_dt(timestamp)
+    if target is None:
+        return len(runs) - 1
+    best_run = 0
+    best_gap = float("inf")
+    for index, run in enumerate(runs):
+        gap_s = min(
+            abs((_as_dt(row.get("timestamp")) - target).total_seconds())
+            for row in run
+            if _as_dt(row.get("timestamp")) is not None
+        )
+        if gap_s < best_gap:
+            best_gap = gap_s
+            best_run = index
+    return best_run
+
+
+def adjacent_hour(
+    rows: list[dict[str, Any]],
+    timestamp: Any | None,
+    step: int,
+) -> dict[str, Any] | None:
+    """The stored hour `step` places away, including across a gap between runs."""
+    if not rows or step == 0:
+        return None
+    target = _as_dt(timestamp)
+    if target is None:
+        return None
+    index = min(
+        range(len(rows)),
+        key=lambda i: abs((_as_dt(rows[i].get("timestamp")) - target).total_seconds()),
+    )
+    nxt = index + step
+    if nxt < 0 or nxt >= len(rows):
+        return None
+    return rows[nxt]
+
+
 def cluster_around(
     telemetry: list[dict[str, Any]],
     timestamp: Any | None,
@@ -103,31 +173,10 @@ def cluster_around(
 
     A live hour a year after the replay must not draw a line across the gap.
     """
-    rows = [row for row in telemetry if _as_dt(row.get("timestamp")) is not None]
-    rows.sort(key=lambda row: _as_dt(row.get("timestamp")) or datetime.min.replace(tzinfo=timezone.utc))
-    if not rows:
+    runs = split_runs(telemetry, gap)
+    if not runs:
         return []
-    target = _as_dt(timestamp) or _as_dt(rows[-1].get("timestamp"))
-    assert target is not None
-    index = min(
-        range(len(rows)),
-        key=lambda i: abs((_as_dt(rows[i].get("timestamp")) - target).total_seconds()),
-    )
-    start = index
-    while start > 0:
-        left = _as_dt(rows[start - 1].get("timestamp"))
-        right = _as_dt(rows[start].get("timestamp"))
-        if left is None or right is None or right - left > gap:
-            break
-        start -= 1
-    end = index
-    while end + 1 < len(rows):
-        left = _as_dt(rows[end].get("timestamp"))
-        right = _as_dt(rows[end + 1].get("timestamp"))
-        if left is None or right is None or right - left > gap:
-            break
-        end += 1
-    return rows[start : end + 1]
+    return runs[run_index(runs, timestamp)]
 
 
 def channel_figure(

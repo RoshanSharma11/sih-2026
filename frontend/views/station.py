@@ -8,7 +8,7 @@ from typing import Any
 import streamlit as st
 
 from api import SkyGuardApiError, merge_station
-from charts import cluster_around, contribution_html, telemetry_figures, timing_figure
+from charts import adjacent_hour, cluster_around, contribution_html, ordered_hours, run_index, split_runs, telemetry_figures, timing_figure
 from evidence import (
     decision_trace_html,
     neighbor_table_html,
@@ -52,7 +52,6 @@ from status import (
     short_name,
     stamp_key,
     status_label,
-    verdict_kind,
 )
 
 
@@ -62,7 +61,7 @@ def render_station() -> None:
     health = client.health()
     page_header(
         "Station",
-        "Raw T / P / H stay on the tiles. A predicted overlay appears only when this hour is distrusted.",
+        "Step through stored hours. The chart is that continuous run. A dashed prediction appears on any hour QC distrusted.",
         health,
     )
     try:
@@ -118,22 +117,26 @@ def station_live() -> None:
         st.caption("That alert is no longer in the recent feed. Showing this hour instead.")
         st.session_state.alert_id = None
 
-    replay_hour = hour_telemetry(telemetry, st.session_state.get("replay_ts"))
-    focus = None if pinned is not None else replay_hour
+    ordered = ordered_hours(telemetry)
+    runs = split_runs(ordered)
     latest = latest_payload(station)
-    hour = _focus_hour(station, telemetry, pinned, focus)
-    alert = pinned if pinned is not None else hour_alert(alerts, (hour or latest).get("timestamp"))
-    warming = bool((hour or latest).get("warming_up")) and pinned is None and focus is None
+    _adopt_external_pin(pinned, st.session_state.get("replay_ts"))
+    hour = _shown_hour(ordered, pinned, latest)
+    pinned_here = pinned is not None and hour is not None and stamp_key(pinned.get("timestamp")) == stamp_key(hour.get("timestamp"))
+    alert = pinned if pinned_here else hour_alert(alerts, (hour or latest).get("timestamp"))
+    on_live = hour is not None and stamp_key(hour.get("timestamp")) == stamp_key(latest.get("timestamp"))
+    warming = bool(hour and hour.get("warming_up"))
+    _time_bar(ordered, runs, hour, latest)
 
-    _identity(station, pinned, focus, names)
-    if warming:
-        window = cluster_around(telemetry, latest.get("timestamp"))
+    _identity(station, names, hour, on_live=on_live, pinned_here=pinned_here, pinned=pinned)
+    if warming and hour is not None:
+        window = cluster_around(ordered, hour.get("timestamp"))
         st.markdown(
-            warmup_html(collected_hours(window), fmt_stamp(latest.get("timestamp"))),
+            warmup_html(collected_hours(window), fmt_stamp(hour.get("timestamp"))),
             unsafe_allow_html=True,
         )
     else:
-        _verdict(station, alerts, telemetry, pinned, focus)
+        _verdict(station, alerts, hour, latest, pinned if pinned_here else None, on_live=on_live)
     st.markdown(readings_html(hour or latest, warming=warming), unsafe_allow_html=True)
 
     health_col, buddy_col = st.columns(2, gap="medium")
@@ -142,13 +145,8 @@ def station_live() -> None:
     with buddy_col:
         st.markdown(buddy_html(station, names, hour), unsafe_allow_html=True)
 
-    if pinned is not None:
-        mark_at, mark_label = pinned.get("timestamp"), "Pinned alert"
-    elif focus is not None:
-        mark_at, mark_label = focus.get("timestamp"), "Replay hour"
-    else:
-        mark_at, mark_label = latest.get("timestamp"), None
-    window = _charts(telemetry, mark_at, mark_label, warming=warming)
+    mark_at = (hour or latest).get("timestamp")
+    window = _charts(ordered, mark_at, "This hour" if mark_at else None, warming=warming)
     gap = feed_gap(hour or latest)
     if gap and alert is None and not warming:
         st.markdown(
@@ -194,19 +192,25 @@ def _sync_alert_pin(current: str) -> None:
     seen = st.session_state.get("_station_seen")
     if seen is not None and seen != current:
         st.session_state.alert_id = None
+        st.session_state.browse_ts = None
+        st.session_state._hour_pin = ""
+        st.session_state.pop("station_hour", None)
     st.session_state._station_seen = current
 
 
 def _identity(
     station: dict[str, Any],
-    pinned: dict[str, Any] | None,
-    focus: dict[str, Any] | None,
     names: dict[str, str],
+    hour: dict[str, Any] | None,
+    *,
+    on_live: bool,
+    pinned_here: bool,
+    pinned: dict[str, Any] | None,
 ) -> None:
-    if pinned is not None:
+    if pinned_here and pinned is not None:
         tag = f"Pinned · {alert_status_label(pinned)}"
-    elif focus is not None:
-        tag = f"Replay · {hour_caption(focus)}"
+    elif hour is not None and not on_live:
+        tag = f"{hour_caption(hour)} · {fmt_stamp(hour.get('timestamp'))}"
     elif station.get("isolate"):
         tag = "Isolate"
     else:
@@ -214,24 +218,214 @@ def _identity(
     st.markdown(identity_html(station, tag, names), unsafe_allow_html=True)
 
 
-def _clear_focus() -> None:
-    st.session_state.alert_id = None
-    st.session_state.replay_ts = None
-    st.rerun()
+def _go_hour(timestamp: str | None) -> None:
+    if timestamp is None:
+        st.session_state.browse_ts = None
+        st.session_state.alert_id = None
+        st.session_state.replay_ts = None
+        st.session_state._hour_pin = ""
+        st.session_state.pop("station_hour", None)
+        return
+    st.session_state.browse_ts = timestamp
+    st.session_state.station_hour = timestamp
+
+
+def _adopt_external_pin(pinned: dict[str, Any] | None, replay_ts: Any) -> None:
+    """A new alert or replay chooses the hour. Browsing after that stays put."""
+    if pinned is not None:
+        token = stamp_key(pinned.get("timestamp"))
+        raw = pinned.get("timestamp")
+    elif replay_ts:
+        token = stamp_key(replay_ts)
+        raw = replay_ts
+    else:
+        token = ""
+        raw = None
+    if st.session_state.get("_hour_pin") == token:
+        return
+    st.session_state._hour_pin = token
+    if not token:
+        return
+    st.session_state.browse_ts = None
+    st.session_state.station_hour = raw
+
+
+def _shown_hour(
+    ordered: list[dict[str, Any]],
+    pinned: dict[str, Any] | None,
+    latest: dict[str, Any],
+) -> dict[str, Any] | None:
+    browse = hour_telemetry(ordered, st.session_state.get("browse_ts"))
+    if st.session_state.get("browse_ts") and browse is None:
+        st.session_state.browse_ts = None
+    if browse is not None:
+        return browse
+    if pinned is not None:
+        match = hour_telemetry(ordered, pinned.get("timestamp"))
+        if match is not None:
+            return match
+    replay = hour_telemetry(ordered, st.session_state.get("replay_ts"))
+    if replay is not None:
+        return replay
+    match = hour_telemetry(ordered, latest.get("timestamp"))
+    if match is not None:
+        return match
+    return ordered[-1] if ordered else None
+
+
+def _option_matching(options: list[str], timestamp: Any) -> str | None:
+    key = stamp_key(timestamp)
+    if not key:
+        return None
+    for option in options:
+        if stamp_key(option) == key:
+            return option
+    return None
+
+
+def _time_bar(
+    ordered: list[dict[str, Any]],
+    runs: list[list[dict[str, Any]]],
+    hour: dict[str, Any] | None,
+    latest: dict[str, Any],
+) -> None:
+    if not ordered or hour is None:
+        return
+    shown = str(hour.get("timestamp"))
+    index = run_index(runs, shown)
+    run = runs[index]
+    earlier = adjacent_hour(ordered, shown, -1)
+    later = adjacent_hour(ordered, shown, 1)
+    on_latest = stamp_key(shown) == stamp_key(latest.get("timestamp")) and later is None
+    previous_run = runs[index - 1][-1] if index > 0 else None
+    next_run = runs[index + 1][0] if index + 1 < len(runs) else None
+
+    st.markdown(
+        section_html(
+            "Stored hours",
+            "Earlier and later walk every stored hour. The chart stays on this continuous run, so a long gap is not drawn as a line.",
+        ),
+        unsafe_allow_html=True,
+    )
+    back, forward, latest_col = st.columns(3, gap="small")
+    with back:
+        st.button(
+            "Earlier",
+            width="stretch",
+            disabled=earlier is None,
+            on_click=_go_hour,
+            args=(None if earlier is None else str(earlier.get("timestamp")),),
+            key="hour_earlier",
+        )
+    with forward:
+        st.button(
+            "Later",
+            width="stretch",
+            disabled=later is None,
+            on_click=_go_hour,
+            args=(None if later is None else str(later.get("timestamp")),),
+            key="hour_later",
+        )
+    with latest_col:
+        st.button(
+            "Latest hour",
+            width="stretch",
+            disabled=on_latest and st.session_state.get("browse_ts") is None and st.session_state.get("replay_ts") is None and st.session_state.get("alert_id") is None,
+            on_click=_go_hour,
+            args=(None,),
+            key="hour_latest",
+        )
+    if len(runs) > 1:
+        prev_col, next_col = st.columns(2, gap="small")
+        with prev_col:
+            target = None if previous_run is None else str(previous_run.get("timestamp"))
+            st.button(
+                "Previous run",
+                width="stretch",
+                disabled=previous_run is None,
+                on_click=_go_hour,
+                args=(target,),
+                key="hour_prev_run",
+            )
+        with next_col:
+            st.button(
+                "Next run",
+                width="stretch",
+                disabled=next_run is None,
+                on_click=_go_hour,
+                args=(None if next_run is None else str(next_run.get("timestamp")),),
+                key="hour_next_run",
+            )
+
+    options = [str(row.get("timestamp")) for row in run]
+    labels = {str(row.get("timestamp")): f"{fmt_stamp(row.get('timestamp'))} · {hour_caption(row)}" for row in run}
+    canonical = _option_matching(options, shown) or options[-1]
+    widget = st.session_state.get("station_hour")
+    last_shown = st.session_state.get("_shown_rendered")
+    widget_in_run = _option_matching(options, widget)
+    following = st.session_state.get("browse_ts") is None
+    if widget_in_run is None or (
+        following and stamp_key(widget) == stamp_key(last_shown) and stamp_key(shown) != stamp_key(widget)
+    ):
+        st.session_state.station_hour = canonical
+    picked = st.selectbox(
+        "Hour in this run",
+        options=options,
+        format_func=lambda value: labels.get(value, value),
+        key="station_hour",
+    )
+    if stamp_key(picked) != stamp_key(shown):
+        st.session_state.browse_ts = picked
+        st.rerun()
+    st.session_state._shown_rendered = shown
+
+    start = fmt_stamp(run[0].get("timestamp"))
+    end = fmt_stamp(run[-1].get("timestamp"))
+    span = start if start == end else f"{start} – {end}"
+    st.caption(
+        f"Run {index + 1} of {len(runs)} · {span} · {len(run)} hour{'s' if len(run) != 1 else ''}. "
+        f"Showing {fmt_stamp(shown)} · {hour_caption(hour)}."
+    )
+
+
+def _reading_meta(row: dict[str, Any] | None) -> str:
+    if not row:
+        return ""
+    humidity = row.get("rhum_observed")
+    if humidity is None:
+        humidity = row.get("rhum_pct")
+    if "temp_observed" not in row and isinstance(row.get("observed"), dict):
+        observed = row.get("observed") or {}
+        return (
+            f" · T {fmt_value(observed.get('temp_c'))}°C"
+            f" · P {fmt_value(observed.get('pres_hpa'))} hPa"
+            f" · H {fmt_value(observed.get('rhum_pct'))}%"
+        )
+    return (
+        f" · T {fmt_value(row.get('temp_observed'))}°C"
+        f" · P {fmt_value(row.get('pres_observed'))} hPa"
+        f" · H {fmt_value(humidity)}%"
+    )
 
 
 def _verdict(
     station: dict[str, Any],
     alerts: list[dict[str, Any]],
-    telemetry: list[dict[str, Any]],
+    hour: dict[str, Any] | None,
+    latest: dict[str, Any],
     pinned: dict[str, Any] | None,
-    focus: dict[str, Any] | None = None,
+    *,
+    on_live: bool,
 ) -> None:
-    latest = latest_payload(station)
     name = short_name(station.get("name", station["station_id"]))
     live_label = status_label(station)
 
-    if pinned is not None:
+    if hour is None:
+        text = "No hour stored yet. The live poll or a replay will light this station."
+        meta = "No telemetry yet"
+        kicker = f"{name} · idle"
+        kind = "idle"
+    elif pinned is not None:
         kind = alert_kind(pinned)
         stamp = fmt_stamp(pinned.get("timestamp"))
         text = pinned.get("explainability_text") or f"{name} · {alert_status_label(pinned)}"
@@ -239,54 +433,18 @@ def _verdict(
         meta = (
             f"{stamp} · {pinned.get('fault_type', '')} · confidence "
             f"{fmt_value(pinned.get('confidence_score'), 2)} · {pinned.get('severity', '')}"
+            f"{_reading_meta(hour)}"
         )
-        hour = hour_telemetry(telemetry, pinned.get("timestamp"))
-        if hour:
-            meta += (
-                f" · T {fmt_value(hour.get('temp_observed'))}°C"
-                f" · P {fmt_value(hour.get('pres_observed'))} hPa"
-                f" · H {fmt_value(hour.get('rhum_pct') if hour.get('rhum_pct') is not None else hour.get('rhum_observed'))}%"
-            )
-        elif latest.get("observed") and stamp_key(latest.get("timestamp")) == stamp_key(pinned.get("timestamp")):
-            observed = latest.get("observed") or {}
-            meta += (
-                f" · T {fmt_value(observed.get('temp_c'))}°C"
-                f" · P {fmt_value(observed.get('pres_hpa'))} hPa"
-                f" · H {fmt_value(observed.get('rhum_pct'))}%"
-            )
-    elif focus is not None:
-        matched = hour_alert(alerts, focus.get("timestamp"))
-        kind = alert_kind(matched) if matched is not None else hour_kind(focus)
-        stamp = fmt_stamp(focus.get("timestamp"))
-        text = (
-            (matched or {}).get("explainability_text")
-            or focus.get("explainability_text")
-            or f"{name} · {hour_caption(focus)}"
-        )
-        kicker = f"Replay · {hour_caption(focus)} · {name}"
-        meta = (
-            f"{stamp}"
-            f" · T {fmt_value(focus.get('temp_observed'))}°C"
-            f" · P {fmt_value(focus.get('pres_observed'))} hPa"
-            f" · H {fmt_value(focus.get('rhum_observed'))}%"
-        )
-        if matched and matched.get("fault_type"):
-            meta = f"{matched.get('fault_type')} · {meta}"
-    elif latest:
-        kind = verdict_kind(station)
-        matched = hour_alert(alerts, latest.get("timestamp"))
-        if matched and matched.get("explainability_text"):
-            text = matched["explainability_text"]
-            meta = (
-                f"{matched.get('fault_type', '')} · confidence {fmt_value(matched.get('confidence_score'), 2)}"
-                f" · {matched.get('severity', '')}"
-            )
-        else:
+    else:
+        matched = hour_alert(alerts, hour.get("timestamp"))
+        kind = alert_kind(matched) if matched is not None else hour_kind(hour)
+        stamp = fmt_stamp(hour.get("timestamp"))
+        if on_live and not (matched and matched.get("explainability_text")) and not hour.get("explainability_text"):
             text = {
                 "clean": f"{name} is tracking with its neighbors. No hardware alert this hour.",
                 "warming": f"{name} is warming up. This raw hour is stored. A verdict waits for 24 hourly values.",
                 "feedgap": (
-                    f"IMD did not send {feed_gap_words(feed_gap(latest))} for most stations this hour. "
+                    f"IMD did not send {feed_gap_words(feed_gap(hour))} for most stations this hour. "
                     "Stored raw, not scored, sensor health not charged."
                 ),
                 "unknown": (
@@ -295,20 +453,25 @@ def _verdict(
                 ),
                 "idle": "No hour stored yet. The live poll or a replay will light this station.",
             }.get(kind, f"{name} · {live_label}")
-            meta = fmt_stamp(latest.get("timestamp"))
-        kicker = f"This hour · {live_label} · {name}"
-        observed = latest.get("observed") or {}
-        if observed:
-            meta += (
-                f" · T {fmt_value(observed.get('temp_c'))}°C"
-                f" · P {fmt_value(observed.get('pres_hpa'))} hPa"
-                f" · H {fmt_value(observed.get('rhum_pct'))}%"
+            meta = stamp
+        else:
+            text = (
+                (matched or {}).get("explainability_text")
+                or hour.get("explainability_text")
+                or f"{name} · {hour_caption(hour)}"
             )
-    else:
-        text = "No hour stored yet. The live poll or a replay will light this station."
-        meta = "No telemetry yet"
-        kicker = f"{name} · idle"
-        kind = "idle"
+            meta = stamp
+            if matched and matched.get("fault_type"):
+                meta = (
+                    f"{matched.get('fault_type')} · confidence {fmt_value(matched.get('confidence_score'), 2)}"
+                    f" · {matched.get('severity', '')} · {meta}"
+                )
+        meta += _reading_meta(hour)
+        kicker = (
+            f"This hour · {live_label} · {name}"
+            if on_live
+            else f"Stored hour · {hour_caption(hour)} · {name}"
+        )
 
     st.markdown(
         f"""<div class="sg-verdict sg-verdict-{kind}">
@@ -318,24 +481,15 @@ def _verdict(
         </div>""",
         unsafe_allow_html=True,
     )
-    if pinned is not None or focus is not None:
-        live_kind = verdict_kind(station)
-        same_hour = stamp_key(latest.get("timestamp")) == stamp_key(
-            (pinned or focus or {}).get("timestamp")
+    if hour is not None and not on_live:
+        observed = latest.get("observed") or {}
+        st.caption(
+            f"Latest hour is {live_label} · {fmt_stamp(latest.get('timestamp'))}"
+            f" · T {fmt_value(observed.get('temp_c'))}°C"
+            f" · P {fmt_value(observed.get('pres_hpa'))} hPa"
+            f" · H {fmt_value(observed.get('rhum_pct'))}%."
+            " Health above is the 7-day index. Latest hour returns there."
         )
-        if not same_hour:
-            observed = latest.get("observed") or {}
-            st.caption(
-                f"Live hour is {live_label}"
-                f" · T {fmt_value(observed.get('temp_c'))}°C"
-                f" · P {fmt_value(observed.get('pres_hpa'))} hPa"
-                f" · H {fmt_value(observed.get('rhum_pct'))}%."
-                " Health above is the 7-day index."
-            )
-        elif live_kind != kind:
-            st.caption(f"Live hour is {live_label}. Health above is the 7-day index.")
-        if st.button("Show live hour", key="clear_alert_pin"):
-            _clear_focus()
 
 
 def _charts(
@@ -353,7 +507,7 @@ def _charts(
         )
     else:
         caption = (
-            "Solid = raw T, P, and H. The dashed correction follows the sensor and leaves it on an hour with an imputed interval. The band covers that hour."
+            "Solid = raw T, P, and H for this run. The dashed correction follows the sensor and leaves it on an hour with an imputed interval. The band covers that hour. The marker is the hour selected above."
         )
     st.markdown(section_html("Observed", caption), unsafe_allow_html=True)
     if window and len(window) != len(telemetry):
@@ -373,23 +527,6 @@ def _charts(
         if ribbon:
             st.html(ribbon)
     return window
-
-
-def _focus_hour(
-    station: dict[str, Any],
-    telemetry: list[dict[str, Any]],
-    pinned: dict[str, Any] | None,
-    focus: dict[str, Any] | None = None,
-) -> dict[str, Any] | None:
-    if pinned is not None:
-        hour = hour_telemetry(telemetry, pinned.get("timestamp"))
-        if hour is not None:
-            return hour
-    if focus is not None:
-        return focus
-    latest = latest_payload(station)
-    hour = hour_telemetry(telemetry, latest.get("timestamp"))
-    return hour or (telemetry[-1] if telemetry else None)
 
 
 def _timing_for(client: Any, station_id: str, hour: dict[str, Any] | None) -> dict[str, Any] | None:

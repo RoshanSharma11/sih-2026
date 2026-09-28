@@ -73,6 +73,8 @@ Storm overlay lists every station in the **neighborhood** of `station_id` (D3). 
 
 `POST /demo/replay` loads `demo_windows.json` and plays one story through `ingest_observation` (D22). Seeded hours are `CLEAN`. The scored hour is mutated in `inject.py` before QC, then the arm is cleared. Stories 2 and 3 (`hardware`, `weather`) ingest the Mumbai four, Santa Cruz last. A newer in-memory window is restored afterward so a live poll does not sit on the 2024 hours. Playing the story again replaces that fixture span.
 
+`POST /demo/play` scores the armed overlays in arm order on 1 June 2024. It seeds 23 clean hours from the demo cycle, then ingests one hour per overlay-hour through the same path, and clears the arms. The next play replaces that June span. It does not rewrite 31 December or a later live hour.
+
 ## TIMING
 
 `GET /stations/{id}/timing?ts=` is the only reader of the v2 cache (D23). Ingest queues the job inside `process_aws_data` and returns without it. `wait_s` defaults to 0.

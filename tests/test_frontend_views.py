@@ -97,6 +97,33 @@ def test_default_camera_frames_mumbai_and_safdarjung() -> None:
     assert "Weather versus hardware cannot be called here." in hover
 
 
+def test_split_runs_keeps_replay_and_live_apart_and_steps_across_the_gap() -> None:
+    from charts import adjacent_hour, ordered_hours, run_index, split_runs
+
+    story = [{"timestamp": f"2024-12-31T{hour:02d}:00:00Z", "temp_observed": 26.0} for hour in range(24)]
+    live = [
+        {"timestamp": "2026-09-27T18:00:00Z", "temp_observed": 25.7},
+        {"timestamp": "2026-09-27T19:00:00Z", "temp_observed": 25.4},
+    ]
+    rows = ordered_hours(story + live)
+    runs = split_runs(rows)
+    assert len(runs) == 2
+    assert len(runs[0]) == 24
+    assert [row["timestamp"] for row in runs[1]] == [
+        "2026-09-27T18:00:00Z",
+        "2026-09-27T19:00:00Z",
+    ]
+    assert run_index(runs, "2024-12-31T23:00:00Z") == 0
+    assert run_index(runs, "2026-09-27T18:00:00Z") == 1
+    stepped = adjacent_hour(rows, "2024-12-31T23:00:00Z", 1)
+    assert stepped is not None
+    assert stepped["timestamp"] == "2026-09-27T18:00:00Z"
+    back = adjacent_hour(rows, "2026-09-27T18:00:00Z", -1)
+    assert back is not None
+    assert back["timestamp"] == "2024-12-31T23:00:00Z"
+    assert adjacent_hour(rows, "2024-12-31T00:00:00Z", -1) is None
+
+
 def test_chart_keeps_the_replay_run_apart_from_a_later_live_hour() -> None:
     story = [
         {

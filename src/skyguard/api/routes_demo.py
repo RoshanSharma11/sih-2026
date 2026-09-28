@@ -8,11 +8,13 @@ from sqlalchemy.orm import Session
 from skyguard.api.deps import get_db
 from skyguard.db.catalog import buddy_map_from_db, catalog_station_ids, neighborhood_ids
 from skyguard.db.models import Station
+from skyguard.engine.play import play_overlays
 from skyguard.engine.replay import play_replay
 from skyguard.errors import CatalogNotLoaded, DuplicateObservation, InvalidDemoRequest, StationNotFound, UnknownScaler
 from skyguard.schemas import (
     DemoInjectRequest,
     DemoStatus,
+    PlayResult,
     ReplayRequest,
     ReplayResult,
     StreamFilterRequest,
@@ -87,6 +89,21 @@ def replay_demo(
         return play_replay(
             session,
             body.story,
+            catalog_ready=request.app.state.catalog_ready,
+            windows=request.app.state.windows,
+            demo=request.app.state.demo,
+            qc_engine=request.app.state.qc_engine,
+        )
+    except (CatalogNotLoaded, StationNotFound, InvalidDemoRequest, UnknownScaler, DuplicateObservation) as exc:
+        raise _translate(exc) from exc
+
+
+@router.post("/demo/play", response_model=PlayResult)
+def play_demo(request: Request, session: Session = Depends(get_db)) -> PlayResult:
+    try:
+        _require_catalog(request)
+        return play_overlays(
+            session,
             catalog_ready=request.app.state.catalog_ready,
             windows=request.app.state.windows,
             demo=request.app.state.demo,

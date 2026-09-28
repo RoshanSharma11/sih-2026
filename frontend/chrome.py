@@ -144,7 +144,7 @@ def fire_inject(body: dict[str, Any]) -> None:
     if station_id:
         focus_station(str(station_id))
     hours = body.get("duration_hours", 1)
-    flash(f"Armed {body['kind']} for {hours}h. The next ingested hour is mutated before QC.")
+    flash(f"Armed {body['kind']} for {hours}h. Play on 1 June 2024 scores every armed event in order.")
 
 
 def fire_replay(story: str, *, open_station: bool = False) -> None:
@@ -167,6 +167,23 @@ def fire_replay(story: str, *, open_station: bool = False) -> None:
         flash(f"Replay {story} · Santa Cruz {label or 'scored'}.")
     if open_station:
         go_page("station")
+
+
+def fire_play() -> None:
+    try:
+        body = get_client().play()
+    except SkyGuardApiError as exc:
+        flash(str(exc), kind="bad")
+        return
+    station_ids = [str(station_id) for station_id in body.get("station_ids") or []]
+    focus_station(station_ids[-1] if station_ids else SANTACRUZ)
+    end = body.get("end")
+    st.session_state.replay_ts = None if end is None else str(end)
+    st.session_state.browse_ts = None
+    st.session_state._hour_pin = ""
+    hours = body.get("scored_hours") or 0
+    flash(f"Played {hours} scored hours from 1 June 2024. Each armed event follows the one before it.")
+    go_page("station")
 
 
 def fire_reset() -> None:

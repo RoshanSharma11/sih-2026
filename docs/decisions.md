@@ -170,6 +170,8 @@ The poller calls `ingest_observation`. `DuplicateObservation` (HTTP 409) is skip
 
 The arm is cleared before the response returns, so the next live hour is not rewritten. `POST /demo/reset` also clears it and does not delete rows. A second play deletes that fixture span first, then writes it again.
 
+`POST /demo/play` is the multi-event canvas. It does not use 31 December. Armed overlays are laid end to end from `2024-06-01T00:00:00Z` after 23 seeded clean hours, each scored hour going through `ingest_observation`, then the arms are cleared. A newer live window is restored. The June span is replaced on the next play.
+
 A station window that already contains an hour after the fixture end is put back when the story finishes. Replay rows remain at the 2024 timestamps. The two timelines do not share one 24-hour window.
 
 ## D23 — TIMING is polled, not on the ingest path

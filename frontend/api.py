@@ -149,6 +149,9 @@ class SkyGuardClient:
     def replay(self, story: str) -> dict[str, Any]:
         return self._post_json("/demo/replay", {"story": story}, timeout=120.0)
 
+    def play(self) -> dict[str, Any]:
+        return self._post_json("/demo/play", {}, timeout=180.0)
+
     def timing(self, station_id: str, ts: str, wait_s: float = 0.0) -> dict[str, Any]:
         return self._get_json(
             f"/stations/{station_id}/timing",

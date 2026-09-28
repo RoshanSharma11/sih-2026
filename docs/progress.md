@@ -1,6 +1,6 @@
 # Progress — SkyGuard (SIH PS 26073)
 
-Last updated: 2026-09-28 (L1–L8: feed-gap, poller budget, ack, export, webhook, reliability, shared-shock, residual CUSUM drift).
+Last updated: 2026-09-28 (Play armed overlays on 1 June 2024, in order, scored immediately).
 
 **Next session:** the live plan is complete. Do not extend the Palam / `ml/` path. Credentials stay in `.env` only.
 

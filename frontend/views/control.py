@@ -11,6 +11,7 @@ from chrome import (
     SANTACRUZ,
     catalog_stations,
     fire_inject,
+    fire_play,
     fire_replay,
     fire_reset,
     focus_station,
@@ -69,9 +70,18 @@ def render_control() -> None:
 
     _replay_block(names)
     _custom_block(catalog, names, by_id)
-    _armed_overlays(names)
-
-    st.button("Reset overlays", width="stretch", on_click=fire_reset)
+    overlays = _armed_overlays(names)
+    play, reset = st.columns(2, gap="small")
+    with play:
+        st.button(
+            "Play on 1 June 2024",
+            type="primary",
+            width="stretch",
+            disabled=not overlays,
+            on_click=fire_play,
+        )
+    with reset:
+        st.button("Reset overlays", width="stretch", on_click=fire_reset)
 
 
 def _replay_block(names: dict[str, str]) -> None:
@@ -158,7 +168,7 @@ def _custom_block(
     st.markdown(
         section_html(
             "Custom event",
-            "Pick a station, a fault, and how long it lasts. This arms POST /demo/inject for the next ingested hours.",
+            "Arm each event, then play them. They run one after another on 1 June 2024, scored immediately, with a prediction on each hardware hour.",
         ),
         unsafe_allow_html=True,
     )
@@ -244,10 +254,16 @@ def _custom_block(
             go_page("station")
 
 
-def _armed_overlays(names: dict[str, str]) -> None:
+def _armed_overlays(names: dict[str, str]) -> list[dict[str, Any]]:
     try:
         status = get_client().demo_status()
     except SkyGuardApiError:
-        return
-    overlays = status.get("overlays") or []
+        return []
+    overlays = list(status.get("overlays") or [])
     st.markdown(overlay_cards_html(overlays, names), unsafe_allow_html=True)
+    if overlays:
+        st.caption(
+            "Play writes these in the order armed, each for its own hours, starting 1 June 2024 "
+            "after 23 clean hours. Station opens on the last scored hour. Earlier steps back through the rest."
+        )
+    return overlays

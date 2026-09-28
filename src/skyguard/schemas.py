@@ -355,6 +355,16 @@ class ReplayResult(BaseModel):
     results: list[IngestResult]
 
 
+class PlayResult(BaseModel):
+    """Armed overlays scored one after another on the 1 June 2024 canvas."""
+
+    start: datetime
+    end: datetime
+    station_ids: list[str]
+    scored_hours: int
+    results: list[IngestResult]
+
+
 class TimingStatus(str, Enum):
     PENDING = "pending"
     READY = "ready"

@@ -182,6 +182,14 @@ Legacy body `{target: "cluster", cluster_id: "NORTH"}` is rejected with 400 afte
 
 `POST /demo/reset` — clear all armed overlays and any replay arm. It does not delete stored hours.
 
+## Demo play
+
+`POST /demo/play` — no body. Scores every armed overlay immediately, in the order it was armed, on a canvas that starts `2024-06-01T00:00:00Z`. This is not the 31 December replay and it does not wait for the next live hour.
+
+The first 23 hours are seeded `CLEAN` from the demo diurnal cycle (tiled), so the window is warm. Each overlay then occupies the next `remaining_hours` and is ingested through `/ingest` before QC. A later overlay starts when the previous one ends, so a 2-hour spike followed by a 6-hour freeze is eight scored hours, not two mutations of the same hour. Hardware stays on its station. `GENUINE_WEATHER` still covers that station's neighborhood. Buddies that have a demo window are ingested on the clean hour so the buddy check can run. A hardware hour can store a prediction band. Weather still does not.
+
+The response `start` is the first scored hour and `end` is the last. `results` is the last scored hour per station, primary station last. Playing again replaces the 1–14 June span for those stations and clears the arms. It does not delete the 31 December fixture or a later live hour. A newer in-memory window is restored after the play. More than 48 scored hours is 400. No armed overlay is 400. A station with no demo window is 400.
+
 ## Demo replay
 
 `POST /demo/replay`
@@ -485,6 +493,6 @@ Live demo uses the same functions. Storm is applied to every station in the **ne
 | 422 | Schema violation |
 | 404 | Unknown `station_id` (not in the product catalog) |
 | 409 | Duplicate `(station_id, timestamp)` ingest |
-| 400 | No train scaler for a catalog station; storm inject targeting a single station; missing channel on SPIKE; legacy `cluster` target; demo windows file missing or not the 24-hour replay |
+| 400 | No train scaler for a catalog station; storm inject targeting a single station; missing channel on SPIKE; legacy `cluster` target; demo windows file missing or not the 24-hour replay; play with nothing armed, more than 48 scored hours, or a station outside the demo cycle |
 
 Duplicate timestamps: do not silently overwrite. The streamer must be deterministic.
