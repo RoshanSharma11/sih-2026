@@ -101,5 +101,10 @@ class AnomalyAlert(Base):
     contribution_temp: Mapped[float | None] = mapped_column(Float, nullable=True)
     contribution_pres: Mapped[float | None] = mapped_column(Float, nullable=True)
     contribution_rhum: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Operator workflow. open -> acknowledged -> resolved; reopen is allowed.
+    ack_state: Mapped[str] = mapped_column(String(20), default="open", server_default="open")
+    ack_note: Mapped[str | None] = mapped_column(String, nullable=True)
+    ack_by: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    ack_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     station: Mapped[Station] = relationship(back_populates="alerts")

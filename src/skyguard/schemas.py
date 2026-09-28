@@ -26,6 +26,12 @@ class Severity(str, Enum):
     CRITICAL = "CRITICAL"
 
 
+class AckState(str, Enum):
+    OPEN = "open"
+    ACKNOWLEDGED = "acknowledged"
+    RESOLVED = "resolved"
+
+
 class StationStatus(str, Enum):
     HEALTHY = "HEALTHY"
     DEGRADED = "DEGRADED"
@@ -264,6 +270,16 @@ class AlertRow(BaseModel):
     contribution_temp: float | None = None
     contribution_pres: float | None = None
     contribution_rhum: float | None = None
+    ack_state: AckState = AckState.OPEN
+    ack_note: str | None = None
+    ack_by: str | None = None
+    ack_at: datetime | None = None
+
+
+class AlertAckRequest(BaseModel):
+    state: AckState
+    note: str | None = Field(default=None, max_length=500)
+    by: str | None = Field(default=None, max_length=60)
 
 
 class V2Artifacts(BaseModel):

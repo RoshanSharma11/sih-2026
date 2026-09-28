@@ -46,7 +46,8 @@ Next: nothing on the v2 live plan. Steps 1–8 are done.
 | V2-8 | `1738cd3` | One live poll stored raw warming-up hours; replay story 2 is hardware with a band near 25 °C and story 3 is weather with no band and health unchanged |
 | F12 | `153d7c3` | Station evidence block: decision trace, neighbor table vs agree bands, TIMING chart, verdict ribbon, CSV + technician note; Alerts timeline; map hover readings |
 | L1 | `1242e48` | Feed gap: a channel IMD leaves empty on most stations in an hour is stored raw with a null label, no v2 call, no alert, no health charge; `feed_gap` on ingest/latest/telemetry and `/healthz.imd.feed_gap`; indigo state on the console |
-| L2 | (this change) | Poller budget: hourly aligned cadence, matched-states only, stop-and-back-off on 429; `/healthz.imd` reports `next_poll`, `states_polled`, `rate_limited_until` |
+| L2 | `3e2eb55` | Poller budget: hourly aligned cadence, matched-states only, stop-and-back-off on 429; `/healthz.imd` reports `next_poll`, `states_polled`, `rate_limited_until` |
+| L3 | (this change) | Alert acknowledge: `ack_state` / `ack_note` / `ack_by` / `ack_at` on `anomaly_alerts`, `POST /alerts/{id}/ack`, `GET /alerts?state=`; Alerts inbox defaults to Open with Acknowledge / Resolve / Reopen; Dispatch can acknowledge |
 
 ## What works today (post-I6)
 

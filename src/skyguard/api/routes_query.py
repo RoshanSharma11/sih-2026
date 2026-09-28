@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
@@ -13,6 +13,8 @@ from skyguard.db.models import AnomalyAlert, Station, StationBuddy, TelemetryLog
 from skyguard.engine.adapter import read_timing
 from skyguard.engine.pipeline import as_utc, latest_snapshot_from_row, telemetry_qc
 from skyguard.schemas import (
+    AckState,
+    AlertAckRequest,
     AlertRow,
     BuddyMap,
     ClusterId,
@@ -258,30 +260,60 @@ def list_telemetry(
     ]
 
 
+def _alert_row(row: AnomalyAlert) -> AlertRow:
+    try:
+        ack_state = AckState(row.ack_state or "open")
+    except ValueError:
+        ack_state = AckState.OPEN
+    return AlertRow(
+        alert_id=row.alert_id,
+        station_id=row.station_id,
+        timestamp=as_utc(row.timestamp),
+        label=_label(row.label),
+        fault_type=FaultType(row.fault_type),
+        confidence_score=row.confidence_score,
+        severity=Severity(row.severity),
+        explainability_text=row.explainability_text,
+        contribution_temp=row.contribution_temp,
+        contribution_pres=row.contribution_pres,
+        contribution_rhum=row.contribution_rhum,
+        ack_state=ack_state,
+        ack_note=row.ack_note,
+        ack_by=row.ack_by,
+        ack_at=None if row.ack_at is None else as_utc(row.ack_at),
+    )
+
+
 @router.get("/alerts", response_model=list[AlertRow])
 def list_alerts(
     session: Session = Depends(get_db),
     station_id: str | None = None,
+    state: AckState | None = None,
     limit: int = Query(default=100, ge=1, le=1000),
 ) -> list[AlertRow]:
     stmt = select(AnomalyAlert)
     if station_id is not None:
         _require_station(session, station_id)
         stmt = stmt.where(AnomalyAlert.station_id == station_id)
+    if state is not None:
+        stmt = stmt.where(AnomalyAlert.ack_state == state.value)
     rows = session.scalars(stmt.order_by(AnomalyAlert.timestamp.desc()).limit(limit)).all()
-    return [
-        AlertRow(
-            alert_id=row.alert_id,
-            station_id=row.station_id,
-            timestamp=as_utc(row.timestamp),
-            label=_label(row.label),
-            fault_type=FaultType(row.fault_type),
-            confidence_score=row.confidence_score,
-            severity=Severity(row.severity),
-            explainability_text=row.explainability_text,
-            contribution_temp=row.contribution_temp,
-            contribution_pres=row.contribution_pres,
-            contribution_rhum=row.contribution_rhum,
-        )
-        for row in rows
-    ]
+    return [_alert_row(row) for row in rows]
+
+
+@router.post("/alerts/{alert_id}/ack", response_model=AlertRow)
+def ack_alert(
+    alert_id: int,
+    body: AlertAckRequest,
+    session: Session = Depends(get_db),
+) -> AlertRow:
+    """Move an alert through open → acknowledged → resolved. Reopen is allowed; QC data is untouched."""
+    row = session.get(AnomalyAlert, alert_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Unknown alert_id: {alert_id}")
+    row.ack_state = body.state.value
+    row.ack_note = body.note
+    row.ack_by = body.by
+    row.ack_at = None if body.state == AckState.OPEN else datetime.now(timezone.utc)
+    session.flush()
+    return _alert_row(row)

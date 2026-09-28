@@ -128,6 +128,22 @@ def _dispatch_group(title: str, rank: str, rows: list[dict[str, Any]]) -> None:
                 ):
                     focus_station(row["station_id"], alert_id=row.get("alert_id"))
                     go_page("station")
+                if row.get("alert_id") is not None and row.get("ack_state") == "open":
+                    if st.button(
+                        "Acknowledge",
+                        key=f"dispatch_ack_{rank}_{row['station_id']}",
+                        width="stretch",
+                        help="Take ownership of the newest hardware alert for this station.",
+                    ):
+                        try:
+                            get_client().ack_alert(
+                                row["alert_id"],
+                                "acknowledged",
+                                by=(st.session_state.get("operator_name") or "").strip() or None,
+                            )
+                        except SkyGuardApiError as exc:
+                            st.toast(str(exc), icon="⚠️")
+                        st.rerun()
 
 
 def _roster_groups(stations: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:

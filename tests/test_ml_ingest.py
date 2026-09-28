@@ -492,3 +492,37 @@ def test_unknown_scaler_is_400_catalog_miss_is_404(tmp_path: Path) -> None:
         )
         assert refused.status_code == 400, refused.text
         assert client.get("/stations/99999/telemetry").json() == []
+
+
+def test_alert_ack_moves_state_and_filters_without_touching_qc(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        _seed(client, PALAM, vary=True)
+        _ingest(client, PALAM, temp_c=99.0)
+        alert = client.get("/alerts").json()[0]
+        assert alert["ack_state"] == "open"
+        assert alert["ack_at"] is None
+        alert_id = alert["alert_id"]
+
+        acked = client.post(
+            f"/alerts/{alert_id}/ack",
+            json={"state": "acknowledged", "note": "Technician dispatched", "by": "ops-1"},
+        )
+        assert acked.status_code == 200, acked.text
+        body = acked.json()
+        assert body["ack_state"] == "acknowledged"
+        assert body["ack_note"] == "Technician dispatched"
+        assert body["ack_by"] == "ops-1"
+        assert body["ack_at"]
+        # QC fields are unchanged
+        assert body["label"] == "PHYSICAL_FAULT"
+        assert body["fault_type"] == alert["fault_type"]
+
+        assert client.get("/alerts", params={"state": "open"}).json() == []
+        assert len(client.get("/alerts", params={"state": "acknowledged"}).json()) == 1
+
+        reopened = client.post(f"/alerts/{alert_id}/ack", json={"state": "open"}).json()
+        assert reopened["ack_state"] == "open"
+        assert reopened["ack_at"] is None
+
+        assert client.post("/alerts/999999/ack", json={"state": "resolved"}).status_code == 404
+        assert client.post(f"/alerts/{alert_id}/ack", json={"state": "closed"}).status_code == 422

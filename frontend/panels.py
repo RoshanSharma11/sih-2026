@@ -701,6 +701,45 @@ ALERT_FILTERS = (
     ("unknown", "Unconfirmed"),
 )
 
+ACK_FILTERS = (
+    ("open", "Open"),
+    ("acknowledged", "Acknowledged"),
+    ("resolved", "Resolved"),
+    ("all", "Everything"),
+)
+
+ACK_TEXT = {"open": "Open", "acknowledged": "Acknowledged", "resolved": "Resolved"}
+
+
+def ack_state(row: dict[str, Any] | None) -> str:
+    value = str((row or {}).get("ack_state") or "open")
+    return value if value in ACK_TEXT else "open"
+
+
+def ack_chip_html(row: dict[str, Any]) -> str:
+    """Operator state on a card. Nothing for an open alert; who and when otherwise."""
+    state = ack_state(row)
+    if state == "open":
+        return ""
+    bits = [ACK_TEXT[state]]
+    if row.get("ack_by"):
+        bits.append(f"by {row['ack_by']}")
+    if row.get("ack_at"):
+        bits.append(fmt_stamp(row["ack_at"]))
+    note = str(row.get("ack_note") or "").strip()
+    text = " · ".join(bits) + (f" — {note}" if note else "")
+    return f'<span class="sg-ack sg-ack-{state}">{escape(text)}</span>'
+
+
+def ack_actions(row: dict[str, Any] | None) -> list[tuple[str, str]]:
+    """Buttons an operator sees for this state: (label, next state)."""
+    state = ack_state(row)
+    if state == "open":
+        return [("Acknowledge", "acknowledged"), ("Resolve", "resolved")]
+    if state == "acknowledged":
+        return [("Resolve", "resolved"), ("Reopen", "open")]
+    return [("Reopen", "open")]
+
 
 def fault_label(fault_type: Any) -> str:
     if not fault_type:
@@ -813,13 +852,14 @@ def alert_card_html(row: dict[str, Any], names: dict[str, str]) -> str:
         health_note = '<div class="sg-alert-note">Neighbors agreed. This hour does not lower sensor health.</div>'
     elif kind == "unknown":
         health_note = '<div class="sg-alert-note">Honesty over a fake buddy call. Health may still drop.</div>'
+    done = " sg-alert-done" if ack_state(row) == "resolved" else ""
     return (
-        f'<div class="sg-alert" style="border-left-color:{color}">'
+        f'<div class="sg-alert{done}" style="border-left-color:{color}">'
         f'<div class="sg-alert-head"><div class="sg-alert-title">{title}</div>'
         f'<span class="sg-chip" style="color:{color};border-color:{color}">{severity}</span></div>'
         f'<div class="sg-alert-who">{name} · {escape(sid)}</div>'
         f'<div class="sg-alert-meta">{stamp} · {fault} · confidence {escape(confidence)}</div>'
-        f'<div class="sg-alert-text">{reason}</div>{share_html}{health_note}</div>'
+        f'<div class="sg-alert-text">{reason}</div>{share_html}{health_note}{ack_chip_html(row)}</div>'
     )
 
 
@@ -915,6 +955,7 @@ def _dispatch_item(
         "fault_type": fault,
         "reason": dispatch_reason(raw, fault, hour_label),
         "alert_id": None if matched is None else matched.get("alert_id"),
+        "ack_state": ack_state(matched) if matched is not None else None,
     }
 
 
@@ -946,11 +987,13 @@ def dispatch_row_html(row: dict[str, Any]) -> str:
     reason = escape(str(row.get("reason") or dispatch_reason(hour_label=row.get("hour_label"))))
     health = fmt_value(row.get("health_score"), 0)
     status = escape(str(row.get("status") or "—"))
+    ack = row.get("ack_state")
+    ack_bit = f" · {escape(ACK_TEXT.get(str(ack), str(ack)).lower())}" if ack and ack != "open" else ""
     return (
         f'<div class="sg-dispatch-row">'
         f'<div class="sg-dispatch-name {tone}">{name}</div>'
         f'<div class="sg-dispatch-why">{reason}</div>'
-        f'<div class="sg-dispatch-meta">7-day {escape(health)} · {status}</div>'
+        f'<div class="sg-dispatch-meta">7-day {escape(health)} · {status}{ack_bit}</div>'
         "</div>"
     )
 

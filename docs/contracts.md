@@ -245,7 +245,8 @@ Empty `station_ids` means all catalog stations (view = ingest = full catalog). S
 | `GET` | `/stations/{id}` | summary + latest observation |
 | `GET` | `/stations/{id}/telemetry?from=&to=&limit=` | raw + imputed series |
 | `GET` | `/stations/{id}/timing?ts=&wait_s=` | v2 TIMING cache for that hour |
-| `GET` | `/alerts?station_id=&limit=` | newest first |
+| `GET` | `/alerts?station_id=&state=&limit=` | newest first; `state` filters `open` / `acknowledged` / `resolved` |
+| `POST` | `/alerts/{alert_id}/ack` | body `{state, note?, by?}` → the updated alert row. 404 unknown id, 422 bad state |
 | `GET` | `/demo/status` | armed overlays |
 | `POST` | `/demo/replay` | play one Mumbai story through `/ingest` |
 | `GET` | `/demo/stream-filter` | current view + ingest sets |
@@ -316,6 +317,8 @@ Station summary (list **includes** `latest` so the live map does not N+1):
 `matched` is how many of the 48 catalog stations had an IMD `ID` in the last poll. Stations that share an `aws_id` all receive that hour. `last_success` is when that poll finished. `last_error` is the latest state or token failure, or null when the last poll was clean. A duplicate hour is not an error. `feed_gap` maps a public channel name to the number of matched stations whose hour was stored as a feed gap for that channel in the last poll (`{}` when the feed was complete). `next_poll` is when the loop will call IMD again (hourly, on `SKYGUARD_IMD_POLL_MINUTE`, default :20). `states_polled` is how many `sid` calls the last cycle made: every state on the first cycle and every 24th, otherwise only the states that held a matched station (`stations.aws_state_id`). `rate_limited_until` is set when IMD answered HTTP 429; the cycle stopped at that call and the next poll waits 1 h, then 2 h, then 4 h at most, until a clean cycle clears it.
 
 Telemetry rows keep observed + imputed columns, plus `explainability_text`, `imputed_interval`, `thermo`, `tier2_score`, `tier3_method`, `tier3_mix`, `tier3_corr`, `warming_up`, and `feed_gap` (list of public channel names, `[]` normally). `is_anomaly` follows D18. `label` on `telemetry_logs` stores the five-way ML label, or null while `warming_up` is true or the hour is a feed gap. Interval and mix use public channel names. `imputed_interval` is `null` when the band is hidden.
+
+Alert rows carry the operator workflow next to the QC verdict: `ack_state` (`open` → `acknowledged` → `resolved`; reopen allowed), `ack_note`, `ack_by`, `ack_at`. New alerts are `open` with the other three null. `POST /alerts/{alert_id}/ack` sets all four (`ack_at` is now, or null when reopening) and never touches `label`, `fault_type`, `confidence_score`, `severity`, the telemetry row, or health. `GET /alerts?state=` filters on it; with no `state` every alert is returned.
 
 `GET /buddy-map` is the ML graph for the dashboard, not a QC input:
 
@@ -416,7 +419,11 @@ CREATE TABLE anomaly_alerts (
   explainability_text  TEXT NOT NULL,
   contribution_temp    REAL,
   contribution_pres    REAL,
-  contribution_rhum    REAL
+  contribution_rhum    REAL,
+  ack_state            VARCHAR(20) NOT NULL DEFAULT 'open',
+  ack_note             TEXT,
+  ack_by               VARCHAR(60),
+  ack_at               DATETIME
 );
 
 CREATE INDEX idx_telemetry_station_time ON telemetry_logs (station_id, timestamp);

@@ -402,6 +402,14 @@ h2, h3, h4, h5 {{ letter-spacing: -0.02em; color: {TEXT}; }}
   color: {MUTED};
   font-size: 0.8rem;
 }}
+.sg-alert-done {{ opacity: 0.62; }}
+.sg-ack {{
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  margin-top: 0.5rem; padding: 0.15rem 0.55rem; border-radius: 999px;
+  border: 1px solid {LINE}; font-size: 0.74rem; color: {MUTED}; background: #F8FAFC;
+}}
+.sg-ack-acknowledged {{ border-color: #0369A1; color: #0369A1; background: #EFF6FF; }}
+.sg-ack-resolved {{ border-color: {CLEAN}; color: {CLEAN}; background: #F0FDFA; }}
 .sg-alert-legend {{
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

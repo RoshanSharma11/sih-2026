@@ -80,11 +80,32 @@ class SkyGuardClient:
     def telemetry(self, station_id: str, limit: int = 240) -> list[dict[str, Any]]:
         return self._get_json(f"/stations/{station_id}/telemetry", params={"limit": limit})
 
-    def alerts(self, station_id: str | None = None, limit: int = 40) -> list[dict[str, Any]]:
+    def alerts(
+        self,
+        station_id: str | None = None,
+        limit: int = 40,
+        state: str | None = None,
+    ) -> list[dict[str, Any]]:
         params: dict[str, Any] = {"limit": limit}
         if station_id:
             params["station_id"] = station_id
+        if state:
+            params["state"] = state
         return self._get_json("/alerts", params=params)
+
+    def ack_alert(
+        self,
+        alert_id: int | str,
+        state: str,
+        note: str | None = None,
+        by: str | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {"state": state}
+        if note:
+            body["note"] = note
+        if by:
+            body["by"] = by
+        return self._post_json(f"/alerts/{alert_id}/ack", body)
 
     def buddy_map(self) -> dict[str, Any]:
         return self._get_json("/buddy-map")

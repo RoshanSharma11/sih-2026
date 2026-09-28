@@ -8,6 +8,7 @@ CONTRACT_PATHS = {
     "/stations/{station_id}/telemetry": {"get"},
     "/stations/{station_id}/timing": {"get"},
     "/alerts": {"get"},
+    "/alerts/{alert_id}/ack": {"post"},
     "/buddy-map": {"get"},
     "/ingest": {"post"},
     "/demo/inject": {"post"},
@@ -128,7 +129,12 @@ CONTRACT_PROPERTIES = {
         "contribution_temp",
         "contribution_pres",
         "contribution_rhum",
+        "ack_state",
+        "ack_note",
+        "ack_by",
+        "ack_at",
     },
+    "AlertAckRequest": {"state", "note", "by"},
     "DemoInjectRequest": {
         "target",
         "station_id",
@@ -189,7 +195,7 @@ def test_openapi_matches_contracts() -> None:
     stations = spec["paths"]["/stations"]["get"]["parameters"]
     assert {item["name"] for item in stations} >= {"ids"}
     alerts = spec["paths"]["/alerts"]["get"]["parameters"]
-    assert {item["name"] for item in alerts} >= {"station_id", "limit"}
+    assert {item["name"] for item in alerts} >= {"station_id", "state", "limit"}
 
     schemas = spec["components"]["schemas"]
     for name, expected in CONTRACT_PROPERTIES.items():

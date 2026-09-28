@@ -452,3 +452,28 @@ def test_poll_strip_shows_budget_and_rate_limit() -> None:
     assert "Poll ok" in html and "12 states called" in html
     limited = poll_html({**imd, "rate_limited_until": "2026-09-28T14:20:00Z", "last_error": "HTTP 429"})
     assert "paused until" in limited and "sg-poll-bad" in limited
+
+
+def test_ack_state_drives_chip_and_actions() -> None:
+    from panels import ack_actions, ack_chip_html, ack_state, alert_card_html, dispatch_row_html
+
+    open_row = {"alert_id": 1, "station_id": "43003", "fault_type": "SPIKE", "label": "HARDWARE_ANOMALY",
+                "severity": "HIGH", "confidence_score": 0.9, "timestamp": "2026-09-28T09:00:00Z",
+                "explainability_text": "x", "ack_state": "open"}
+    assert ack_state(open_row) == "open"
+    assert ack_chip_html(open_row) == ""
+    assert ack_actions(open_row) == [("Acknowledge", "acknowledged"), ("Resolve", "resolved")]
+    acked = {**open_row, "ack_state": "acknowledged", "ack_by": "ops-1", "ack_at": "2026-09-28T09:30:00Z",
+             "ack_note": "Technician dispatched"}
+    chip = ack_chip_html(acked)
+    assert "Acknowledged" in chip and "ops-1" in chip and "Technician dispatched" in chip
+    assert ack_actions(acked) == [("Resolve", "resolved"), ("Reopen", "open")]
+    resolved = {**open_row, "ack_state": "resolved"}
+    assert ack_actions(resolved) == [("Reopen", "open")]
+    assert "sg-alert-done" in alert_card_html(resolved, {"43003": "Santa Cruz"})
+    assert "sg-alert-done" not in alert_card_html(open_row, {"43003": "Santa Cruz"})
+    # legacy rows without the field are open
+    assert ack_state({}) == "open"
+    row_html = dispatch_row_html({"station_id": "43003", "name": "Santa Cruz", "health_score": 60.0,
+                                  "status": "CRITICAL", "rank": "page", "ack_state": "acknowledged"})
+    assert "acknowledged" in row_html

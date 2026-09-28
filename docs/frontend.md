@@ -65,7 +65,8 @@ The map plots all 48. The camera starts on Mumbai `43003`, `43057`, `43002`, `43
 ### Alerts
 
 - QC inbox. Clean hours never appear. Intro states the three kinds before the feed.
-- `GET /alerts?limit=` (optional `station_id` when “Only {station}” is on). Counts and filters are client-side: all / hardware / weather / unconfirmed.
+- `GET /alerts?limit=&state=` (optional `station_id` when “Only {station}” is on). Kind filters are client-side: all / hardware / weather / unconfirmed. The operator-state radio (Open, default / Acknowledged / Resolved / Everything) is the `state` query. "Your name for the log" is sent as `by`.
+- Each card has **Inspect this hour**, then the actions for its state: open → Acknowledge / Resolve; acknowledged → Resolve / Reopen; resolved → Reopen (`POST /alerts/{id}/ack`). Acknowledged and resolved cards show a chip with who and when; resolved cards are dimmed. Dispatch rows on Network show `acknowledged` in the meta line and get an **Acknowledge** button while the newest hardware alert is open.
 - **Exceptions per hour**: a stacked bar chart of the feed bucketed by hour (rose hardware / amber weather / slate unconfirmed). A wide amber bar is a shared weather hour; a lone rose bar is one sensor. Hidden when the feed is empty.
 - Newest first. Each card is a human label, station name, time, fault in plain language (`Spike`, `Missing packet`, …), confidence, reason, and a weather/unconfirmed health note. Amber weather (`GENUINE_WEATHER` and `STORM`) vs rose hardware (`PHYSICAL_FAULT`, `HARDWARE_ANOMALY`, `THERMO`, `COMMUNICATION`, `COMM_ERROR`) vs slate unconfirmed.
 - **Inspect this hour** pins that `alert_id` and focuses Station on that hour (not the live CLEAN hour).
@@ -135,7 +136,7 @@ Never N+1 the catalog. Map and KPIs use list `latest` only. Do not call port 800
 2. `GET /stations` for all 48
 3. Network dispatch: one `GET /alerts?limit=` (not N+1)
 4. Selected station: `GET /stations/{id}/telemetry?limit=`, `GET /alerts?station_id=`, `GET /stations/{id}/timing?ts=&wait_s=0`, and `GET /healthz` for `threshold` (the LSTM trace ratio)
-5. Alerts page: `GET /alerts?limit=`
+5. Alerts page: `GET /alerts?limit=&state=`; buttons call `POST /alerts/{id}/ack`
 6. Control: `GET /healthz` for the poll line, `POST /demo/replay`, `POST /demo/reset`
 7. `GET /buddy-map` only to draw edges among the camera set
 

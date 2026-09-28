@@ -18,7 +18,9 @@ from chrome import (
     show_flash,
 )
 from panels import (
+    ACK_FILTERS,
     ALERT_FILTERS,
+    ack_actions,
     alert_card_html,
     alert_counts,
     alerts_empty_html,
@@ -63,11 +65,33 @@ def _filters() -> None:
             ):
                 st.session_state.alerts_kind = kind
                 st.rerun()
-    st.checkbox(
-        f"Only {station_name}",
-        key="alerts_station_only",
-        help="Limit the inbox to the station selected on Network or Station.",
-    )
+    state_col, who_col, only_col = st.columns([2.4, 1.2, 1.2], gap="small")
+    with state_col:
+        labels = [label for _key, label in ACK_FILTERS]
+        keys = [key for key, _label in ACK_FILTERS]
+        current_state = st.session_state.get("alerts_ack") or "open"
+        picked = st.radio(
+            "Operator state",
+            labels,
+            index=keys.index(current_state) if current_state in keys else 0,
+            horizontal=True,
+            key="alerts_ack_radio",
+            help="Open is the inbox. Acknowledged means someone owns it. Resolved is closed; the QC hour is unchanged.",
+        )
+        st.session_state.alerts_ack = keys[labels.index(picked)]
+    with who_col:
+        st.text_input(
+            "Your name for the log",
+            key="operator_name",
+            placeholder="ops-1",
+            help="Stored as ack_by on the alert.",
+        )
+    with only_col:
+        st.checkbox(
+            f"Only {station_name}",
+            key="alerts_station_only",
+            help="Limit the inbox to the station selected on Network or Station.",
+        )
 
 
 @st.fragment(run_every=1)
@@ -76,8 +100,9 @@ def alerts_live() -> None:
     station_id = st.session_state.get("station_id")
     only = bool(st.session_state.get("alerts_station_only"))
     kind = st.session_state.get("alerts_kind") or "all"
+    ack = st.session_state.get("alerts_ack") or "open"
     try:
-        rows = client.alerts(station_id if only else None, limit=80)
+        rows = client.alerts(station_id if only else None, limit=80, state=None if ack == "all" else ack)
         catalog = catalog_stations()
     except SkyGuardApiError as exc:
         offline_help(str(exc))
@@ -96,15 +121,24 @@ def alerts_live() -> None:
     st.markdown(
         section_html(
             "Newest first",
-            "Inspect pins this hour on Station. The live hour can already be clean or still warming up.",
+            "Inspect pins this hour on Station. Acknowledge takes ownership; Resolve closes it. QC data never changes.",
         ),
         unsafe_allow_html=True,
     )
     if not visible:
-        st.markdown(alerts_empty_html(filtered=bool(rows)), unsafe_allow_html=True)
+        st.markdown(alerts_empty_html(filtered=bool(rows) or ack != "all"), unsafe_allow_html=True)
         return
     for row in visible:
         _alert_row(row, names)
+
+
+def _ack(alert_id: Any, state: str) -> None:
+    try:
+        get_client().ack_alert(alert_id, state, by=(st.session_state.get("operator_name") or "").strip() or None)
+    except SkyGuardApiError as exc:
+        st.toast(str(exc), icon="⚠️")
+        return
+    st.toast(f"Alert {alert_id} → {state}")
 
 
 def _alert_row(row: dict[str, Any], names: dict[str, str]) -> None:
@@ -121,3 +155,12 @@ def _alert_row(row: dict[str, Any], names: dict[str, str]) -> None:
         ):
             focus_station(sid, alert_id=row.get("alert_id"))
             go_page("station")
+        for label, next_state in ack_actions(row):
+            if st.button(
+                label,
+                key=f"ack_{row.get('alert_id')}_{next_state}",
+                width="stretch",
+                type="primary" if next_state == "acknowledged" else "secondary",
+            ):
+                _ack(row.get("alert_id"), next_state)
+                st.rerun()

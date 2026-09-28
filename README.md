@@ -96,7 +96,8 @@ Poll shapes are frozen in [docs/contracts.md](docs/contracts.md). No SSE. Do not
 | `GET`        | `/stations?ids=`                            | view-set summaries with `latest`, `buddy_ids`, `isolate` (no N+1) |
 | `GET`        | `/stations/{id}`                            | summary + `latest`                                                |
 | `GET`        | `/stations/{id}/telemetry?from=&to=&limit=` | observed + imputed. `is_anomaly` follows D18 (true for weather)   |
-| `GET`        | `/alerts?station_id=&limit=`                | newest first — verdict sentence + `label`                         |
+| `GET`        | `/alerts?station_id=&state=&limit=`         | newest first — verdict sentence + `label` + `ack_state`           |
+| `POST`       | `/alerts/{id}/ack`                          | `{state, note?, by?}` — open / acknowledged / resolved            |
 | `GET`        | `/buddy-map`                                | ML graph for the dashboard                                        |
 | `GET`        | `/demo/status`                              | armed overlays                                                    |
 | `GET`/`POST` | `/demo/stream-filter`                       | view vs ingest sets                                               |
