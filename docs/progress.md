@@ -48,7 +48,8 @@ Next: nothing on the v2 live plan. Steps 1–8 are done.
 | L1 | `1242e48` | Feed gap: a channel IMD leaves empty on most stations in an hour is stored raw with a null label, no v2 call, no alert, no health charge; `feed_gap` on ingest/latest/telemetry and `/healthz.imd.feed_gap`; indigo state on the console |
 | L2 | `3e2eb55` | Poller budget: hourly aligned cadence, matched-states only, stop-and-back-off on 429; `/healthz.imd` reports `next_poll`, `states_polled`, `rate_limited_until` |
 | L3 | `bfde9d9` | Alert acknowledge: `ack_state` / `ack_note` / `ack_by` / `ack_at` on `anomaly_alerts`, `POST /alerts/{id}/ack`, `GET /alerts?state=`; Alerts inbox defaults to Open with Acknowledge / Resolve / Reopen; Dispatch can acknowledge |
-| L4 | (this change) | `GET /export` CSV with WMO-style `qc_flag`; link buttons on Station (30 d) and Network (7 d) |
+| L4 | `900ee86` | `GET /export` CSV with WMO-style `qc_flag`; link buttons on Station (30 d) and Network (7 d) |
+| L5 | (this change) | Webhook pager: `SKYGUARD_WEBHOOK_URL` gets `station_status_changed` (DEGRADED / CRITICAL / recovery) and `alert_opened` (HIGH hardware) off the ingest thread; `/healthz.webhook`; Control strip |
 
 ## What works today (post-I6)
 

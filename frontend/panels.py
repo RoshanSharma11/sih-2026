@@ -559,6 +559,31 @@ def poll_html(imd: dict[str, Any], n_stations: int = 48) -> str:
     )
 
 
+def webhook_html(webhook: dict[str, Any]) -> str:
+    """One line under the poll strip: where pages go and whether the last one landed."""
+    if not webhook.get("configured"):
+        return (
+            '<div class="sg-poll sg-poll-idle"><div class="sg-poll-state">Paging off</div>'
+            '<div class="sg-poll-meta">Set SKYGUARD_WEBHOOK_URL to POST DEGRADED / CRITICAL transitions '
+            "and HIGH hardware alerts to a pager, Slack, or a ticketing hook. Weather never pages.</div></div>"
+        )
+    sent = webhook.get("sent") or 0
+    failed = webhook.get("failed") or 0
+    error = webhook.get("last_error")
+    kind = "bad" if error else "ok"
+    state = "Paging on" if not error else "Paging failed"
+    bits = [f"{sent} sent", f"{failed} failed"]
+    if webhook.get("last_sent"):
+        bits.append(f"last {fmt_stamp(webhook['last_sent'])}")
+    if webhook.get("last_event"):
+        bits.append(str(webhook["last_event"]).replace("_", " "))
+    error_html = f'<div class="sg-poll-error">{escape(str(error))}</div>' if error else ""
+    return (
+        f'<div class="sg-poll sg-poll-{kind}"><div class="sg-poll-state">{state}</div>'
+        f'<div class="sg-poll-meta">{escape(" · ".join(bits))}</div>{error_html}</div>'
+    )
+
+
 def poll_budget_line(imd: dict[str, Any]) -> str:
     """` · next poll 13:20 UTC · 12 states` from /healthz.imd. Empty before the first cycle."""
     bits = []

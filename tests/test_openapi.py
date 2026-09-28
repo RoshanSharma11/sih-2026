@@ -150,7 +150,17 @@ CONTRACT_PROPERTIES = {
     "DemoOverlayStatus": {"kind", "station_ids", "channel", "remaining_hours", "hour_index"},
     "StreamFilterRequest": {"station_ids", "include_buddies"},
     "StreamFilterStatus": {"view", "ingest", "include_buddies"},
-    "Healthz": {"ok", "model_loaded", "threshold", "n_stations", "n_isolates", "v2_artifacts", "imd"},
+    "Healthz": {
+        "ok",
+        "model_loaded",
+        "threshold",
+        "n_stations",
+        "n_isolates",
+        "v2_artifacts",
+        "imd",
+        "webhook",
+    },
+    "WebhookStatusView": {"configured", "sent", "failed", "last_sent", "last_error", "last_event"},
     "ImdPoll": {
         "last_success",
         "last_error",

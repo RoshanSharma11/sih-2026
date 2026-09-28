@@ -30,6 +30,7 @@ from panels import (
     event_spec,
     overlay_cards_html,
     poll_html,
+    webhook_html,
     result_cards_html,
     section_html,
     split_lead_result,
@@ -55,6 +56,8 @@ def render_control() -> None:
     imd = health.get("imd") if isinstance(health.get("imd"), dict) else {}
     n_stations = health.get("n_stations") if isinstance(health.get("n_stations"), int) else 48
     st.markdown(poll_html(imd, n_stations), unsafe_allow_html=True)
+    webhook = health.get("webhook") if isinstance(health.get("webhook"), dict) else {}
+    st.markdown(webhook_html(webhook), unsafe_allow_html=True)
 
     try:
         catalog = catalog_stations()

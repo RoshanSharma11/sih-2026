@@ -299,6 +299,15 @@ class ImdPoll(BaseModel):
     rate_limited_until: datetime | None = None
 
 
+class WebhookStatusView(BaseModel):
+    configured: bool = False
+    sent: int = 0
+    failed: int = 0
+    last_sent: datetime | None = None
+    last_error: str | None = None
+    last_event: str | None = None
+
+
 class Healthz(BaseModel):
     ok: bool = True
     model_loaded: bool = False
@@ -307,6 +316,7 @@ class Healthz(BaseModel):
     n_isolates: int = 0
     v2_artifacts: V2Artifacts = Field(default_factory=V2Artifacts)
     imd: ImdPoll = Field(default_factory=ImdPoll)
+    webhook: WebhookStatusView = Field(default_factory=WebhookStatusView)
 
 
 class DemoOverlayStatus(BaseModel):

@@ -140,7 +140,7 @@ Never N+1 the catalog. Map and KPIs use list `latest` only. Do not call port 800
 6. Control: `GET /healthz` for the poll line, `POST /demo/replay`, `POST /demo/reset`
 7. `GET /buddy-map` only to draw edges among the camera set
 
-If `latest` is null, the station is waiting. If `warming_up` is true, it is warming up. If `feed_gap` is non-empty, the hour is a feed gap: the verdict card, the missing reading tile and the ribbon cell say so, "Why this hour" explains it instead of the decision trace, and Control's poll strip shows the same count from `/healthz.imd.feed_gap`. The poll strip also shows `next_poll`, how many states the last cycle called, and a rose "paused until" state while `rate_limited_until` is set.
+If `latest` is null, the station is waiting. If `warming_up` is true, it is warming up. If `feed_gap` is non-empty, the hour is a feed gap: the verdict card, the missing reading tile and the ribbon cell say so, "Why this hour" explains it instead of the decision trace, and Control's poll strip shows the same count from `/healthz.imd.feed_gap`. The poll strip also shows `next_poll`, how many states the last cycle called, and a rose "paused until" state while `rate_limited_until` is set. Under it a second strip reads `/healthz.webhook`: "Paging off" with the env var to set, or "Paging on · n sent · n failed · last event".
 
 ## Out of scope
 

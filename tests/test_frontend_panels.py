@@ -477,3 +477,14 @@ def test_ack_state_drives_chip_and_actions() -> None:
     row_html = dispatch_row_html({"station_id": "43003", "name": "Santa Cruz", "health_score": 60.0,
                                   "status": "CRITICAL", "rank": "page", "ack_state": "acknowledged"})
     assert "acknowledged" in row_html
+
+
+def test_webhook_strip_states() -> None:
+    from panels import webhook_html
+
+    assert "Paging off" in webhook_html({"configured": False})
+    on = webhook_html({"configured": True, "sent": 3, "failed": 0, "last_sent": "2026-09-28T12:00:00Z",
+                       "last_event": "alert_opened", "last_error": None})
+    assert "Paging on" in on and "3 sent" in on and "alert opened" in on
+    bad = webhook_html({"configured": True, "sent": 3, "failed": 1, "last_error": "HTTP 500"})
+    assert "Paging failed" in bad and "HTTP 500" in bad

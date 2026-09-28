@@ -30,6 +30,7 @@ from skyguard.schemas import (
     StationSummary,
     TelemetryRow,
     TimingResponse,
+    WebhookStatusView,
 )
 
 router = APIRouter()
@@ -161,6 +162,21 @@ def healthz(request: Request, session: Session = Depends(get_db)) -> Healthz:
             states_polled=int(getattr(imd, "states_polled", 0) or 0),
             rate_limited_until=getattr(imd, "rate_limited_until", None),
         ),
+        webhook=_webhook_view(getattr(request.app.state, "notifier", None)),
+    )
+
+
+def _webhook_view(notifier) -> WebhookStatusView:
+    status = getattr(notifier, "status", None)
+    if status is None:
+        return WebhookStatusView()
+    return WebhookStatusView(
+        configured=bool(status.configured),
+        sent=int(status.sent),
+        failed=int(status.failed),
+        last_sent=status.last_sent,
+        last_error=status.last_error,
+        last_event=status.last_event,
     )
 
 

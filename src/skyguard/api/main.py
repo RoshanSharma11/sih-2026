@@ -18,6 +18,7 @@ from skyguard.db.session import create_tables, make_engine, make_session_factory
 from skyguard.engine.adapter import load_qc_engine
 from skyguard.engine.demo import DemoController, StreamFilterController
 from skyguard.engine.windows import WindowStore
+from skyguard.notify import Notifier, notifier_from_env
 from skyguard.imd.poller import ImdPoller, ImdStatus, poll_enabled, poll_interval_seconds, poll_minute
 
 
@@ -25,6 +26,7 @@ def create_app(
     db_path: Path | None = None,
     stations_path: Path | None = None,
     buddy_edges_path: Path | None = None,
+    notifier: Notifier | None = None,
 ) -> FastAPI:
     resolved_db = db_path or DB_PATH
     resolved_stations = stations_path or STATIONS_PATH
@@ -50,6 +52,7 @@ def create_app(
         app.state.qc_engine = load_qc_engine()
         app.state.imd_status = ImdStatus()
         app.state.imd_poller = None
+        app.state.notifier = notifier if notifier is not None else notifier_from_env()
         session = factory()
         try:
             if resolved_stations.exists():
@@ -72,6 +75,7 @@ def create_app(
         poller_running = getattr(app.state, "imd_poller", None)
         if poller_running is not None:
             poller_running.stop()
+        app.state.notifier.close()
         engine.dispose()
 
     app = FastAPI(title="SkyGuard AI", version="0.1.0", lifespan=lifespan)

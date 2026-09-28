@@ -30,6 +30,10 @@ Do not start `uvicorn v2.main:app` or `uvicorn ml.main:app` as the product serve
 5. Otherwise the adapter builds the ML payload (window + buddies) and calls `process_aws_data`
 6. Map result (D12 / D18) and persist overlay, alert, and health from stored labels
 
+### Pager — `notify.py`
+
+`Notifier` is a daemon thread with a queue. `ingest_observation` calls `_page` after health is recomputed: `should_page_status(previous, current)` for DEGRADED / CRITICAL transitions and recovery, `should_page_alert(label, severity)` for HIGH / CRITICAL hardware alerts. Off when `SKYGUARD_WEBHOOK_URL` is empty. `/healthz.webhook` reports sent / failed / last error. Tests pass a `Notifier` with an `httpx.MockTransport` into `create_app(notifier=...)`.
+
 ### Export — `api/routes_export.py`
 
 `GET /export` streams stored hours as CSV with a WMO-style `qc_flag` (0 good, 1 probably good = confirmed weather, 2 suspect = unconfirmed, 3 erroneous = physical/hardware, 9 not checked = warming up / feed gap / no label). It reads `telemetry_logs` only; it never recomputes QC.

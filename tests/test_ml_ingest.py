@@ -138,6 +138,7 @@ def _client(
     *,
     catalog_writer=_write_catalog,
     edges: list[dict] | None = None,
+    notifier=None,
 ) -> TestClient:
     stations = tmp_path / "stations.json"
     edges_path = tmp_path / "buddy_edges.json"
@@ -148,6 +149,7 @@ def _client(
             db_path=tmp_path / "test.db",
             stations_path=stations,
             buddy_edges_path=edges_path,
+            notifier=notifier,
         )
     )
 
@@ -565,3 +567,53 @@ def test_export_csv_carries_wmo_style_flags(tmp_path: Path) -> None:
         assert client.get("/export", params={"station_id": "nope"}).status_code == 404
         window = client.get("/export", params={"station_id": PALAM, "from": rows[-1]["timestamp_utc"]}).text.splitlines()
         assert len(window) == 2
+
+
+def test_webhook_pages_on_high_hardware_alert_and_status_change_only(tmp_path: Path) -> None:
+    import httpx
+
+    from skyguard.notify import Notifier, should_page_alert, should_page_status
+
+    assert should_page_status("HEALTHY", "DEGRADED") is True
+    assert should_page_status("DEGRADED", "CRITICAL") is True
+    assert should_page_status("CRITICAL", "HEALTHY") is True
+    assert should_page_status("HEALTHY", "HEALTHY") is False
+    assert should_page_status(None, "HEALTHY") is False
+    assert should_page_alert("HARDWARE_ANOMALY", "HIGH") is True
+    assert should_page_alert("PHYSICAL_FAULT", "CRITICAL") is True
+    assert should_page_alert("GENUINE_WEATHER_EVENT", "CRITICAL") is False
+    assert should_page_alert("UNCONFIRMED_ANOMALY", "HIGH") is False
+    assert should_page_alert("HARDWARE_ANOMALY", "LOW") is False
+
+    received: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        received.append(json.loads(request.content))
+        return httpx.Response(204)
+
+    notifier = Notifier("http://hook.test/skyguard", transport=httpx.MockTransport(handler))
+    with _client(tmp_path, notifier=notifier) as client:
+        assert client.get("/healthz").json()["webhook"]["configured"] is True
+        _seed(client, PALAM, vary=True)
+        body = _ingest(client, PALAM, temp_c=99.0).json()
+        assert body["label"] == "PHYSICAL_FAULT"
+        notifier.flush()
+        events = {row["event"] for row in received}
+        assert "alert_opened" in events
+        opened = next(row for row in received if row["event"] == "alert_opened")
+        assert opened["station_id"] == PALAM
+        assert opened["label"] == "PHYSICAL_FAULT"
+        assert opened["severity"] in {"HIGH", "CRITICAL"}
+        assert opened["alert_id"]
+        assert opened["timestamp"].endswith("Z")
+        health = client.get("/healthz").json()["webhook"]
+        assert health["sent"] == len(received)
+        assert health["failed"] == 0
+        assert health["last_event"] in {"alert_opened", "station_status_changed"}
+
+    # disabled notifier: nothing leaves, ingest unaffected
+    quiet = Notifier(None)
+    assert quiet.enabled is False
+    (tmp_path / "quiet").mkdir(exist_ok=True)
+    with _client(tmp_path / "quiet", notifier=quiet) as client:
+        assert client.get("/healthz").json()["webhook"]["configured"] is False

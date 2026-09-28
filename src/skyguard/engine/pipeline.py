@@ -27,6 +27,7 @@ from skyguard.engine.adapter import (
 from skyguard.engine.demo import DemoController
 from skyguard.engine.windows import WindowPoint, WindowStore
 from skyguard.errors import CatalogNotLoaded, DuplicateObservation, StationNotFound, UnknownScaler
+from skyguard.notify import Notifier, WebhookEvent, should_page_alert, should_page_status
 from skyguard.schemas import (
     Channel,
     ChannelValues,
@@ -110,6 +111,7 @@ def ingest_observation(
     detector=None,
     qc_engine=None,
     feed_gap: list[Channel] | None = None,
+    notifier: Notifier | None = None,
 ) -> IngestResult:
     """Persist one hour and run v2 QC on it.
 
@@ -188,29 +190,31 @@ def ingest_observation(
         mapped = map_ml_result(ml_out)
         _apply_overlay(row, mapped)
         session.flush()
+        previous_status = station.status
         health_score, station_status = health_from_stored_labels(
             session, payload.station_id, timestamp
         )
         station.health_score = health_score
         station.status = station_status.value
+        alert: AnomalyAlert | None = None
         if mapped["is_anomaly"]:
             contrib = mapped["contribution_pct"]
-            session.add(
-                AnomalyAlert(
-                    station_id=payload.station_id,
-                    timestamp=timestamp,
-                    label=mapped["label"].value,
-                    fault_type=(mapped["fault_type"] or FaultType.UNKNOWN).value,
-                    confidence_score=mapped["confidence"] or 0.0,
-                    severity=(mapped["severity"] or Severity.LOW).value,
-                    explainability_text=mapped["explainability_text"]
-                    or "Pipeline flagged this observation.",
-                    contribution_temp=contrib.temp_c,
-                    contribution_pres=contrib.pres_hpa,
-                    contribution_rhum=contrib.rhum_pct,
-                )
+            alert = AnomalyAlert(
+                station_id=payload.station_id,
+                timestamp=timestamp,
+                label=mapped["label"].value,
+                fault_type=(mapped["fault_type"] or FaultType.UNKNOWN).value,
+                confidence_score=mapped["confidence"] or 0.0,
+                severity=(mapped["severity"] or Severity.LOW).value,
+                explainability_text=mapped["explainability_text"]
+                or "Pipeline flagged this observation.",
+                contribution_temp=contrib.temp_c,
+                contribution_pres=contrib.pres_hpa,
+                contribution_rhum=contrib.rhum_pct,
             )
+            session.add(alert)
             session.flush()
+        _page(notifier, station, timestamp, previous_status, alert)
 
         return result_from_row(
             station,
@@ -440,6 +444,49 @@ def _apply_overlay(row: TelemetryLog, mapped: dict) -> None:
     row.tier3_method = tier3.method
     row.tier3_mix = dump_json(tier3.mix)
     row.tier3_corr = dump_json(tier3.corr)
+
+
+def _page(
+    notifier: Notifier | None,
+    station: Station,
+    timestamp: datetime,
+    previous_status: str | None,
+    alert: AnomalyAlert | None,
+) -> None:
+    """Queue webhook events. Never raises; never blocks ingest on the network."""
+    if notifier is None or not notifier.enabled:
+        return
+    if should_page_status(previous_status, station.status):
+        notifier.notify(
+            WebhookEvent(
+                event="station_status_changed",
+                station_id=station.station_id,
+                station_name=station.name,
+                timestamp=timestamp,
+                status=station.status,
+                previous_status=previous_status,
+                health_score=station.health_score,
+                label=None if alert is None else alert.label,
+                fault_type=None if alert is None else alert.fault_type,
+                reason=None if alert is None else alert.explainability_text,
+            )
+        )
+    if alert is not None and should_page_alert(alert.label, alert.severity):
+        notifier.notify(
+            WebhookEvent(
+                event="alert_opened",
+                station_id=station.station_id,
+                station_name=station.name,
+                timestamp=timestamp,
+                status=station.status,
+                health_score=station.health_score,
+                label=alert.label,
+                fault_type=alert.fault_type,
+                severity=alert.severity,
+                reason=alert.explainability_text,
+                alert_id=alert.alert_id,
+            )
+        )
 
 
 def _pipeline_status(value: str | None) -> PipelineStatus | None:

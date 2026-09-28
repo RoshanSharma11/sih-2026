@@ -296,6 +296,7 @@ def _ingest_payload(
             demo=app.state.demo,
             qc_engine=app.state.qc_engine,
             feed_gap=feed_gap,
+            notifier=getattr(app.state, "notifier", None),
         )
         session.commit()
         outcome.stored += 1
