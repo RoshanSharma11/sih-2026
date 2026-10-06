@@ -120,7 +120,7 @@ Below the diagram, two charts read `v2-deliverable/v2/artifacts`: the 2023 recon
 | Font | IBM Plex Sans / IBM Plex Mono |
 | Plotly | white paper, light grid, observed solid, predicted dashed |
 
-Hide Streamlit toolbar, menu, footer, deploy. Sidebar ~268px with custom `st.page_link` nav (do not restyle sidebar `*` to IBM Plex — that breaks Material icons). Layout: KPI strip, dispatch board, then map + roster rail / charts, then tables. Map height ~640px. Custom HTML goes through `st.html` so Markdown does not eat spaces.
+Hide Streamlit menu, footer, deploy, and toolbar actions — not the whole toolbar (the reopen-sidebar control lives there when collapsed). Sidebar ~268px with custom `st.page_link` nav (do not restyle sidebar `*` to IBM Plex — that breaks Material icons). Layout: KPI strip, dispatch board, then map + roster rail / charts, then tables. Map height ~640px. Custom HTML goes through `st.html` so Markdown does not eat spaces.
 
 ## Marker / verdict encoding
 

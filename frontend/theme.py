@@ -38,22 +38,44 @@ html, body, [class*="css"], [data-testid="stAppViewContainer"] {{
   color-scheme: light !important;
 }}
 header[data-testid="stHeader"] {{ background: transparent; }}
-#MainMenu, footer, .stAppDeployButton {{ visibility: hidden; height: 0; }}
-div[data-testid="stToolbar"] {{ visibility: hidden; }}
+/* Hide Streamlit chrome, but never the whole toolbar — when the sidebar is
+   closed, stExpandSidebarButton is rendered inside stToolbar. */
+#MainMenu, footer, .stAppDeployButton,
+[data-testid="stToolbarActions"],
+[data-testid="stStatusWidget"] {{
+  visibility: hidden;
+  height: 0;
+  overflow: hidden;
+}}
+[data-testid="stExpandSidebarButton"] {{
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  color: {TEXT} !important;
+}}
+[data-testid="stExpandSidebarButton"] span[data-testid="stIconMaterial"] {{
+  color: {TEXT} !important;
+}}
 .block-container {{ padding-top: 1.05rem; padding-bottom: 2.4rem; max-width: 1360px; }}
 
+/* Pin width only while open. Streamlit collapses with min/max-width: 0 +
+   translateX; our old !important 268px left a blank rail and pinned content. */
 section[data-testid="stSidebar"] {{
   background: {CARD} !important;
+  color: {TEXT} !important;
+  color-scheme: light !important;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+}}
+section[data-testid="stSidebar"][aria-expanded="true"] {{
   border-right: 1px solid {LINE};
   width: 268px !important;
   min-width: 268px !important;
-  color: {TEXT} !important;
-  color-scheme: light !important;
 }}
-[data-testid="stSidebar"] {{
-  font-family: "IBM Plex Sans", system-ui, sans-serif;
-  background: {CARD} !important;
-  color: {TEXT} !important;
+section[data-testid="stSidebar"][aria-expanded="false"] {{
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  border-right: none !important;
 }}
 [data-testid="stSidebar"] [data-testid="stSidebarContent"] {{
   padding: 0.35rem 0.85rem 1.2rem 0.85rem;
