@@ -26,3 +26,5 @@ data/skyguard.db
 
 ml/eval_out/
 ml/ml/reports/*.csv
+
+skyguard-_key.pem
