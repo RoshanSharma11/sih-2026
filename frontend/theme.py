@@ -31,24 +31,33 @@ html, body, [class*="css"], [data-testid="stAppViewContainer"] {{
   font-family: "IBM Plex Sans", system-ui, sans-serif;
 }}
 
-.stApp {{ background: {CANVAS}; }}
+/* Light console only — beat OS dark preference / missing config.toml on deploy. */
+.stApp, [data-testid="stApp"] {{
+  background: {CANVAS} !important;
+  color: {TEXT} !important;
+  color-scheme: light !important;
+}}
 header[data-testid="stHeader"] {{ background: transparent; }}
 #MainMenu, footer, .stAppDeployButton {{ visibility: hidden; height: 0; }}
 div[data-testid="stToolbar"] {{ visibility: hidden; }}
 .block-container {{ padding-top: 1.05rem; padding-bottom: 2.4rem; max-width: 1360px; }}
 
 section[data-testid="stSidebar"] {{
-  background: {CARD};
+  background: {CARD} !important;
   border-right: 1px solid {LINE};
   width: 268px !important;
   min-width: 268px !important;
+  color: {TEXT} !important;
+  color-scheme: light !important;
 }}
 [data-testid="stSidebar"] {{
   font-family: "IBM Plex Sans", system-ui, sans-serif;
-  background: {CARD};
+  background: {CARD} !important;
+  color: {TEXT} !important;
 }}
 [data-testid="stSidebar"] [data-testid="stSidebarContent"] {{
   padding: 0.35rem 0.85rem 1.2rem 0.85rem;
+  color: {TEXT} !important;
 }}
 
 span[data-testid="stIconMaterial"],
@@ -101,13 +110,25 @@ span[data-testid="stIconMaterial"] *,
 [data-testid="stSidebar"] [data-testid="stPageLink"] {{
   margin: 0.12rem 0;
 }}
+/* Emotion sets color on the inner span (bodyText). Dark OS theme → white
+   glyphs on our forced white sidebar. Override every text node inside. */
 [data-testid="stSidebar"] [data-testid="stPageLink"] a,
-[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {{
+[data-testid="stSidebar"] [data-testid="stPageLink"] a span,
+[data-testid="stSidebar"] [data-testid="stPageLink"] a p,
+[data-testid="stSidebar"] [data-testid="stPageLink"] a [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"],
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] span,
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] p,
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] [data-testid="stMarkdownContainer"] {{
   border-radius: 10px !important;
-  padding: 0.55rem 0.7rem !important;
-  gap: 0.65rem !important;
   font-weight: 600 !important;
   color: {TEXT} !important;
+  opacity: 1 !important;
+}}
+[data-testid="stSidebar"] [data-testid="stPageLink"] a,
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {{
+  padding: 0.55rem 0.7rem !important;
+  gap: 0.65rem !important;
   background: transparent;
 }}
 [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover,
@@ -115,12 +136,40 @@ span[data-testid="stIconMaterial"] *,
   background: {CANVAS} !important;
 }}
 [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"],
+[data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] span,
+[data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"] p,
+[data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="true"],
+[data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="true"] span,
+[data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="true"] p,
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="page"],
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="page"] span,
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="page"] p,
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="true"],
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="true"] span,
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="true"] p {{
+  background: #F0FDFA !important;
+  color: {OBSERVED} !important;
+}}
+[data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"],
 [data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="true"],
 [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="page"],
 [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"][aria-current="true"] {{
-  background: #F0FDFA !important;
-  color: {OBSERVED} !important;
   box-shadow: inset 3px 0 0 {ACCENT};
+}}
+
+/* Native Streamlit labels when the host follows prefers-color-scheme: dark. */
+[data-testid="stAppViewContainer"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stAppViewContainer"] [data-testid="stWidgetLabel"],
+[data-testid="stAppViewContainer"] [data-testid="stWidgetLabel"] p,
+[data-testid="stAppViewContainer"] label,
+[data-testid="stAppViewContainer"] .stCaption,
+[data-testid="stAppViewContainer"] [data-testid="stCaptionContainer"] {{
+  color: {TEXT} !important;
+}}
+[data-testid="stAppViewContainer"] .stCaption,
+[data-testid="stAppViewContainer"] [data-testid="stCaptionContainer"],
+[data-testid="stAppViewContainer"] [data-testid="stCaptionContainer"] p {{
+  color: {MUTED} !important;
 }}
 
 h1 {{ letter-spacing: -0.03em; color: {TEXT}; font-weight: 700; }}

@@ -5,6 +5,8 @@ backgroundColor = "#F8FAFC"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#0F172A"
 font = "sans serif"
+# Keep light even when the browser reports prefers-color-scheme: dark.
+# Without this, Streamlit bodyText goes near-white on our white sidebar.
 
 [browser]
 gatherUsageStats = false

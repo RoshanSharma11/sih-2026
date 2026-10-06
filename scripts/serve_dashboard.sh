@@ -10,4 +10,14 @@ exec streamlit run frontend/app.py \
   --server.port "$PORT" \
   --server.headless true \
   --server.fileWatcherType none \
-  --browser.gatherUsageStats false
+  --browser.gatherUsageStats false \
+  --theme.base=light \
+  --theme.primaryColor=#0D9488 \
+  --theme.backgroundColor=#F8FAFC \
+  --theme.secondaryBackgroundColor=#FFFFFF \
+  --theme.textColor=#0F172A \
+  --theme.base=light \
+  --theme.primaryColor=#0D9488 \
+  --theme.backgroundColor=#F8FAFC \
+  --theme.secondaryBackgroundColor=#FFFFFF \
+  --theme.textColor=#0F172A

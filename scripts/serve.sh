@@ -14,7 +14,12 @@ streamlit run frontend/app.py \
   --server.fileWatcherType none \
   --browser.gatherUsageStats false \
   --server.enableCORS false \
-  --server.enableXsrfProtection false &
+  --server.enableXsrfProtection false \
+  --theme.base=light \
+  --theme.primaryColor=#0D9488 \
+  --theme.backgroundColor=#F8FAFC \
+  --theme.secondaryBackgroundColor=#FFFFFF \
+  --theme.textColor=#0F172A &
 ui_pid=$!
 
 trap 'kill "$api_pid" "$ui_pid" 2>/dev/null || true' TERM INT
