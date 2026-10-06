@@ -134,6 +134,8 @@ ingest set = view ∪ 1-hop buddies   (streamer POSTs these)
 
 | Key | Default | Purpose |
 |---|---|---|
+| `SKYGUARD_ROOT` | auto (source tree or `/app`) | Checkout / image root; set in Docker so paths work after a non-editable `pip install` |
+| `SKYGUARD_DATA` | `$SKYGUARD_ROOT/data` | Data directory (catalog JSON lives under `processed/`) |
 | `SKYGUARD_DB` | `data/skyguard.db` | SQLite path |
 | `SKYGUARD_WINDOW` | `24` | Hours in the LSTM window |
 | `SKYGUARD_STREAM_MS` | `200` | Weather-hour → wall-clock ms |

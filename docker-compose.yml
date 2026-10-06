@@ -7,6 +7,9 @@ services:
     env_file:
       - .env
     environment:
+      # Image layout: package may sit in site-packages; paths must stay under /app.
+      SKYGUARD_ROOT: /app
+      SKYGUARD_DATA: /app/data
       # Server-side polls stay inside the container. SKYGUARD_PUBLIC_API comes from .env.
       SKYGUARD_API: http://127.0.0.1:8000
       SKYGUARD_DB: /var/lib/skyguard/skyguard.db

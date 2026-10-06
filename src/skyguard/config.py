@@ -6,7 +6,33 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+
+def _looks_like_repo(root: Path) -> bool:
+    return (root / "v2-deliverable").is_dir() or (
+        root / "data" / "processed" / "stations.json"
+    ).is_file()
+
+
+def _resolve_repo_root() -> Path:
+    """Find the checkout / image root even when the package lives in site-packages.
+
+    `pip install .` (non-editable) puts skyguard under site-packages, so
+    ``Path(__file__).parents[2]`` is not the repo. Docker sets ``SKYGUARD_ROOT=/app``.
+    """
+    override = os.environ.get("SKYGUARD_ROOT", "").strip()
+    if override:
+        return Path(override).resolve()
+    from_src = Path(__file__).resolve().parents[2]
+    if _looks_like_repo(from_src):
+        return from_src
+    for candidate in (Path("/app"), Path.cwd()):
+        resolved = candidate.resolve()
+        if _looks_like_repo(resolved):
+            return resolved
+    return from_src
+
+
+REPO_ROOT = _resolve_repo_root()
 DATA_DIR = Path(os.environ.get("SKYGUARD_DATA", REPO_ROOT / "data"))
 DB_PATH = Path(os.environ.get("SKYGUARD_DB", DATA_DIR / "skyguard.db"))
 STATIONS_PATH = Path(os.environ.get("SKYGUARD_STATIONS", DATA_DIR / "processed" / "stations.json"))
