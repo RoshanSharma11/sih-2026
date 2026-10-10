@@ -6,10 +6,9 @@ from pathlib import Path
 from typing import Any
 
 import streamlit as st
-
 from api import SkyGuardApiError, SkyGuardClient
 from status import short_name
-from theme import CLEAN, FEEDGAP, HARDWARE, SLATE, WARMING, WEATHER, CSS
+from theme import CLEAN, CSS, FEEDGAP, HARDWARE, SLATE, WARMING, WEATHER
 
 _PAGES: dict[str, Any] = {}
 _ASSETS = Path(__file__).resolve().parent / "assets"
@@ -21,7 +20,8 @@ SANTACRUZ = "43003"
 COLABA = "43057"
 JUHU = "43002"
 ALIBAG = "43058"
-DEMO_FOCUS = [SANTACRUZ, COLABA, JUHU, ALIBAG, SAFDARJUNG]
+RATNAGIRI = "43110"
+DEMO_FOCUS = [RATNAGIRI, SANTACRUZ, COLABA, JUHU, ALIBAG, SAFDARJUNG]
 DEFAULT_VIEW = list(DEMO_FOCUS)
 
 
@@ -33,7 +33,11 @@ def render_html(html: str) -> None:
 def inject_theme() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     if _WORDMARK.exists():
-        st.logo(str(_WORDMARK), icon_image=str(_MARK) if _MARK.exists() else None, size="large")
+        st.logo(
+            str(_WORDMARK),
+            icon_image=str(_MARK) if _MARK.exists() else None,
+            size="large",
+        )
 
 
 def render_sidebar(
@@ -46,7 +50,9 @@ def render_sidebar(
             '<p class="sg-brand-sub">Live QC for Indian AWS</p>',
             unsafe_allow_html=True,
         )
-        st.markdown('<div class="sg-nav-section">Operations</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="sg-nav-section">Operations</div>', unsafe_allow_html=True
+        )
         for page in operations:
             st.page_link(page, width="stretch")
         st.markdown('<div class="sg-nav-section">Demo</div>', unsafe_allow_html=True)
@@ -89,7 +95,7 @@ def init_session() -> None:
     if "view_ids" not in st.session_state:
         st.session_state.view_ids = list(DEFAULT_VIEW)
     if "station_id" not in st.session_state:
-        st.session_state.station_id = SANTACRUZ
+        st.session_state.station_id = RATNAGIRI
     if "include_buddies" not in st.session_state:
         st.session_state.include_buddies = True
     if "flash" not in st.session_state:
@@ -144,7 +150,9 @@ def fire_inject(body: dict[str, Any]) -> None:
     if station_id:
         focus_station(str(station_id))
     hours = body.get("duration_hours", 1)
-    flash(f"Armed {body['kind']} for {hours}h. Play on 1 June 2024 scores every armed event in order.")
+    flash(
+        f"Armed {body['kind']} for {hours}h. Play on 1 June 2024 scores every armed event in order."
+    )
 
 
 def fire_replay(story: str, *, open_station: bool = False) -> None:
@@ -159,7 +167,14 @@ def fire_replay(story: str, *, open_station: bool = False) -> None:
     payload = dict(body) if isinstance(body, dict) else {}
     payload["story"] = story
     st.session_state.replay_last = payload
-    santa = next((row for row in payload.get("results") or [] if row.get("station_id") == SANTACRUZ), None)
+    santa = next(
+        (
+            row
+            for row in payload.get("results") or []
+            if row.get("station_id") == SANTACRUZ
+        ),
+        None,
+    )
     if santa and santa.get("warming_up"):
         flash("Santa Cruz is warming up. The raw hour is stored.")
     else:
@@ -182,7 +197,9 @@ def fire_play() -> None:
     st.session_state.browse_ts = None
     st.session_state._hour_pin = ""
     hours = body.get("scored_hours") or 0
-    flash(f"Played {hours} scored hours from 1 June 2024. Each armed event follows the one before it.")
+    flash(
+        f"Played {hours} scored hours from 1 June 2024. Each armed event follows the one before it."
+    )
     go_page("station")
 
 
@@ -214,13 +231,17 @@ def page_header(
     show_status: bool = True,
 ) -> None:
     if not show_status:
-        st.markdown('<div class="sg-kicker">SkyGuard · live QC</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="sg-kicker">SkyGuard · live QC</div>', unsafe_allow_html=True
+        )
         st.title(title)
         st.markdown(f'<p class="sg-sub">{subtitle}</p>', unsafe_allow_html=True)
         return
     left, right = st.columns([3, 2])
     with left:
-        st.markdown('<div class="sg-kicker">SkyGuard · live QC</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="sg-kicker">SkyGuard · live QC</div>', unsafe_allow_html=True
+        )
         st.title(title)
         st.markdown(f'<p class="sg-sub">{subtitle}</p>', unsafe_allow_html=True)
     with right:
@@ -239,7 +260,9 @@ def page_header(
                 chips.append(f'<span class="sg-chip">{n_stations} stations</span>')
         else:
             chips.append('<span class="sg-chip sg-chip-bad">API down</span>')
-        st.markdown(f'<div class="sg-health">{"".join(chips)}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="sg-health">{"".join(chips)}</div>', unsafe_allow_html=True
+        )
 
 
 def kpi_strip(counts: dict[str, int]) -> None:
@@ -278,15 +301,15 @@ def legend() -> None:
 def offline_help(error: str) -> None:
     st.error(error)
     st.code(
-        "python scripts/run_api.py\n"
-        "python scripts/run_dashboard.py",
+        "python scripts/run_api.py\npython scripts/run_dashboard.py",
         language="text",
     )
 
 
 def station_options(catalog: list[dict[str, Any]]) -> dict[str, str]:
     return {
-        row["station_id"]: f"{short_name(row['name'])}  ·  {row['station_id']}" for row in catalog
+        row["station_id"]: f"{short_name(row['name'])}  ·  {row['station_id']}"
+        for row in catalog
     }
 
 
